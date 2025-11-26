@@ -120,6 +120,7 @@ dependencies = [
     { name = "sqlalchemy" },
     { name = "tenacity" },
     { name = "turbobt" },
+    { name = "uvicorn" },
 ]
 
 [package.optional-dependencies]
@@ -140,6 +141,14 @@ format = [
     { name = "ruff" },
     { name = "sentry-sdk", extra = ["litestar"] },
     { name = "ty" },
+]
+
+[package.dev-dependencies]
+dev = [
+    { name = "pytest" },
+    { name = "pytest-asyncio" },
+    { name = "respx" },
+    { name = "ruff" },
 ]
 
 [package.metadata]
@@ -173,8 +182,17 @@ requires-dist = [
     { name = "turbobt", marker = "extra == 'dev'", specifier = ">=0.2.2" },
     { name = "ty", marker = "extra == 'format'" },
     { name = "uv", marker = "extra == 'dev'" },
+    { name = "uvicorn", specifier = ">=0.35.0" },
 ]
 provides-extras = ["dev", "format"]
+
+[package.metadata.requires-dev]
+dev = [
+    { name = "pytest", specifier = ">=8.4.1" },
+    { name = "pytest-asyncio", specifier = ">=1.1.0" },
+    { name = "respx", specifier = ">=0.22.0" },
+    { name = "ruff", specifier = ">=0.12.9" },
+]
 
 [[package]]
 name = "bittensor-wallet"
