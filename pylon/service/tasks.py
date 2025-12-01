@@ -5,11 +5,12 @@ from typing import ClassVar, Self
 
 from pylon._internal.common.models import Block, CommitReveal
 from pylon._internal.common.settings import settings
-from pylon._internal.common.types import Hotkey, Weight
+from pylon._internal.common.types import Hotkey, NetUid, Weight
 from pylon.service.bittensor.client import AbstractBittensorClient
 from pylon.service.metrics import (
     Attr,
     MetricsContext,
+    Param,
     apply_weights_attempt_duration,
     apply_weights_job_duration,
     track_operation,
@@ -31,13 +32,12 @@ class ApplyWeights:
 
     def __init__(self, client: AbstractBittensorClient):
         self._client: AbstractBittensorClient = client
-        self._hotkey: Hotkey = Hotkey(client.wallet.hotkey.ss58_address)
-        self._netuid: str = str(settings.bittensor_netuid)
+        self._hotkey = client.hotkey
 
     @classmethod
-    async def schedule(cls, client: AbstractBittensorClient, weights: dict[Hotkey, Weight]) -> Self:
+    async def schedule(cls, client: AbstractBittensorClient, weights: dict[Hotkey, Weight], netuid: NetUid) -> Self:
         apply_weights = cls(client)
-        task = asyncio.create_task(apply_weights.run_job(weights), name=cls.JOB_NAME)
+        task = asyncio.create_task(apply_weights.run_job(weights, netuid), name=cls.JOB_NAME)
         cls.tasks_running.add(task)
         task.add_done_callback(apply_weights._log_done)
         return apply_weights
@@ -45,7 +45,7 @@ class ApplyWeights:
     @track_operation(
         duration_metric=apply_weights_job_duration,
         labels={
-            "netuid": Attr("_netuid"),
+            "netuid": Param("netuid"),
             "hotkey": Attr("_hotkey"),
         },
         inject_context="job_metrics",
@@ -53,12 +53,12 @@ class ApplyWeights:
     async def run_job(
         self,
         weights: dict[Hotkey, Weight],
-        *,
+        netuid: NetUid,
         job_metrics: MetricsContext | None = None,
     ) -> None:
         start_block = await self._client.get_latest_block()
 
-        tempo = get_epoch_containing_block(start_block.number)
+        tempo = get_epoch_containing_block(start_block.number, netuid)
         initial_tempo = tempo
 
         assert job_metrics is not None, "track_operation injects MetricsContext"
@@ -67,7 +67,6 @@ class ApplyWeights:
         retry_count = settings.weights_retry_attempts
         next_sleep_seconds = settings.weights_retry_delay_seconds
         max_sleep_seconds = next_sleep_seconds * 10
-
         for retry_no in range(retry_count + 1):
             latest_block = await self._client.get_latest_block()
             if latest_block.number > initial_tempo.end:
@@ -83,8 +82,8 @@ class ApplyWeights:
             )
             try:
                 job_metrics.set_label("attempt", str(retry_no))
-
-                await asyncio.wait_for(self._apply_weights(weights, latest_block), 120)
+                apply_weights = self._apply_weights(weights, netuid, latest_block)
+                await asyncio.wait_for(asyncio.shield(apply_weights), 120)
                 job_metrics.set_label("job_status", self.JobStatus.COMPLETED)
                 return
             except Exception as exc:
@@ -105,26 +104,21 @@ class ApplyWeights:
     @track_operation(
         duration_metric=apply_weights_attempt_duration,
         labels={
-            "netuid": Attr("_netuid"),
+            "netuid": Param("netuid"),
             "hotkey": Attr("_hotkey"),
         },
     )
-    async def _apply_weights(
-        self,
-        weights: dict[Hotkey, Weight],
-        latest_block: Block,
-    ) -> None:
-        hyperparams = await self._client.get_hyperparams(settings.bittensor_netuid, latest_block)
+    async def _apply_weights(self, weights: dict[Hotkey, Weight], netuid: NetUid, latest_block: Block) -> None:
+        hyperparams = await self._client.get_hyperparams(netuid, latest_block)
         if hyperparams is None:
             raise RuntimeError("Failed to fetch hyperparameters")
         commit_reveal_enabled = hyperparams.commit_reveal_weights_enabled
-
         if commit_reveal_enabled and commit_reveal_enabled != CommitReveal.DISABLED:
             logger.info(f"Commit weights (reveal enabled: {commit_reveal_enabled})")
-            await self._client.commit_weights(settings.bittensor_netuid, weights)
+            await self._client.commit_weights(netuid, weights)
         else:
             logger.info("Set weights (reveal disabled)")
-            await self._client.set_weights(settings.bittensor_netuid, weights)
+            await self._client.set_weights(netuid, weights)
 
     def _log_done(self, job: asyncio.Task[None]) -> None:
         logger.info(f"Task finished {job}")

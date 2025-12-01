@@ -5,7 +5,7 @@ from litestar.plugins.prometheus import PrometheusConfig
 
 from pylon._internal.common.settings import settings
 from pylon.service import dependencies
-from pylon.service.lifespans import bittensor_client
+from pylon.service.lifespans import bittensor_client_pool
 from pylon.service.prometheus_controller import AuthenticatedPrometheusController
 from pylon.service.routers import v1_router
 from pylon.service.schema import PylonSchemaPlugin
@@ -32,8 +32,8 @@ def create_app() -> Litestar:
             description="REST API for the bittensor-pylon service",
         ),
         middleware=[prometheus_config.middleware],
-        lifespan=[bittensor_client],
-        dependencies={"bt_client": Provide(dependencies.bt_client, use_cache=True)},
+        lifespan=[bittensor_client_pool],
+        dependencies={"bt_client_pool": Provide(dependencies.bt_client_pool_dep, use_cache=True)},
         plugins=[PylonSchemaPlugin()],
         debug=settings.debug,
     )

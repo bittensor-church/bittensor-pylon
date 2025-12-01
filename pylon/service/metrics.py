@@ -34,11 +34,10 @@ class LabelSource(ABC):
     different locations (attributes, parameters, or static values).
     """
 
-    SelfT = TypeVar("SelfT")
     ParamT = TypeVar("ParamT")
 
     @abstractmethod
-    def extract(self, label_name: str, self_obj: SelfT | None, method_params: dict[str, ParamT]) -> str:
+    def extract(self, label_name: str, self_obj: object | None, method_params: dict[str, ParamT]) -> str:
         """
         Extract label value from the method call context.
 
@@ -61,9 +60,7 @@ class Static(LabelSource):
     def __init__(self, value: str):
         self.value = value
 
-    def extract(
-        self, label_name: str, self_obj: LabelSource.SelfT | None, method_params: dict[str, LabelSource.ParamT]
-    ) -> str:
+    def extract(self, label_name: str, self_obj: object | None, method_params: dict[str, LabelSource.ParamT]) -> str:
         return self.value
 
 
@@ -73,9 +70,7 @@ class Param(LabelSource):
     def __init__(self, name: str):
         self.name = name
 
-    def extract(
-        self, label_name: str, self_obj: LabelSource.SelfT | None, method_params: dict[str, LabelSource.ParamT]
-    ) -> str:
+    def extract(self, label_name: str, self_obj: object | None, method_params: dict[str, LabelSource.ParamT]) -> str:
         if self.name not in method_params:
             raise MetricsConfigurationError(
                 f"Parameter '{self.name}' not found in method signature for label '{label_name}'"
@@ -90,9 +85,7 @@ class Attr(LabelSource):
     def __init__(self, name: str):
         self.name = name
 
-    def extract(
-        self, label_name: str, self_obj: LabelSource.SelfT | None, method_params: dict[str, LabelSource.ParamT]
-    ) -> str:
+    def extract(self, label_name: str, self_obj: object | None, method_params: dict[str, LabelSource.ParamT]) -> str:
         if self_obj is None:
             raise MetricsConfigurationError(
                 f"Cannot extract attribute '{self.name}' for label '{label_name}' - no self object"
@@ -245,7 +238,7 @@ def track_operation(
 
 def _extract_labels(
     label_config: dict[str, LabelSource],
-    self_obj: LabelSource.SelfT | None,
+    self_obj: object | None,
     method_params: dict[str, LabelSource.ParamT],
 ) -> dict[str, str]:
     """

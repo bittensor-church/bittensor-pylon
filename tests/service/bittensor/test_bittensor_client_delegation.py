@@ -8,6 +8,7 @@ the main client or the archive client based on block age and availability.
 import ipaddress
 
 import pytest
+from bittensor_wallet import Wallet
 from turbobt.substrate.exceptions import UnknownBlock
 
 from pylon._internal.common.currency import Currency, Token
@@ -39,7 +40,6 @@ from pylon._internal.common.types import (
     ValidatorTrust,
 )
 from pylon.service.bittensor.client import BittensorClient
-from tests.helpers import make_mock_wallet
 from tests.mock_bittensor_client import MockBittensorClient
 
 
@@ -72,7 +72,7 @@ def test_neuron():
 
 @pytest.fixture
 def bittensor_client():
-    wallet = make_mock_wallet()
+    wallet = Wallet()
 
     # Create BittensorClient
     client = BittensorClient(
