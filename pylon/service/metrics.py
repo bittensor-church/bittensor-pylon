@@ -3,6 +3,7 @@ from __future__ import annotations
 import functools
 import inspect
 import logging
+from abc import ABC, abstractmethod
 from collections.abc import Awaitable, Callable
 from contextlib import asynccontextmanager
 from time import perf_counter
@@ -14,16 +15,94 @@ from prometheus_client.metrics import MetricWrapperBase
 logger = logging.getLogger(__name__)
 
 
-class UseMethodNameType:
+class UseMethodName:
     """Sentinel type indicating the decorator should use the function name."""
 
 
 AsyncCallableT = TypeVar("AsyncCallableT", bound=Callable[..., Awaitable[Any]])
-USE_METHOD_NAME = UseMethodNameType()
+USE_METHOD_NAME = UseMethodName()
 
 
 class MetricsConfigurationError(Exception):
     """Raised when metrics label configuration is invalid."""
+
+
+class LabelSource(ABC):
+    """
+    Label sources define how to extract values for Prometheus metric labels
+    from method calls. Each source type knows how to extract values from
+    different locations (attributes, parameters, or static values).
+    """
+
+    SelfT = TypeVar("SelfT")
+    ParamT = TypeVar("ParamT")
+
+    @abstractmethod
+    def extract(self, label_name: str, self_obj: SelfT | None, method_params: dict[str, ParamT]) -> str:
+        """
+        Extract label value from the method call context.
+
+        Args:
+            label_name: Name of the label being extracted (for error messages)
+            self_obj: The instance object (self) if method is bound, None otherwise
+            method_params: Dictionary of method parameter names to their values
+
+        Returns:
+            String value for the label
+
+        Raises:
+            MetricsConfigurationError: When value cannot be extracted
+        """
+
+
+class Static(LabelSource):
+    """Static label value that never changes."""
+
+    def __init__(self, value: str):
+        self.value = value
+
+    def extract(
+        self, label_name: str, self_obj: LabelSource.SelfT | None, method_params: dict[str, LabelSource.ParamT]
+    ) -> str:
+        return self.value
+
+
+class Param(LabelSource):
+    """Extract label value from method parameter."""
+
+    def __init__(self, name: str):
+        self.name = name
+
+    def extract(
+        self, label_name: str, self_obj: LabelSource.SelfT | None, method_params: dict[str, LabelSource.ParamT]
+    ) -> str:
+        if self.name not in method_params:
+            raise MetricsConfigurationError(
+                f"Parameter '{self.name}' not found in method signature for label '{label_name}'"
+            )
+        value = method_params[self.name]
+        return str(value) if value is not None else "unknown"
+
+
+class Attr(LabelSource):
+    """Extract label value from instance attribute (self.attribute)."""
+
+    def __init__(self, name: str):
+        self.name = name
+
+    def extract(
+        self, label_name: str, self_obj: LabelSource.SelfT | None, method_params: dict[str, LabelSource.ParamT]
+    ) -> str:
+        if self_obj is None:
+            raise MetricsConfigurationError(
+                f"Cannot extract attribute '{self.name}' for label '{label_name}' - no self object"
+            )
+        if not hasattr(self_obj, self.name):
+            raise MetricsConfigurationError(
+                f"Attribute '{self.name}' not found on {type(self_obj).__name__} for label '{label_name}'"
+            )
+        value = getattr(self_obj, self.name)
+        return str(value) if value is not None else "unknown"
 
 
 class MetricsContext:
@@ -49,7 +128,8 @@ bittensor_operation_duration = Histogram(
 
     Labels:
         operation: Name of the operation (e.g., get_block, get_neurons, commit_weights).
-        status: Operation outcome.
+        status: Operation outcome ("success" or "error").
+              Set automatically by _track_operation_context based on exception presence.
         uri: Bittensor network URI.
         netuid: Subnet identifier.
         hotkey: Wallet hotkey (ss58) performing the operation.
@@ -64,6 +144,7 @@ bittensor_fallback_total = Counter(
 
     Labels:
         reason: Reason for fallback (e.g., "unknown_block", "stale_block").
+              See pylon.service.bittensor.client.FallbackReason for details.
         operation: Name of the operation that triggered fallback.
         hotkey: Wallet hotkey (ss58) performing the operation.
     """,
@@ -76,7 +157,8 @@ apply_weights_job_duration = Histogram(
     """Duration of entire ApplyWeights job execution (outer ``run_job`` wrapper).
 
     Labels:
-        job_status: Outcome set via ``MetricsContext`` ("completed", "tempo_expired", "failed", ...).
+        job_status: Outcome set via ``MetricsContext`` ("running", "completed", "tempo_expired", "failed").
+              See pylon.service.tasks.ApplyWeights.JobStatus for details.
         netuid: Subnet identifier for multi-net deployments.
         hotkey: Wallet hotkey (ss58) used by the client submitting weights.
     """,
@@ -90,7 +172,8 @@ apply_weights_attempt_duration = Histogram(
 
     Labels:
         operation: Name of the inner coroutine (``_apply_weights``).
-        status: Outcome of the attempt ("success" / "error").
+        status: Outcome of the attempt ("success" or "error").
+              Set automatically by _track_operation_context based on exception presence.
         netuid: Subnet identifier.
         hotkey: Wallet hotkey (ss58) used by the client submitting weights.
     """,
@@ -101,8 +184,8 @@ apply_weights_attempt_duration = Histogram(
 
 def track_operation(
     duration_metric: Histogram,
-    operation_name: str | UseMethodNameType = USE_METHOD_NAME,
-    labels: dict[str, str] | None = None,
+    operation_name: str | UseMethodName = USE_METHOD_NAME,
+    labels: dict[str, LabelSource] | None = None,
     *,
     inject_context: str | None = None,
 ):
@@ -121,11 +204,14 @@ def track_operation(
     Args:
         duration_metric: Prometheus Histogram for operation duration (must include "status" label)
         operation_name: Custom operation name. If not provided, uses method name.
-        labels: Label extraction with EXPLICIT prefixes. Extraction happens at the time of the call,
-            not at the time of metric reporting.
-            - "static:value" -> Static string "value"
-            - "param:name" -> Extract from method parameter "name"
-            - "attr:field" -> Extract from self.field attribute
+        labels: Label extraction configuration. Maps label names to LabelSource objects.
+            Example:
+                {
+                    "uri": Attr("uri"),           # Extract from self.uri
+                    "hotkey": Attr("_hotkey"),    # Extract from self._hotkey
+                    "netuid": Param("netuid"),    # Extract from netuid parameter
+                    "env": Static("production"),  # Static value
+                }
         inject_context: Parameter name to inject MetricsContext into. If None, no injection.
     """
 
@@ -138,7 +224,7 @@ def track_operation(
             bound_args.apply_defaults()
 
             self_obj = args[0] if args else None
-            op_name = func.__name__ if isinstance(operation_name, UseMethodNameType) else operation_name
+            op_name = func.__name__ if isinstance(operation_name, UseMethodName) else operation_name
             extracted_labels = _extract_labels(labels or {}, self_obj, bound_args.arguments)
 
             context = MetricsContext(extracted_labels)
@@ -158,49 +244,33 @@ def track_operation(
 
 
 def _extract_labels(
-    label_config: dict[str, str], self_obj: object | None, method_params: dict[str, object]
+    label_config: dict[str, LabelSource],
+    self_obj: LabelSource.SelfT | None,
+    method_params: dict[str, LabelSource.ParamT],
 ) -> dict[str, str]:
-    """Extract labels with strict validation, raising exceptions on misconfiguration.
+    """
+    Extract labels using LabelSource objects.
+
+    Args:
+        label_config: Mapping of label names to LabelSource objects
+        self_obj: Instance object (self) if available
+        method_params: Dictionary of method parameter names to values
+
+    Returns:
+        Dictionary of label names to extracted string values
 
     Raises:
-        MetricsConfigurationError: When label configuration is invalid or references missing attributes/parameters.
+        MetricsConfigurationError: When label extraction fails or configuration is invalid
     """
     extracted = {}
 
-    for label_name, source_spec in label_config.items():
-        if not isinstance(source_spec, str) or ":" not in source_spec:
-            raise MetricsConfigurationError(f"Label '{label_name}' must use explicit prefix format: 'type:value'")
-
-        prefix, source = source_spec.split(":", 1)
-
-        match prefix:
-            case "static":
-                # Static string value
-                value = source
-            case "param":
-                # Extract from method parameter
-                if source not in method_params:
-                    raise MetricsConfigurationError(
-                        f"Parameter '{source}' not found in method signature for label '{label_name}'"
-                    )
-                value = method_params[source]
-            case "attr":
-                # Extract from self attribute
-                if self_obj is None:
-                    raise MetricsConfigurationError(
-                        f"Cannot extract attribute '{source}' for label '{label_name}' - no self object"
-                    )
-                if not hasattr(self_obj, source):
-                    raise MetricsConfigurationError(
-                        f"Attribute '{source}' not found on {type(self_obj).__name__} for label '{label_name}'"
-                    )
-                value = getattr(self_obj, source)
-            case _:
-                raise MetricsConfigurationError(
-                    f"Unknown label prefix '{prefix}' for label '{label_name}'. Use: static, param, or attr"
-                )
-
-        extracted[label_name] = str(value) if value is not None else "unknown"
+    for label_name, source in label_config.items():
+        if not isinstance(source, LabelSource):
+            raise MetricsConfigurationError(
+                f"Label '{label_name}' must be a LabelSource instance (Static, Param, or Attr), "
+                f"got {type(source).__name__}"
+            )
+        extracted[label_name] = source.extract(label_name, self_obj, method_params)
 
     return extracted
 

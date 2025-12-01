@@ -8,6 +8,7 @@ from pylon._internal.common.settings import settings
 from pylon._internal.common.types import Hotkey, Weight
 from pylon.service.bittensor.client import AbstractBittensorClient
 from pylon.service.metrics import (
+    Attr,
     MetricsContext,
     apply_weights_attempt_duration,
     apply_weights_job_duration,
@@ -44,8 +45,8 @@ class ApplyWeights:
     @track_operation(
         duration_metric=apply_weights_job_duration,
         labels={
-            "netuid": "attr:_netuid",
-            "hotkey": "attr:_hotkey",
+            "netuid": Attr("_netuid"),
+            "hotkey": Attr("_hotkey"),
         },
         inject_context="job_metrics",
     )
@@ -104,8 +105,8 @@ class ApplyWeights:
     @track_operation(
         duration_metric=apply_weights_attempt_duration,
         labels={
-            "netuid": "attr:_netuid",
-            "hotkey": "attr:_hotkey",
+            "netuid": Attr("_netuid"),
+            "hotkey": Attr("_hotkey"),
         },
     )
     async def _apply_weights(

@@ -67,6 +67,8 @@ from pylon._internal.common.types import (
     Weight,
 )
 from pylon.service.metrics import (
+    Attr,
+    Param,
     bittensor_fallback_total,
     bittensor_operation_duration,
     track_operation,
@@ -201,8 +203,8 @@ class TurboBtClient(AbstractBittensorClient):
     @track_operation(
         bittensor_operation_duration,
         labels={
-            "uri": "attr:uri",
-            "hotkey": "attr:_hotkey",
+            "uri": Attr("uri"),
+            "hotkey": Attr("_hotkey"),
         },
     )
     async def get_block(self, number: BlockNumber) -> Block | None:
@@ -221,8 +223,8 @@ class TurboBtClient(AbstractBittensorClient):
     @track_operation(
         bittensor_operation_duration,
         labels={
-            "uri": "attr:uri",
-            "hotkey": "attr:_hotkey",
+            "uri": Attr("uri"),
+            "hotkey": Attr("_hotkey"),
         },
     )
     async def get_latest_block(self) -> Block:
@@ -260,9 +262,9 @@ class TurboBtClient(AbstractBittensorClient):
     @track_operation(
         bittensor_operation_duration,
         labels={
-            "uri": "attr:uri",
-            "netuid": "param:netuid",
-            "hotkey": "attr:_hotkey",
+            "uri": Attr("uri"),
+            "netuid": Param("netuid"),
+            "hotkey": Attr("_hotkey"),
         },
     )
     async def get_neurons_list(self, netuid: NetUid, block: Block) -> list[Neuron]:
@@ -279,9 +281,9 @@ class TurboBtClient(AbstractBittensorClient):
     @track_operation(
         bittensor_operation_duration,
         labels={
-            "uri": "attr:uri",
-            "netuid": "param:netuid",
-            "hotkey": "attr:_hotkey",
+            "uri": Attr("uri"),
+            "netuid": Param("netuid"),
+            "hotkey": Attr("_hotkey"),
         },
     )
     async def get_neurons(self, netuid: NetUid, block: Block) -> SubnetNeurons:
@@ -300,9 +302,9 @@ class TurboBtClient(AbstractBittensorClient):
     @track_operation(
         bittensor_operation_duration,
         labels={
-            "uri": "attr:uri",
-            "netuid": "param:netuid",
-            "hotkey": "attr:_hotkey",
+            "uri": Attr("uri"),
+            "netuid": Param("netuid"),
+            "hotkey": Attr("_hotkey"),
         },
     )
     async def get_hyperparams(self, netuid: NetUid, block: Block) -> SubnetHyperparams | None:
@@ -325,9 +327,9 @@ class TurboBtClient(AbstractBittensorClient):
     @track_operation(
         bittensor_operation_duration,
         labels={
-            "uri": "attr:uri",
-            "netuid": "param:netuid",
-            "hotkey": "attr:_hotkey",
+            "uri": Attr("uri"),
+            "netuid": Param("netuid"),
+            "hotkey": Attr("_hotkey"),
         },
     )
     async def get_certificates(self, netuid: NetUid, block: Block) -> dict[Hotkey, NeuronCertificate]:
@@ -346,9 +348,9 @@ class TurboBtClient(AbstractBittensorClient):
     @track_operation(
         bittensor_operation_duration,
         labels={
-            "uri": "attr:uri",
-            "netuid": "param:netuid",
-            "hotkey": "attr:_hotkey",
+            "uri": Attr("uri"),
+            "netuid": Param("netuid"),
+            "hotkey": Attr("_hotkey"),
         },
     )
     async def get_certificate(
@@ -377,9 +379,9 @@ class TurboBtClient(AbstractBittensorClient):
     @track_operation(
         bittensor_operation_duration,
         labels={
-            "uri": "attr:uri",
-            "netuid": "param:netuid",
-            "hotkey": "attr:_hotkey",
+            "uri": Attr("uri"),
+            "netuid": Param("netuid"),
+            "hotkey": Attr("_hotkey"),
         },
     )
     async def generate_certificate_keypair(
@@ -399,9 +401,9 @@ class TurboBtClient(AbstractBittensorClient):
     @track_operation(
         bittensor_operation_duration,
         labels={
-            "uri": "attr:uri",
-            "netuid": "param:netuid",
-            "hotkey": "attr:_hotkey",
+            "uri": Attr("uri"),
+            "netuid": Param("netuid"),
+            "hotkey": Attr("_hotkey"),
         },
     )
     async def get_subnet_state(self, netuid: NetUid, block: Block) -> SubnetState:
@@ -437,9 +439,9 @@ class TurboBtClient(AbstractBittensorClient):
     @track_operation(
         bittensor_operation_duration,
         labels={
-            "uri": "attr:uri",
-            "netuid": "param:netuid",
-            "hotkey": "attr:_hotkey",
+            "uri": Attr("uri"),
+            "netuid": Param("netuid"),
+            "hotkey": Attr("_hotkey"),
         },
     )
     async def commit_weights(self, netuid: NetUid, weights: dict[Hotkey, Weight]) -> RevealRound:
@@ -455,9 +457,9 @@ class TurboBtClient(AbstractBittensorClient):
     @track_operation(
         bittensor_operation_duration,
         labels={
-            "uri": "attr:uri",
-            "netuid": "param:netuid",
-            "hotkey": "attr:_hotkey",
+            "uri": Attr("uri"),
+            "netuid": Param("netuid"),
+            "hotkey": Attr("_hotkey"),
         },
     )
     async def set_weights(self, netuid: NetUid, weights: dict[Hotkey, Weight]) -> None:
