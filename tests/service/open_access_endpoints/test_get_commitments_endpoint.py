@@ -1,5 +1,5 @@
 """
-Tests for the GET /subnet/{netuid}/commitments endpoint.
+Tests for the GET /subnet/{netuid}/block/latest/commitments endpoint.
 """
 
 import pytest
@@ -43,6 +43,6 @@ async def test_get_commitments_open_access(
         get_latest_block=[latest_block],
         get_commitments=[subnet_commitments],
     ):
-        response = await test_client.get("/api/v1/subnet/1/commitments")
+        response = await test_client.get("/api/v1/subnet/1/block/latest/commitments")
     assert response.status_code == HTTP_200_OK
     assert response.json() == subnet_commitments.model_dump(mode="json")

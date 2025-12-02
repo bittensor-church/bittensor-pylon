@@ -32,7 +32,8 @@ class Endpoint(EndpointMember, Enum):
     SUBNET_WEIGHTS = (HTTPMethod.PUT, "/weights", "subnet_weights")
     IDENTITY_LOGIN = (HTTPMethod.POST, "/login/identity/{identity_name:str}", "identity_login")
     COMMITMENTS = "/commitments"
-    COMMITMENTS_HOTKEY = "/commitments/{hotkey:str}"
+    LATEST_COMMITMENTS = "/block/latest/commitments"
+    LATEST_COMMITMENTS_HOTKEY = "/block/latest/commitments/{hotkey:str}"
 
     def format_url(self, *args, **kwargs) -> str:
         normalized = re.sub(r":.+?}", "}", self.url)

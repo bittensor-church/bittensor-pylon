@@ -97,7 +97,7 @@ class OpenAccessController(Controller):
 
         return certificate
 
-    @get(Endpoint.COMMITMENTS)
+    @get(Endpoint.LATEST_COMMITMENTS)
     async def get_commitments_endpoint(self, bt_client: AbstractBittensorClient, netuid: NetUid) -> SubnetCommitments:
         """
         Get all commitments for the subnet.
@@ -105,7 +105,7 @@ class OpenAccessController(Controller):
         block = await bt_client.get_latest_block()
         return await bt_client.get_commitments(netuid, block)
 
-    @get(Endpoint.COMMITMENTS_HOTKEY)
+    @get(Endpoint.LATEST_COMMITMENTS_HOTKEY)
     async def get_commitment_endpoint(
         self, hotkey: Hotkey, bt_client: AbstractBittensorClient, netuid: NetUid
     ) -> Commitment:

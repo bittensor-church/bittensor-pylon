@@ -1,5 +1,5 @@
 """
-Tests for the GET /subnet/{netuid}/commitments/{hotkey} endpoint.
+Tests for the GET /subnet/{netuid}/block/latest/commitments/{hotkey} endpoint.
 """
 
 import pytest
@@ -24,7 +24,7 @@ async def test_get_commitment_open_access_success(
         get_latest_block=[Block(number=BlockNumber(1000), hash=BlockHash("0xabc123"))],
         get_commitment=[commitment],
     ):
-        response = await test_client.get(f"/api/v1/subnet/1/commitments/{hotkey}")
+        response = await test_client.get(f"/api/v1/subnet/1/block/latest/commitments/{hotkey}")
     assert response.status_code == HTTP_200_OK
     assert response.json() == commitment.model_dump(mode="json")
 
@@ -40,7 +40,7 @@ async def test_get_commitment_open_access_not_found(
         get_latest_block=[Block(number=BlockNumber(1000), hash=BlockHash("0xabc123"))],
         get_commitment=[None],
     ):
-        response = await test_client.get("/api/v1/subnet/1/commitments/hotkey1")
+        response = await test_client.get("/api/v1/subnet/1/block/latest/commitments/hotkey1")
     assert response.status_code == HTTP_404_NOT_FOUND
     assert response.json() == {
         "detail": "Commitment not found.",
