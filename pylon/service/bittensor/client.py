@@ -9,9 +9,7 @@ from typing import Any, Generic, TypeVar
 from bittensor_wallet import Wallet
 from turbobt.client import Bittensor
 from turbobt.neuron import Neuron as TurboBtNeuron
-from turbobt.subnet import (
-    CertificateAlgorithm as TurboBtCertificateAlgorithm,
-)
+from turbobt.subnet import CertificateAlgorithm as TurboBtCertificateAlgorithm
 from turbobt.subnet import (
     NeuronCertificate as TurboBtNeuronCertificate,
 )
@@ -30,11 +28,13 @@ from pylon._internal.common.models import (
     AxonProtocol,
     Block,
     CertificateAlgorithm,
+    Commitment,
     CommitReveal,
     Neuron,
     NeuronCertificate,
     NeuronCertificateKeypair,
     Stakes,
+    SubnetCommitments,
     SubnetHyperparams,
     SubnetNeurons,
     SubnetState,
@@ -45,7 +45,8 @@ from pylon._internal.common.types import (
     BlockHash,
     BlockNumber,
     Coldkey,
-    CommitmentData,
+    CommitmentDataBytes,
+    CommitmentDataHex,
     Consensus,
     Dividends,
     Emission,
@@ -184,23 +185,19 @@ class AbstractBittensorClient(ABC):
         """
 
     @abstractmethod
-    async def get_commitment(
-        self, netuid: NetUid, block: Block, hotkey: Hotkey
-    ) -> CommitmentData | None:
+    async def get_commitment(self, netuid: NetUid, block: Block, hotkey: Hotkey) -> Commitment | None:
         """
         Fetches commitment data for a hotkey in a subnet.
         """
 
     @abstractmethod
-    async def get_commitments(
-        self, netuid: NetUid, block: Block
-    ) -> dict[Hotkey, CommitmentData]:
+    async def get_commitments(self, netuid: NetUid, block: Block) -> SubnetCommitments:
         """
         Fetches all commitments for a subnet.
         """
 
     @abstractmethod
-    async def set_commitment(self, netuid: NetUid, data: CommitmentData) -> None:
+    async def set_commitment(self, netuid: NetUid, data: CommitmentDataBytes) -> None:
         """
         Sets commitment data on chain for the wallet's hotkey.
         """
@@ -499,9 +496,7 @@ class TurboBtClient(AbstractBittensorClient):
         logger.debug(f"Setting weights on subnet {netuid} at {self.uri}")
         await self._raw_client.subnet(netuid).weights.set(await self._translate_weights(netuid, weights))
 
-    async def get_commitment(
-        self, netuid: NetUid, block: Block, hotkey: Hotkey
-    ) -> CommitmentData | None:
+    async def get_commitment(self, netuid: NetUid, block: Block, hotkey: Hotkey) -> Commitment | None:
         assert self._raw_client is not None, (
             "The client is not open, please use the client as a context manager or call the open() method."
         )
@@ -509,21 +504,20 @@ class TurboBtClient(AbstractBittensorClient):
         commitment = await self._raw_client.subnet(netuid).commitments.get(hotkey, block_hash=block.hash)
         if commitment is None:
             return None
-        return CommitmentData(commitment)
+        return Commitment(hotkey=Hotkey(hotkey), commitment=CommitmentDataHex(commitment.hex()))
 
-    async def get_commitments(
-        self, netuid: NetUid, block: Block
-    ) -> dict[Hotkey, CommitmentData]:
+    async def get_commitments(self, netuid: NetUid, block: Block) -> SubnetCommitments:
         assert self._raw_client is not None, (
             "The client is not open, please use the client as a context manager or call the open() method."
         )
         logger.debug(f"Fetching all commitments from subnet {netuid} at block {block.number}, {self.uri}")
         commitments = await self._raw_client.subnet(netuid).commitments.fetch(block_hash=block.hash)
-        if not commitments:
-            return {}
-        return {Hotkey(hotkey): CommitmentData(data) for hotkey, data in commitments.items()}
+        return SubnetCommitments(
+            block=block,
+            commitments={Hotkey(hotkey): CommitmentDataHex(data.hex()) for hotkey, data in commitments.items()},
+        )
 
-    async def set_commitment(self, netuid: NetUid, data: CommitmentData) -> None:
+    async def set_commitment(self, netuid: NetUid, data: CommitmentDataBytes) -> None:
         assert self._raw_client is not None, (
             "The client is not open, please use the client as a context manager or call the open() method."
         )
@@ -608,17 +602,13 @@ class BittensorClient(Generic[SubClient], AbstractBittensorClient):
     async def get_subnet_state(self, netuid: NetUid, block: Block) -> SubnetState:
         return await self._delegate(self.subclient_cls.get_subnet_state, netuid=netuid, block=block)
 
-    async def get_commitment(
-        self, netuid: NetUid, block: Block, hotkey: Hotkey
-    ) -> CommitmentData | None:
+    async def get_commitment(self, netuid: NetUid, block: Block, hotkey: Hotkey) -> Commitment | None:
         return await self._delegate(self.subclient_cls.get_commitment, netuid=netuid, block=block, hotkey=hotkey)
 
-    async def get_commitments(
-        self, netuid: NetUid, block: Block
-    ) -> dict[Hotkey, CommitmentData]:
+    async def get_commitments(self, netuid: NetUid, block: Block) -> SubnetCommitments:
         return await self._delegate(self.subclient_cls.get_commitments, netuid=netuid, block=block)
 
-    async def set_commitment(self, netuid: NetUid, data: CommitmentData) -> None:
+    async def set_commitment(self, netuid: NetUid, data: CommitmentDataBytes) -> None:
         return await self._delegate(self.subclient_cls.set_commitment, netuid=netuid, data=data)
 
     async def _delegate(

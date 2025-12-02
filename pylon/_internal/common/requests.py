@@ -15,7 +15,7 @@ from pylon._internal.common.responses import (
     PylonResponse,
     SetWeightsResponse,
 )
-from pylon._internal.common.types import BlockNumber, IdentityName, NetUid, CommitmentData, Hotkey, Weight
+from pylon._internal.common.types import BlockNumber, IdentityName, NetUid, CommitmentDataBytes, Hotkey, Weight
 
 PylonResponseT = typing.TypeVar("PylonResponseT", bound=PylonResponse, covariant=True)
 LoginResponseT = typing.TypeVar("LoginResponseT", bound=LoginResponse, covariant=True)
@@ -122,18 +122,22 @@ class SetCommitmentRequest(PylonRequest):
     version = ApiVersion.V1
     response_cls = SetCommitmentResponse
 
-    data: CommitmentData
+    commitment: CommitmentDataBytes
 
-    @field_validator("data", mode="before")
+    @field_validator("commitment", mode="before")
     @classmethod
-    def validate_data(cls, v):
+    def validate_commitment(cls, v):
         if isinstance(v, str):
             # Allow hex string input, convert to bytes
             if v.startswith("0x"):
                 v = v[2:]
-            return bytes.fromhex(v)
+            try:
+                return bytes.fromhex(v)
+            except ValueError as e:
+                # Give more user-friendly message to the api.
+                raise ValueError("passed commitment data is not a valid hex string.") from e
         if not isinstance(v, bytes):
-            raise ValueError("data must be bytes or hex string")
+            raise ValueError("commitment must be bytes or hex string")
         return v
 
 

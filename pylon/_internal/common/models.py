@@ -10,6 +10,7 @@ from pylon._internal.common.types import (
     BlockHash,
     BlockNumber,
     Coldkey,
+    CommitmentDataHex,
     Consensus,
     Dividends,
     Emission,
@@ -164,3 +165,13 @@ class SubnetState(BittensorModel):
             )
             for hotkey, alpha, tao, total in zip(self.hotkeys, self.alpha_stake, self.tao_stake, self.total_stake)
         }
+
+
+class Commitment(BittensorModel):
+    hotkey: Hotkey
+    commitment: CommitmentDataHex
+
+
+class SubnetCommitments(BittensorModel):
+    block: Block
+    commitments: dict[Hotkey, CommitmentDataHex]

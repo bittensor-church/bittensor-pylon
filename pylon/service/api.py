@@ -7,7 +7,7 @@ from litestar.handlers.http_handlers import decorators as http_decorators
 
 from pylon._internal.common.bodies import LoginBody, SetWeightsBody
 from pylon._internal.common.endpoints import Endpoint
-from pylon._internal.common.models import Hotkey, SubnetNeurons
+from pylon._internal.common.models import Commitment, Hotkey, NeuronCertificate, SubnetCommitments, SubnetNeurons
 from pylon._internal.common.requests import (
     GenerateCertificateKeypairRequest,
 )
@@ -71,19 +71,19 @@ class OpenAccessController(Controller):
         return await bt_client.get_neurons(netuid, block=block)
 
     @handler(Endpoint.CERTIFICATES)
-    async def get_certificates_endpoint(self, bt_client: AbstractBittensorClient, netuid: NetUid) -> Response:
+    async def get_certificates_endpoint(
+        self, bt_client: AbstractBittensorClient, netuid: NetUid
+    ) -> dict[Hotkey, NeuronCertificate]:
         """
         Get all certificates for the subnet at the latest block.
         """
         block = await bt_client.get_latest_block()
-        certificates = await bt_client.get_certificates(netuid, block)
-
-        return Response(certificates, status_code=status_codes.HTTP_200_OK)
+        return await bt_client.get_certificates(netuid, block)
 
     @handler(Endpoint.CERTIFICATES_HOTKEY)
     async def get_certificate_endpoint(
         self, hotkey: Hotkey, bt_client: AbstractBittensorClient, netuid: NetUid
-    ) -> Response:
+    ) -> NeuronCertificate:
         """
         Get a specific certificate for a hotkey.
 
@@ -95,7 +95,31 @@ class OpenAccessController(Controller):
         if certificate is None:
             raise NotFoundException(detail="Certificate not found or error fetching.")
 
-        return Response(certificate, status_code=status_codes.HTTP_200_OK)
+        return certificate
+
+    @get(Endpoint.COMMITMENTS)
+    async def get_commitments_endpoint(self, bt_client: AbstractBittensorClient, netuid: NetUid) -> SubnetCommitments:
+        """
+        Get all commitments for the subnet.
+        """
+        block = await bt_client.get_latest_block()
+        return await bt_client.get_commitments(netuid, block)
+
+    @get(Endpoint.COMMITMENTS_HOTKEY)
+    async def get_commitment_endpoint(
+        self, hotkey: Hotkey, bt_client: AbstractBittensorClient, netuid: NetUid
+    ) -> Commitment:
+        """
+        Get a specific commitment for a hotkey.
+
+        Raises:
+            NotFoundException: If commitment could not be found in the blockchain.
+        """
+        block = await bt_client.get_latest_block()
+        commitment = await bt_client.get_commitment(netuid, block, hotkey=hotkey)
+        if commitment is None:
+            raise NotFoundException(detail="Commitment not found.")
+        return commitment
 
 
 class IdentityController(OpenAccessController):
@@ -150,43 +174,15 @@ class IdentityController(OpenAccessController):
 
         return Response(certificate_keypair, status_code=status_codes.HTTP_201_CREATED)
 
-
-@get(Endpoint.COMMITMENTS)
-async def get_commitments_endpoint(bt_client: AbstractBittensorClient) -> Response:
-    """
-    Get all commitments for the subnet.
-    """
-    block = await bt_client.get_latest_block()
-    commitments = await bt_client.get_commitments(settings.bittensor_netuid, block)
-    # Convert bytes to hex strings for JSON serialization
-    serialized = {hotkey: data.hex() for hotkey, data in commitments.items()}
-    return Response({"commitments": serialized}, status_code=status_codes.HTTP_200_OK)
-
-
-@get(Endpoint.COMMITMENTS_HOTKEY)
-async def get_commitment_endpoint(hotkey: Hotkey, bt_client: AbstractBittensorClient) -> Response:
-    """
-    Get a specific commitment for a hotkey.
-    """
-    block = await bt_client.get_latest_block()
-    commitment = await bt_client.get_commitment(settings.bittensor_netuid, block, hotkey=hotkey)
-    if commitment is None:
+    @post(Endpoint.COMMITMENTS)
+    async def set_commitment_endpoint(
+        self, bt_client: AbstractBittensorClient, data: SetCommitmentRequest, netuid: NetUid
+    ) -> Response:
+        """
+        Set a commitment (model metadata) on chain for the wallet's hotkey.
+        """
+        await bt_client.set_commitment(netuid, data.commitment)
         return Response(
-            {"detail": "Commitment not found."}, status_code=status_codes.HTTP_404_NOT_FOUND
+            {"detail": "Commitment set successfully."},
+            status_code=status_codes.HTTP_201_CREATED,
         )
-    # Convert bytes to hex string for JSON serialization
-    return Response({"hotkey": hotkey, "data": commitment.hex()}, status_code=status_codes.HTTP_200_OK)
-
-
-@post(Endpoint.COMMITMENTS)
-async def set_commitment_endpoint(
-    bt_client: AbstractBittensorClient, data: SetCommitmentRequest
-) -> Response:
-    """
-    Set a commitment (model metadata) on chain for the wallet's hotkey.
-    """
-    await bt_client.set_commitment(settings.bittensor_netuid, data.data)
-    return Response(
-        {"detail": "Commitment set successfully."},
-        status_code=status_codes.HTTP_201_CREATED,
-    )
