@@ -42,6 +42,10 @@ class Settings(BaseSettings):
     weights_retry_attempts: int = 200
     weights_retry_delay_seconds: int = 1
 
+    # commitment endpoint behaviour
+    commitment_retry_attempts: int = 10
+    commitment_retry_delay_seconds: int = 1
+
     # sentry
     sentry_dsn: str = ""
     sentry_environment: str = "development"

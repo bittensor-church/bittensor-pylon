@@ -17,7 +17,7 @@ from pylon.service.bittensor.client import AbstractBittensorClient
 from pylon.service.dependencies import bt_client_identity_dep, bt_client_open_access_dep, identity_dep
 from pylon.service.exceptions import BadGatewayException
 from pylon.service.identities import Identity
-from pylon.service.tasks import ApplyWeights
+from pylon.service.tasks import ApplyWeights, SetCommitment
 
 logger = logging.getLogger(__name__)
 
@@ -180,8 +180,14 @@ class IdentityController(OpenAccessController):
     ) -> Response:
         """
         Set a commitment (model metadata) on chain for the wallet's hotkey.
+
+        Raises:
+            BadGatewayException: When commitment could not be set after all retries.
         """
-        await bt_client.set_commitment(netuid, data.commitment)
+        try:
+            await SetCommitment.execute(bt_client, netuid, data.commitment)
+        except RuntimeError as exc:
+            raise BadGatewayException(detail=str(exc)) from exc
         return Response(
             {"detail": "Commitment set successfully."},
             status_code=status_codes.HTTP_201_CREATED,

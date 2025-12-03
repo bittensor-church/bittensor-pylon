@@ -4,7 +4,7 @@ from enum import StrEnum
 from typing import ClassVar, Self
 
 from pylon._internal.common.models import Block, CommitReveal
-from pylon._internal.common.types import Hotkey, NetUid, Weight
+from pylon._internal.common.types import CommitmentDataBytes, Hotkey, NetUid, Weight
 from pylon.service.bittensor.client import AbstractBittensorClient
 from pylon.service.metrics import (
     Attr,
@@ -126,3 +126,50 @@ class ApplyWeights:
             job.result()
         except Exception as exc:  # noqa: BLE001
             logger.error("Exception in weights job: %s", exc, exc_info=True)
+
+
+class SetCommitment:
+    """
+    Sets commitment on chain with retry logic.
+    """
+
+    def __init__(self, client: AbstractBittensorClient):
+        self._client: AbstractBittensorClient = client
+
+    @classmethod
+    async def execute(
+        cls, client: AbstractBittensorClient, netuid: NetUid, data: CommitmentDataBytes
+    ) -> None:
+        instance = cls(client)
+        await instance._run(netuid, data)
+
+    async def _run(self, netuid: NetUid, data: CommitmentDataBytes) -> None:
+        retry_count = settings.commitment_retry_attempts
+        next_sleep_seconds = settings.commitment_retry_delay_seconds
+        max_sleep_seconds = next_sleep_seconds * 10
+        last_exception: Exception | None = None
+
+        for retry_no in range(retry_count + 1):
+            logger.info(f"set commitment attempt {retry_no}")
+            try:
+                await asyncio.wait_for(
+                    asyncio.shield(self._client.set_commitment(netuid, data)),
+                    timeout=120,
+                )
+                logger.info("Commitment set successfully")
+                return
+            except Exception as exc:
+                last_exception = exc
+                logger.error(
+                    "Error setting commitment: %s (retry %s)",
+                    exc,
+                    retry_no,
+                    exc_info=True,
+                )
+                if retry_no < retry_count:
+                    logger.info(f"Sleeping for {next_sleep_seconds} seconds before retrying...")
+                    await asyncio.sleep(next_sleep_seconds)
+                    next_sleep_seconds = min(next_sleep_seconds * 2, max_sleep_seconds)
+
+        logger.error(f"Failed to set commitment after {retry_count + 1} attempts: {last_exception}")
+        raise RuntimeError(f"Failed to set commitment after {retry_count + 1} attempts: {last_exception}") from last_exception

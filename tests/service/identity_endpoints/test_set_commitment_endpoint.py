@@ -3,7 +3,7 @@ Tests for the POST /identity/{identity_name}/subnet/{netuid}/commitments endpoin
 """
 
 import pytest
-from litestar.status_codes import HTTP_201_CREATED, HTTP_400_BAD_REQUEST
+from litestar.status_codes import HTTP_201_CREATED, HTTP_400_BAD_REQUEST, HTTP_502_BAD_GATEWAY
 from litestar.testing import AsyncTestClient
 
 from tests.mock_bittensor_client import MockBittensorClient
@@ -23,6 +23,7 @@ async def test_set_commitment_identity_success(test_client: AsyncTestClient, sn1
             "/api/v1/identity/sn1/subnet/1/commitments",
             json={"commitment": commitment_data},
         )
+
     assert response.status_code == HTTP_201_CREATED
     assert response.json() == {
         "detail": "Commitment set successfully.",
@@ -48,6 +49,7 @@ async def test_set_commitment_identity_with_0x_prefix(
             "/api/v1/identity/sn2/subnet/2/commitments",
             json={"commitment": commitment_data},
         )
+
     assert response.status_code == HTTP_201_CREATED
     assert response.json() == {
         "detail": "Commitment set successfully.",
@@ -55,6 +57,33 @@ async def test_set_commitment_identity_with_0x_prefix(
     assert sn2_mock_bt_client.calls["set_commitment"] == [
         (2, bytes.fromhex(commitment_data[2:])),
     ]
+
+
+@pytest.mark.asyncio
+async def test_set_commitment_identity_blockchain_error(
+    test_client: AsyncTestClient, sn1_mock_bt_client: MockBittensorClient, monkeypatch
+):
+    """
+    Test that blockchain errors return 502 Bad Gateway after retries exhausted.
+    """
+    # Set retry attempts to 0 for faster test
+    monkeypatch.setattr("pylon.service.tasks.settings.commitment_retry_attempts", 0)
+
+    commitment_data = "0102030405060708"
+
+    async with sn1_mock_bt_client.mock_behavior(
+        set_commitment=[RuntimeError("Blockchain connection failed")],
+    ):
+        response = await test_client.post(
+            "/api/v1/identity/sn1/subnet/1/commitments",
+            json={"commitment": commitment_data},
+        )
+
+    assert response.status_code == HTTP_502_BAD_GATEWAY
+    assert response.json() == {
+        "status_code": HTTP_502_BAD_GATEWAY,
+        "detail": "Failed to set commitment after 1 attempts: Blockchain connection failed",
+    }
 
 
 @pytest.mark.asyncio
