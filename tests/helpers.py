@@ -8,7 +8,7 @@ async def wait_for_background_tasks(tasks_to_wait: Iterable[asyncio.Task], timeo
     Wait for background tasks to complete.
 
     Args:
-        tasks_to_wait: List of tasks to wait for
+        tasks_to_wait: Iterable of tasks to wait for.
         timeout: Maximum time to wait in seconds
 
     Raises:

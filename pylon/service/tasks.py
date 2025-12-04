@@ -1,11 +1,20 @@
 import asyncio
 import logging
+from enum import StrEnum
 from typing import ClassVar, Self
 
 from pylon._internal.common.models import Block, CommitReveal
 from pylon._internal.common.settings import settings
 from pylon._internal.common.types import Hotkey, NetUid, Weight
 from pylon.service.bittensor.client import AbstractBittensorClient
+from pylon.service.metrics import (
+    Attr,
+    MetricsContext,
+    Param,
+    apply_weights_attempt_duration,
+    apply_weights_job_duration,
+    track_operation,
+)
 from pylon.service.utils import get_epoch_containing_block
 
 logger = logging.getLogger(__name__)
@@ -15,8 +24,15 @@ class ApplyWeights:
     JOB_NAME: ClassVar[str] = "apply_weights"
     tasks_running = set()
 
+    class JobStatus(StrEnum):
+        RUNNING = "running"
+        TEMPO_EXPIRED = "tempo_expired"
+        COMPLETED = "completed"
+        FAILED = "failed"
+
     def __init__(self, client: AbstractBittensorClient):
         self._client: AbstractBittensorClient = client
+        self._hotkey = client.hotkey
 
     @classmethod
     async def schedule(cls, client: AbstractBittensorClient, weights: dict[Hotkey, Weight], netuid: NetUid) -> Self:
@@ -26,11 +42,27 @@ class ApplyWeights:
         task.add_done_callback(apply_weights._log_done)
         return apply_weights
 
-    async def run_job(self, weights: dict[Hotkey, Weight], netuid: NetUid) -> None:
+    @track_operation(
+        duration_metric=apply_weights_job_duration,
+        labels={
+            "netuid": Param("netuid"),
+            "hotkey": Attr("_hotkey"),
+        },
+        inject_context="job_metrics",
+    )
+    async def run_job(
+        self,
+        weights: dict[Hotkey, Weight],
+        netuid: NetUid,
+        job_metrics: MetricsContext | None = None,
+    ) -> None:
         start_block = await self._client.get_latest_block()
 
         tempo = get_epoch_containing_block(start_block.number, netuid)
         initial_tempo = tempo
+
+        assert job_metrics is not None, "track_operation injects MetricsContext"
+        job_metrics.set_label("status", self.JobStatus.RUNNING)
 
         retry_count = settings.weights_retry_attempts
         next_sleep_seconds = settings.weights_retry_delay_seconds
@@ -38,6 +70,7 @@ class ApplyWeights:
         for retry_no in range(retry_count + 1):
             latest_block = await self._client.get_latest_block()
             if latest_block.number > initial_tempo.end:
+                job_metrics.set_label("status", self.JobStatus.TEMPO_EXPIRED)
                 logger.error(
                     f"Apply weights job task cancelled: tempo ended "
                     f"({latest_block.number} > {initial_tempo.end}, {start_block.number=})"
@@ -50,6 +83,7 @@ class ApplyWeights:
             try:
                 apply_weights = self._apply_weights(weights, netuid, latest_block)
                 await asyncio.wait_for(asyncio.shield(apply_weights), 120)
+                job_metrics.set_label("status", self.JobStatus.COMPLETED)
                 return
             except Exception as exc:
                 logger.error(
@@ -59,10 +93,20 @@ class ApplyWeights:
                     retry_no,
                     exc_info=True,
                 )
+                if retry_no == retry_count:
+                    job_metrics.set_label("status", self.JobStatus.FAILED)
+                    raise
                 logger.info(f"Sleeping for {next_sleep_seconds} seconds before retrying...")
                 await asyncio.sleep(next_sleep_seconds)
                 next_sleep_seconds = min(next_sleep_seconds * 2, max_sleep_seconds)
 
+    @track_operation(
+        duration_metric=apply_weights_attempt_duration,
+        labels={
+            "netuid": Param("netuid"),
+            "hotkey": Attr("_hotkey"),
+        },
+    )
     async def _apply_weights(self, weights: dict[Hotkey, Weight], netuid: NetUid, latest_block: Block) -> None:
         hyperparams = await self._client.get_hyperparams(netuid, latest_block)
         if hyperparams is None:
