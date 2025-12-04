@@ -34,10 +34,8 @@ class LabelSource(ABC):
     different locations (attributes, parameters, or static values).
     """
 
-    ParamT = TypeVar("ParamT")
-
     @abstractmethod
-    def extract(self, label_name: str, self_obj: object | None, method_params: dict[str, ParamT]) -> str:
+    def extract(self, label_name: str, self_obj: object | None, method_params: dict[str, Any]) -> str:
         """
         Extract label value from the method call context.
 
@@ -60,7 +58,7 @@ class Static(LabelSource):
     def __init__(self, value: str):
         self.value = value
 
-    def extract(self, label_name: str, self_obj: object | None, method_params: dict[str, LabelSource.ParamT]) -> str:
+    def extract(self, label_name: str, self_obj: object | None, method_params: dict[str, Any]) -> str:
         return self.value
 
 
@@ -70,7 +68,7 @@ class Param(LabelSource):
     def __init__(self, name: str):
         self.name = name
 
-    def extract(self, label_name: str, self_obj: object | None, method_params: dict[str, LabelSource.ParamT]) -> str:
+    def extract(self, label_name: str, self_obj: object | None, method_params: dict[str, Any]) -> str:
         if self.name not in method_params:
             raise MetricsConfigurationError(
                 f"Parameter '{self.name}' not found in method signature for label '{label_name}'"
@@ -85,7 +83,7 @@ class Attr(LabelSource):
     def __init__(self, name: str):
         self.name = name
 
-    def extract(self, label_name: str, self_obj: object | None, method_params: dict[str, LabelSource.ParamT]) -> str:
+    def extract(self, label_name: str, self_obj: object | None, method_params: dict[str, Any]) -> str:
         if self_obj is None:
             raise MetricsConfigurationError(
                 f"Cannot extract attribute '{self.name}' for label '{label_name}' - no self object"
@@ -150,12 +148,13 @@ apply_weights_job_duration = Histogram(
     """Duration of entire ApplyWeights job execution (outer ``run_job`` wrapper).
 
     Labels:
-        job_status: Outcome set via ``MetricsContext`` ("running", "completed", "tempo_expired", "failed").
-              See pylon.service.tasks.ApplyWeights.JobStatus for details.
+        operation: Name of the operation (``run_job``).
+        status: Operation outcome ("success" or "error").
+              Set automatically by _track_operation_context based on exception presence.
         netuid: Subnet identifier for multi-net deployments.
         hotkey: Wallet hotkey (ss58) used by the client submitting weights.
     """,
-    ["job_status", "netuid", "hotkey"],
+    ["operation", "status", "netuid", "hotkey"],
     buckets=(1.0, 5.0, 10.0, 30.0, 60.0, 120.0, 300.0, 600.0, 1200.0),
 )
 
@@ -239,7 +238,7 @@ def track_operation(
 def _extract_labels(
     label_config: dict[str, LabelSource],
     self_obj: object | None,
-    method_params: dict[str, LabelSource.ParamT],
+    method_params: dict[str, Any],
 ) -> dict[str, str]:
     """
     Extract labels using LabelSource objects.

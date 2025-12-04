@@ -62,7 +62,7 @@ class ApplyWeights:
         initial_tempo = tempo
 
         assert job_metrics is not None, "track_operation injects MetricsContext"
-        job_metrics.set_label("job_status", self.JobStatus.RUNNING)
+        job_metrics.set_label("status", self.JobStatus.RUNNING)
 
         retry_count = settings.weights_retry_attempts
         next_sleep_seconds = settings.weights_retry_delay_seconds
@@ -70,7 +70,7 @@ class ApplyWeights:
         for retry_no in range(retry_count + 1):
             latest_block = await self._client.get_latest_block()
             if latest_block.number > initial_tempo.end:
-                job_metrics.set_label("job_status", self.JobStatus.TEMPO_EXPIRED)
+                job_metrics.set_label("status", self.JobStatus.TEMPO_EXPIRED)
                 logger.error(
                     f"Apply weights job task cancelled: tempo ended "
                     f"({latest_block.number} > {initial_tempo.end}, {start_block.number=})"
@@ -81,10 +81,9 @@ class ApplyWeights:
                 f"still got {initial_tempo.end - latest_block.number} blocks left to go."
             )
             try:
-                job_metrics.set_label("attempt", str(retry_no))
                 apply_weights = self._apply_weights(weights, netuid, latest_block)
                 await asyncio.wait_for(asyncio.shield(apply_weights), 120)
-                job_metrics.set_label("job_status", self.JobStatus.COMPLETED)
+                job_metrics.set_label("status", self.JobStatus.COMPLETED)
                 return
             except Exception as exc:
                 logger.error(
@@ -95,7 +94,7 @@ class ApplyWeights:
                     exc_info=True,
                 )
                 if retry_no == retry_count:
-                    job_metrics.set_label("job_status", self.JobStatus.FAILED)
+                    job_metrics.set_label("status", self.JobStatus.FAILED)
                     raise
                 logger.info(f"Sleeping for {next_sleep_seconds} seconds before retrying...")
                 await asyncio.sleep(next_sleep_seconds)
