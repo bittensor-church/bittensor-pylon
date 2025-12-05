@@ -136,19 +136,19 @@ Use the Pylon client to connect with the running service:
 import asyncio
 
 from pylon.v1 import (
-    AsyncPylonClient, 
-    AsyncPylonClientConfig, 
-    BlockNumber, 
+    AsyncPylonClient,
+    AsyncConfig,
+    BlockNumber,
     GetNeuronsRequest,
     GetLatestNeuronsRequest,
-    Hotkey, 
-    SetWeightsRequest, 
+    Hotkey,
+    SetWeightsRequest,
     Weight
 )
 
 
 async def main():
-    config = AsyncPylonClientConfig(address="http://127.0.0.1:8000")
+    config = AsyncConfig(address="http://127.0.0.1:8000")
     async with AsyncPylonClient(config) as client:
         # Get the current metagraph
         metagraph = await client.request(GetLatestNeuronsRequest())
@@ -170,14 +170,15 @@ If you need to manage the Pylon service programmatically, you can use the `Pylon
 It's a context manager that starts the Pylon service and stops it when the `async with` block is exited. Only suitable for ad-hoc use cases like scripts, short-lived tasks or testing.
 
 ```python
-from pylon.v1 import AsyncPylonClient, AsyncPylonClientConfig, SetWeightsRequest, PylonDockerManager, Hotkey, Weight
+from pylon.v1 import AsyncPylonClient, AsyncConfig, SetWeightsRequest, PylonDockerManager, Hotkey, Weight
+
 
 async def main():
     async with PylonDockerManager(port=8000):
-        config = AsyncPylonClientConfig(address="http://127.0.0.1:8000")
+        config = AsyncConfig(address="http://127.0.0.1:8000")
         async with AsyncPylonClient(config) as client:
             await client.request(SetWeightsRequest(weights={Hotkey("h1"): Weight(0.1)}))
-                ...
+            ...
 ```
 
 ### Retries
@@ -195,12 +196,13 @@ This example shows how to configure the client to retry up to 5 times, waiting b
 attempt.
 
 ```python
-from pylon.v1 import AsyncPylonClient, AsyncPylonClientConfig, PylonRequestException
+from pylon.v1 import AsyncPylonClient, AsyncConfig, PylonRequestException
 
 from tenacity import AsyncRetrying, stop_after_attempt, retry_if_exception_type, wait_random
 
+
 async def main():
-    config = AsyncPylonClientConfig(
+    config = AsyncConfig(
         address="http://127.0.0.1:8000",
         retry=AsyncRetrying(
             wait=wait_random(min=0.1, max=0.3),
@@ -214,14 +216,14 @@ async def main():
 
 To avoid manual exception handling, we recommend using `pylon.v1.DEFAULT_RETRIES` object as following:
 
-
 ```python
-from pylon.v1 import AsyncPylonClient, AsyncPylonClientConfig, DEFAULT_RETRIES
+from pylon.v1 import AsyncPylonClient, AsyncConfig, DEFAULT_RETRIES
 
 from tenacity import stop_after_attempt, wait_random
 
+
 async def main():
-    config = AsyncPylonClientConfig(
+    config = AsyncConfig(
         address="http://127.0.0.1:8000",
         retry=DEFAULT_RETRIES.copy(
             wait=wait_random(min=0.1, max=0.3),

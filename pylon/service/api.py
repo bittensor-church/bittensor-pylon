@@ -4,26 +4,39 @@ from litestar import Controller, Response, get, post, put, status_codes
 from litestar.di import Provide
 from litestar.exceptions import NotFoundException
 
+from pylon._internal.common.bodies import LoginBody, SetWeightsBody
 from pylon._internal.common.endpoints import Endpoint
 from pylon._internal.common.models import Hotkey, SubnetNeurons
 from pylon._internal.common.requests import (
     GenerateCertificateKeypairRequest,
-    SetWeightsRequest,
 )
+from pylon._internal.common.responses import IdentityLoginResponse
 from pylon._internal.common.types import BlockNumber, NetUid
 from pylon.service.bittensor.client import AbstractBittensorClient
 from pylon.service.dependencies import bt_client_identity_dep, bt_client_open_access_dep, identity_dep
 from pylon.service.exceptions import BadGatewayException
+from pylon.service.identities import Identity
 from pylon.service.tasks import ApplyWeights
 
 logger = logging.getLogger(__name__)
+
+
+@post(
+    Endpoint.IDENTITY_LOGIN.url,
+    name=Endpoint.IDENTITY_LOGIN.reverse,
+    dependencies={"identity": identity_dep},
+    status_code=status_codes.HTTP_200_OK,
+)
+async def identity_login(data: LoginBody, identity: Identity) -> IdentityLoginResponse:
+    # TODO: Add real authentication and session.
+    return IdentityLoginResponse(netuid=identity.netuid, identity_name=identity.identity_name)
 
 
 class OpenAccessController(Controller):
     path = "/subnet/{netuid:int}/"
     dependencies = {"bt_client": Provide(bt_client_open_access_dep)}
 
-    @get(Endpoint.NEURONS)
+    @get(Endpoint.NEURONS.url, name=Endpoint.NEURONS.reverse)
     async def get_neurons(
         self, bt_client: AbstractBittensorClient, block_number: BlockNumber, netuid: NetUid
     ) -> SubnetNeurons:
@@ -40,12 +53,12 @@ class OpenAccessController(Controller):
             raise NotFoundException(detail=f"Block {block_number} not found.")
         return await bt_client.get_neurons(netuid, block=block)
 
-    @get(Endpoint.LATEST_NEURONS)
+    @get(Endpoint.LATEST_NEURONS.url, name=Endpoint.LATEST_NEURONS.reverse)
     async def get_latest_neurons(self, bt_client: AbstractBittensorClient, netuid: NetUid) -> SubnetNeurons:
         block = await bt_client.get_latest_block()
         return await bt_client.get_neurons(netuid, block=block)
 
-    @get(Endpoint.CERTIFICATES)
+    @get(Endpoint.CERTIFICATES.url, name=Endpoint.CERTIFICATES.reverse)
     async def get_certificates_endpoint(self, bt_client: AbstractBittensorClient, netuid: NetUid) -> Response:
         """
         Get all certificates for the subnet at the latest block.
@@ -55,7 +68,7 @@ class OpenAccessController(Controller):
 
         return Response(certificates, status_code=status_codes.HTTP_200_OK)
 
-    @get(Endpoint.CERTIFICATES_HOTKEY)
+    @get(Endpoint.CERTIFICATES_HOTKEY.url, name=Endpoint.CERTIFICATES_HOTKEY.reverse)
     async def get_certificate_endpoint(
         self, hotkey: Hotkey, bt_client: AbstractBittensorClient, netuid: NetUid
     ) -> Response:
@@ -77,9 +90,9 @@ class IdentityController(OpenAccessController):
     path = "/identity/{identity_name:str}/subnet/{netuid:int}"
     dependencies = {"identity": Provide(identity_dep), "bt_client": Provide(bt_client_identity_dep)}
 
-    @put(Endpoint.SUBNET_WEIGHTS)
+    @put(Endpoint.SUBNET_WEIGHTS.url, name=Endpoint.SUBNET_WEIGHTS.reverse)
     async def put_weights_endpoint(
-        self, data: SetWeightsRequest, bt_client: AbstractBittensorClient, netuid: NetUid
+        self, data: SetWeightsBody, bt_client: AbstractBittensorClient, netuid: NetUid
     ) -> Response:
         """
         Set multiple hotkeys' weights for the current epoch in a single transaction.
@@ -94,7 +107,7 @@ class IdentityController(OpenAccessController):
             status_code=status_codes.HTTP_200_OK,
         )
 
-    @get(Endpoint.CERTIFICATES_SELF)
+    @get(Endpoint.CERTIFICATES_SELF.url, name=Endpoint.CERTIFICATES_SELF.reverse)
     async def get_own_certificate_endpoint(self, bt_client: AbstractBittensorClient, netuid: NetUid) -> Response:
         """
         Get a certificate for the identity's wallet.
@@ -109,7 +122,7 @@ class IdentityController(OpenAccessController):
 
         return Response(certificate, status_code=status_codes.HTTP_200_OK)
 
-    @post(Endpoint.CERTIFICATES_SELF)
+    @post(Endpoint.CERTIFICATES_GENERATE.url, name=Endpoint.CERTIFICATES_GENERATE.reverse)
     async def generate_certificate_keypair_endpoint(
         self, bt_client: AbstractBittensorClient, data: GenerateCertificateKeypairRequest, netuid: NetUid
     ) -> Response:

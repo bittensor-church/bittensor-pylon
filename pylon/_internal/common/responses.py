@@ -1,6 +1,7 @@
 from pydantic import BaseModel
 
 from pylon._internal.common.models import SubnetNeurons
+from pylon._internal.common.types import IdentityName, NetUid
 
 
 class PylonResponse(BaseModel):
@@ -12,6 +13,31 @@ class PylonResponse(BaseModel):
     Every Pylon request class has its respective response class that will be returned by
     the pylon client after performing a request.
     """
+
+
+class LoginResponse(PylonResponse):
+    """
+    Base class for response that is returned for the login request.
+    """
+
+    pass
+
+
+class OpenAccessLoginResponse(LoginResponse):
+    """
+    Response returned for the login via open access request.
+    """
+
+    pass
+
+
+class IdentityLoginResponse(LoginResponse):
+    """
+    Response returned for the login via identity request.
+    """
+
+    netuid: NetUid
+    identity_name: IdentityName
 
 
 class SetWeightsResponse(PylonResponse):

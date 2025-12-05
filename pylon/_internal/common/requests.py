@@ -3,12 +3,23 @@ import typing
 from pydantic import BaseModel, field_validator
 
 from pylon._internal.common.apiver import ApiVersion
+from pylon._internal.common.bodies import LoginBody, SetWeightsBody
 from pylon._internal.common.models import CertificateAlgorithm
-from pylon._internal.common.responses import GetNeuronsResponse, PylonResponse, SetWeightsResponse
-from pylon._internal.common.types import BlockNumber, Hotkey, Weight
+from pylon._internal.common.responses import (
+    GetNeuronsResponse,
+    IdentityLoginResponse,
+    LoginResponse,
+    OpenAccessLoginResponse,
+    PylonResponse,
+    SetWeightsResponse,
+)
+from pylon._internal.common.types import BlockNumber, IdentityName, NetUid
+
+PylonResponseT = typing.TypeVar("PylonResponseT", bound=PylonResponse, covariant=True)
+LoginResponseT = typing.TypeVar("LoginResponseT", bound=LoginResponse, covariant=True)
 
 
-class PylonRequest(BaseModel):
+class PylonRequest(BaseModel, typing.Generic[PylonResponseT]):
     """
     Base class for all Pylon requests.
 
@@ -18,37 +29,39 @@ class PylonRequest(BaseModel):
     the pylon client after performing a request.
     """
 
-    rtype: typing.ClassVar[str]
     version: typing.ClassVar[ApiVersion]
-    response_cls: typing.ClassVar[type[PylonResponse]]
+    response_cls: typing.ClassVar[typing.Any]
 
 
-class SetWeightsRequest(PylonRequest):
-    """
-    Class used to perform setting weights by the Pylon client.
-    """
+# Request classes used to log in into Pylon
 
+
+class OpenAccessLoginRequest(LoginBody, PylonRequest[OpenAccessLoginResponse]):
     version = ApiVersion.V1
-    response_cls = SetWeightsResponse
-
-    weights: dict[Hotkey, Weight]
-
-    @field_validator("weights")
-    @classmethod
-    def validate_weights(cls, v):
-        if not v:
-            raise ValueError("No weights provided")
-
-        for hotkey, weight in v.items():
-            if not hotkey or not isinstance(hotkey, str):
-                raise ValueError(f"Invalid hotkey: '{hotkey}' must be a non-empty string")
-            if not isinstance(weight, int | float):
-                raise ValueError(f"Invalid weight for hotkey '{hotkey}': '{weight}' must be a number")
-
-        return v
+    response_cls = OpenAccessLoginResponse
 
 
-class GetNeuronsRequest(PylonRequest):
+class IdentityLoginRequest(LoginBody, PylonRequest[IdentityLoginResponse]):
+    version = ApiVersion.V1
+    response_cls = IdentityLoginResponse
+
+    identity_name: IdentityName
+
+
+# Request classes for endpoints that require authentication either by open access or identity
+
+
+class AuthenticatedPylonRequest(PylonRequest[PylonResponseT]):
+    """
+    Request that requires the authentication, either by open access or identity.
+    """
+
+    netuid: NetUid
+    # None == open access
+    identity_name: IdentityName | None = None
+
+
+class GetNeuronsRequest(AuthenticatedPylonRequest[GetNeuronsResponse]):
     """
     Class used to fetch the neurons by the Pylon client.
     """
@@ -59,13 +72,33 @@ class GetNeuronsRequest(PylonRequest):
     block_number: BlockNumber
 
 
-class GetLatestNeuronsRequest(PylonRequest):
+class GetLatestNeuronsRequest(AuthenticatedPylonRequest[GetNeuronsResponse]):
     """
     Class used to fetch the latest neurons by the Pylon client.
     """
 
     version = ApiVersion.V1
     response_cls = GetNeuronsResponse
+
+
+# Request classes that require identity authentication.
+
+
+class IdentityPylonRequest(AuthenticatedPylonRequest[PylonResponseT]):
+    """
+    Request that requires authentication via identity.
+    """
+
+    identity_name: IdentityName  # type: ignore[assignment]
+
+
+class SetWeightsRequest(SetWeightsBody, IdentityPylonRequest[SetWeightsResponse]):
+    """
+    Class used to perform setting weights by the Pylon client.
+    """
+
+    version = ApiVersion.V1
+    response_cls = SetWeightsResponse
 
 
 class GenerateCertificateKeypairRequest(PylonRequest):

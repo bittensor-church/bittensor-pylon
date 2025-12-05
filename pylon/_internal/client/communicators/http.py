@@ -1,17 +1,28 @@
 import logging
 from functools import singledispatchmethod
 from http import HTTPMethod
+from typing import TypeVar
 
 from httpx import AsyncClient, HTTPStatusError, Request, RequestError, Response
 
 from pylon._internal.client.communicators.abstract import AbstractCommunicator
-from pylon._internal.client.config import AsyncPylonClientConfig
+from pylon._internal.client.config import AsyncConfig
 from pylon._internal.common.endpoints import Endpoint
 from pylon._internal.common.exceptions import PylonRequestException, PylonResponseException
-from pylon._internal.common.requests import GetLatestNeuronsRequest, GetNeuronsRequest, PylonRequest, SetWeightsRequest
+from pylon._internal.common.requests import (
+    AuthenticatedPylonRequest,
+    GetLatestNeuronsRequest,
+    GetNeuronsRequest,
+    IdentityLoginRequest,
+    PylonRequest,
+    SetWeightsRequest,
+)
 from pylon._internal.common.responses import PylonResponse
 
 logger = logging.getLogger(__name__)
+
+
+PylonResponseT = TypeVar("PylonResponseT", bound=PylonResponse)
 
 
 class AsyncHttpCommunicator(AbstractCommunicator[Request, Response]):
@@ -19,20 +30,31 @@ class AsyncHttpCommunicator(AbstractCommunicator[Request, Response]):
     Communicates with Pylon API through HTTP.
     """
 
-    def __init__(self, config: AsyncPylonClientConfig):
+    def __init__(self, config: AsyncConfig):
         super().__init__(config)
         self._raw_client: AsyncClient | None = None
 
     async def open(self) -> None:
-        assert self._raw_client is None
+        await super().open()
         logger.debug(f"Opening communicator for the server {self.config.address}")
         self._raw_client = AsyncClient(base_url=self.config.address)
 
     async def close(self) -> None:
-        assert self._raw_client is not None
+        await super().close()
         logger.debug(f"Closing communicator for the server {self.config.address}")
-        await self._raw_client.aclose()
+        if self._raw_client is not None:
+            await self._raw_client.aclose()
         self._raw_client = None
+
+    def _build_url(self, endpoint: Endpoint, request: PylonRequest) -> str:
+        if isinstance(request, AuthenticatedPylonRequest):
+            return endpoint.absolute_url(
+                request.version,
+                netuid_=request.netuid,
+                identity_name_=request.identity_name,
+                **request.model_dump(exclude={"netuid", "identity_name"}),
+            )
+        return endpoint.absolute_url(request.version, **request.model_dump())
 
     @singledispatchmethod
     async def _translate_request(self, request: PylonRequest) -> Request:  # type: ignore
@@ -41,27 +63,34 @@ class AsyncHttpCommunicator(AbstractCommunicator[Request, Response]):
     @_translate_request.register
     async def _(self, request: SetWeightsRequest) -> Request:
         assert self._raw_client is not None
+        url = self._build_url(Endpoint.SUBNET_WEIGHTS, request)
         return self._raw_client.build_request(
             method=HTTPMethod.PUT,
-            url=Endpoint.SUBNET_WEIGHTS.for_version(request.version),
-            json=request.model_dump(),
+            url=url,
+            json=request.model_dump(include={"weights"}),
         )
 
     @_translate_request.register
     async def _(self, request: GetNeuronsRequest) -> Request:
         assert self._raw_client is not None
-        return self._raw_client.build_request(
-            method=HTTPMethod.GET, url=Endpoint.NEURONS.for_version(request.version, block_number=request.block_number)
-        )
+        url = self._build_url(Endpoint.NEURONS, request)
+        return self._raw_client.build_request(method=HTTPMethod.GET, url=url)
 
     @_translate_request.register
     async def _(self, request: GetLatestNeuronsRequest) -> Request:
         assert self._raw_client is not None
-        return self._raw_client.build_request(
-            method=HTTPMethod.GET, url=Endpoint.LATEST_NEURONS.for_version(request.version)
-        )
+        url = self._build_url(Endpoint.LATEST_NEURONS, request)
+        return self._raw_client.build_request(method=HTTPMethod.GET, url=url)
 
-    async def _translate_response(self, pylon_request: PylonRequest, response: Response) -> PylonResponse:
+    @_translate_request.register
+    async def _(self, request: IdentityLoginRequest) -> Request:
+        assert self._raw_client is not None
+        url = self._build_url(Endpoint.IDENTITY_LOGIN, request)
+        return self._raw_client.build_request(method=HTTPMethod.POST, url=url, json=request.model_dump())
+
+    async def _translate_response(
+        self, pylon_request: PylonRequest[PylonResponseT], response: Response
+    ) -> PylonResponseT:
         return pylon_request.response_cls(**response.json())
 
     async def _request(self, request: Request) -> Response:

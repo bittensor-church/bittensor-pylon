@@ -1,8 +1,15 @@
 from pylon._internal.client.abstract import AbstractAsyncPylonClient
 from pylon._internal.client.asynchronous import AsyncPylonClient
-from pylon._internal.client.config import AsyncPylonClientConfig, DEFAULT_RETRIES
-from pylon._internal.client.mock import Behavior, MockCommunicator, RaiseRequestError, RaiseResponseError, WorkNormally
-from pylon._internal.common.exceptions import BasePylonException, PylonRequestException, PylonResponseException
+from pylon._internal.client.config import AsyncConfig, DEFAULT_RETRIES
+from pylon._internal.common.exceptions import (
+    BasePylonException,
+    PylonRequestException,
+    PylonResponseException,
+    PylonForbidden,
+    PylonUnauthorized,
+    PylonMisconfigured,
+    PylonClosed,
+)
 from pylon._internal.common.models import (
     CommitReveal,
     BittensorModel,
@@ -13,7 +20,6 @@ from pylon._internal.common.models import (
     Neuron,
     SubnetNeurons,
 )
-from pylon._internal.common.requests import GetLatestNeuronsRequest, GetNeuronsRequest, PylonRequest, SetWeightsRequest
 from pylon._internal.common.responses import GetNeuronsResponse, PylonResponse, SetWeightsResponse
 from pylon._internal.common.types import (
     Hotkey,
@@ -29,6 +35,7 @@ from pylon._internal.common.types import (
     Stake,
     Rank,
     Emission,
+    EmissionRao,
     Incentive,
     Consensus,
     Trust,
@@ -43,5 +50,16 @@ from pylon._internal.common.types import (
     ArchiveBlocksCutoff,
     NeuronActive,
     ValidatorPermit,
+    SubnetActive,
+    AlphaStakeRao,
+    TaoStakeRao,
+    TotalStakeRao,
+    AlphaStake,
+    TaoStake,
+    TotalStake,
+    WalletName,
+    HotkeyName,
+    PylonAuthToken,
+    IdentityName,
 )
 from pylon._internal.docker_manager import PylonDockerManager

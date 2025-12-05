@@ -2,35 +2,46 @@ import logging
 from abc import ABC
 from typing import Generic, TypeVar
 
+from pylon._internal.client.api.abstract import AbstractIdentityAsyncApi, AbstractOpenAccessAsyncApi
 from pylon._internal.client.communicators.abstract import AbstractCommunicator
-from pylon._internal.client.config import AsyncPylonClientConfig
-from pylon._internal.common.requests import PylonRequest
+from pylon._internal.client.config import AsyncConfig
 from pylon._internal.common.responses import PylonResponse
 
-C = TypeVar("C", bound=AbstractCommunicator)
+OpenAccessApiT = TypeVar("OpenAccessApiT", bound=AbstractOpenAccessAsyncApi)
+IdentityApiT = TypeVar("IdentityApiT", bound=AbstractIdentityAsyncApi)
+CommunicatorT = TypeVar("CommunicatorT", bound=AbstractCommunicator)
+ResponseT = TypeVar("ResponseT", bound=PylonResponse)
 
 logger = logging.getLogger(__name__)
 
 
-class AbstractAsyncPylonClient(Generic[C], ABC):
+class AbstractAsyncPylonClient(Generic[OpenAccessApiT, IdentityApiT, CommunicatorT], ABC):
     """
     Base for every async Pylon client.
 
-    Pylon client allows easy communication with Pylon service through the use of PylonRequest objects.
-    To make a request, use client's `request` method, providing an object of PylonRequest subclass:
+    Pylon client allows easy communication with Pylon service.
+    To make a request, use client's api interfaces:
+      - open_access
+      - identity
+    Pylon client will take care of authentication and retries, you just need to construct it with proper AsyncConfig
+    instance.
 
-    ```
-    response = await client.request(GetMetagraphRequest(BlockNumber(1234)))
-    ```
-
-    Async pylon client is configured via passed AsyncPylonClientConfig instance.
+    Example:
+        with AsyncPylonClient(AsyncConfig(address="127.0.0.1:8000", open_access_token="my_token")) as client:
+            response = await client.identity.get_latest_neurons()
     """
 
-    _communicator_cls: type[C]
+    _open_access_api_cls: type[OpenAccessApiT]
+    _identity_api_cls: type[IdentityApiT]
+    _communicator_cls: type[CommunicatorT]
 
-    def __init__(self, config: AsyncPylonClientConfig):
+    def __init__(self, config: AsyncConfig):
         self.config = config
-        self._communicator: C | None = None
+        self._open_access_communicator = self._communicator_cls(config)
+        self._identity_communicator = self._communicator_cls(config)
+        self.open_access = self._open_access_api_cls(self._open_access_communicator)
+        self.identity = self._identity_api_cls(self._identity_communicator)
+        self.is_open = False
 
     async def __aenter__(self):
         await self.open()
@@ -41,34 +52,28 @@ class AbstractAsyncPylonClient(Generic[C], ABC):
 
     async def open(self) -> None:
         """
-        Prepares the client to work by opening a communicator.
+        Prepares the client to work by opening the communicators.
+
+        Raises:
+            ValueError: When trying to open the already opened client.
         """
-        assert self._communicator is None
+        if self.is_open:
+            raise ValueError("The client is already open.")
         logger.debug(f"Opening client for the server {self.config.address}")
-        self._communicator = self._communicator_cls(self.config)
-        await self._communicator.open()
+        self.is_open = True
+        await self._open_access_communicator.open()
+        await self._identity_communicator.open()
 
     async def close(self) -> None:
         """
-        Closes the communicator.
-        """
-        assert self._communicator is not None
-        logger.debug(f"Closing client for the server {self.config.address}")
-        await self._communicator.close()
-        self._communicator = None
-
-    async def request(self, request: PylonRequest) -> PylonResponse:
-        """
-        Entrypoint to the Pylon.
-
-        Makes a request to the Pylon api based on a passed PylonRequest.
-        Retries on failures based on a retry config.
+        Closes the communicators.
 
         Raises:
-            PylonRequestException: If pylon client fails to communicate with the Pylon service after all retry attempts.
-            PylonResponseException: If pylon client receives error response from the Pylon service.
+            ValueError: When trying to close the already closed client.
         """
-        assert self._communicator is not None, (
-            "Client is not open, use context manager or the open() method before making a request."
-        )
-        return await self._communicator.request(request)
+        if not self.is_open:
+            raise ValueError("The client is already closed.")
+        logger.debug(f"Closing client for the server {self.config.address}")
+        self.is_open = False
+        await self._open_access_communicator.close()
+        await self._identity_communicator.close()
