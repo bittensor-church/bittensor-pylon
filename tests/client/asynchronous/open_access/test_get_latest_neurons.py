@@ -7,7 +7,7 @@ from pylon._internal.common.endpoints import Endpoint
 from pylon._internal.common.models import Block
 from pylon._internal.common.responses import GetNeuronsResponse
 from pylon._internal.common.types import BlockHash, BlockNumber, NetUid
-from tests.client.base_endpoint_test import OpenAccessEndpointTest
+from tests.client.asynchronous.base_test import OpenAccessEndpointTest
 from tests.factories import NeuronFactory
 
 

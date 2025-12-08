@@ -8,24 +8,23 @@ from pylon._internal.common.endpoints import Endpoint
 from pylon._internal.common.requests import SetWeightsRequest
 from pylon._internal.common.responses import SetWeightsResponse
 from pylon._internal.common.types import Hotkey, IdentityName, NetUid, Weight
-from tests.client.asynchronous.base_test import IdentityEndpointTest
+from tests.client.synchronous.base_test import IdentityEndpointTest
 
 
-class TestIdentitySetWeights(IdentityEndpointTest):
+class TestSyncIdentitySetWeights(IdentityEndpointTest):
     endpoint = Endpoint.SUBNET_WEIGHTS
     route_params = {"identity_name": "sn1", "netuid": 1}
     http_method = HTTPMethod.PUT
 
-    async def make_endpoint_call(self, client):
-        return await client.identity.put_weights(weights={Hotkey("h1"): Weight(0.2)})
+    def make_endpoint_call(self, client):
+        return client.identity.put_weights(weights={Hotkey("h1"): Weight(0.2)})
 
     @pytest.fixture
     def success_response(self) -> SetWeightsResponse:
         return SetWeightsResponse()
 
-    @pytest.mark.asyncio
-    async def test_success(self, pylon_client, service_mock, route_mock, success_response):
-        await super().test_success(pylon_client, service_mock, route_mock, success_response)
+    def test_success(self, pylon_client, service_mock, route_mock, success_response):
+        super().test_success(pylon_client, service_mock, route_mock, success_response)
         assert json.loads(route_mock.calls.last.request.content) == {"weights": {"h1": 0.2}}
 
 
@@ -66,7 +65,7 @@ class TestIdentitySetWeights(IdentityEndpointTest):
         ),
     ],
 )
-def test_set_weights_request_validation_error(invalid_weights, expected_errors):
+def test_sync_set_weights_request_validation_error(invalid_weights, expected_errors):
     """
     Test that SetWeightsRequest validates input correctly.
     """

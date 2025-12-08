@@ -1,6 +1,7 @@
-from pylon._internal.client.abstract import AbstractAsyncPylonClient
-from pylon._internal.client.asynchronous import AsyncPylonClient
-from pylon._internal.client.config import AsyncConfig, DEFAULT_RETRIES
+from pylon._internal.client.asynchronous.client import AbstractAsyncPylonClient, AsyncPylonClient
+from pylon._internal.client.asynchronous.config import ASYNC_DEFAULT_RETRIES, AsyncConfig
+from pylon._internal.client.sync.client import AbstractPylonClient, PylonClient
+from pylon._internal.client.sync.config import DEFAULT_RETRIES, Config
 from pylon._internal.common.exceptions import (
     BasePylonException,
     PylonRequestException,

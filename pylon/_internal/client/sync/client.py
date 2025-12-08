@@ -2,40 +2,42 @@ import logging
 from abc import ABC
 from typing import Generic, TypeVar
 
-from pylon._internal.client.api.abstract import AbstractIdentityAsyncApi, AbstractOpenAccessAsyncApi
-from pylon._internal.client.communicators.abstract import AbstractCommunicator
-from pylon._internal.client.config import AsyncConfig
-from pylon._internal.common.responses import PylonResponse
+from pylon._internal.client.sync.api import (
+    AbstractIdentityApi,
+    AbstractOpenAccessApi,
+    IdentityApi,
+    OpenAccessApi,
+)
+from pylon._internal.client.sync.communicators import AbstractCommunicator, HttpCommunicator
+from pylon._internal.client.sync.config import Config
 
-OpenAccessApiT = TypeVar("OpenAccessApiT", bound=AbstractOpenAccessAsyncApi)
-IdentityApiT = TypeVar("IdentityApiT", bound=AbstractIdentityAsyncApi)
+OpenAccessApiT = TypeVar("OpenAccessApiT", bound=AbstractOpenAccessApi)
+IdentityApiT = TypeVar("IdentityApiT", bound=AbstractIdentityApi)
 CommunicatorT = TypeVar("CommunicatorT", bound=AbstractCommunicator)
-ResponseT = TypeVar("ResponseT", bound=PylonResponse)
-
 logger = logging.getLogger(__name__)
 
 
-class AbstractAsyncPylonClient(Generic[OpenAccessApiT, IdentityApiT, CommunicatorT], ABC):
+class AbstractPylonClient(Generic[OpenAccessApiT, IdentityApiT, CommunicatorT], ABC):
     """
-    Base for every async Pylon client.
+    Base for every sync Pylon client.
 
     Pylon client allows easy communication with Pylon service.
     To make a request, use client's api interfaces:
       - open_access
       - identity
-    Pylon client will take care of authentication and retries, you just need to construct it with proper AsyncConfig
+    Pylon client will take care of authentication and retries, you just need to construct it with proper Config
     instance.
 
     Example:
-        with AsyncPylonClient(AsyncConfig(address="127.0.0.1:8000", open_access_token="my_token")) as client:
-            response = await client.identity.get_latest_neurons()
+        with PylonClient(Config(address="127.0.0.1:8000", open_access_token="my_token")) as client:
+            response = client.identity.get_latest_neurons()
     """
 
     _open_access_api_cls: type[OpenAccessApiT]
     _identity_api_cls: type[IdentityApiT]
     _communicator_cls: type[CommunicatorT]
 
-    def __init__(self, config: AsyncConfig):
+    def __init__(self, config: Config):
         self.config = config
         self._open_access_communicator = self._communicator_cls(config)
         self._identity_communicator = self._communicator_cls(config)
@@ -43,14 +45,14 @@ class AbstractAsyncPylonClient(Generic[OpenAccessApiT, IdentityApiT, Communicato
         self.identity = self._identity_api_cls(self._identity_communicator)
         self.is_open = False
 
-    async def __aenter__(self):
-        await self.open()
+    def __enter__(self):
+        self.open()
         return self
 
-    async def __aexit__(self, exc_type, exc_val, exc_tb):
-        await self.close()
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        self.close()
 
-    async def open(self) -> None:
+    def open(self) -> None:
         """
         Prepares the client to work by opening the communicators.
 
@@ -61,10 +63,10 @@ class AbstractAsyncPylonClient(Generic[OpenAccessApiT, IdentityApiT, Communicato
             raise ValueError("The client is already open.")
         logger.debug(f"Opening client for the server {self.config.address}")
         self.is_open = True
-        await self._open_access_communicator.open()
-        await self._identity_communicator.open()
+        self._open_access_communicator.open()
+        self._identity_communicator.open()
 
-    async def close(self) -> None:
+    def close(self) -> None:
         """
         Closes the communicators.
 
@@ -75,5 +77,11 @@ class AbstractAsyncPylonClient(Generic[OpenAccessApiT, IdentityApiT, Communicato
             raise ValueError("The client is already closed.")
         logger.debug(f"Closing client for the server {self.config.address}")
         self.is_open = False
-        await self._open_access_communicator.close()
-        await self._identity_communicator.close()
+        self._open_access_communicator.close()
+        self._identity_communicator.close()
+
+
+class PylonClient(AbstractPylonClient[OpenAccessApi, IdentityApi, HttpCommunicator]):
+    _open_access_api_cls = OpenAccessApi
+    _identity_api_cls = IdentityApi
+    _communicator_cls = HttpCommunicator

@@ -2,8 +2,8 @@ import pytest
 from httpx import ConnectTimeout, Response, codes
 from tenacity import stop_after_attempt
 
-from pylon._internal.client.asynchronous.client import AsyncPylonClient
-from pylon._internal.client.asynchronous.config import ASYNC_DEFAULT_RETRIES, AsyncConfig
+from pylon._internal.client.sync.client import PylonClient
+from pylon._internal.client.sync.config import DEFAULT_RETRIES, Config
 from pylon._internal.common.endpoints import Endpoint
 from pylon._internal.common.exceptions import PylonRequestException
 from pylon._internal.common.responses import SetWeightsResponse
@@ -18,8 +18,7 @@ from pylon.service.main import app
         pytest.param(4, id="four_attempts"),
     ),
 )
-@pytest.mark.asyncio
-async def test_async_config_retries_success(service_mock, test_url, attempts):
+def test_sync_config_retries_success(service_mock, test_url, attempts):
     """
     Test that client retries the specified number of times before succeeding.
     """
@@ -41,21 +40,20 @@ async def test_async_config_retries_success(service_mock, test_url, attempts):
             ),
         ]
     )
-    async with AsyncPylonClient(
-        AsyncConfig(
+    with PylonClient(
+        Config(
             address=test_url,
             identity_name=IdentityName("sn1"),
             identity_token=PylonAuthToken("test_token"),
-            retry=ASYNC_DEFAULT_RETRIES.copy(stop=stop_after_attempt(attempts)),
+            retry=DEFAULT_RETRIES.copy(stop=stop_after_attempt(attempts)),
         )
-    ) as async_client:
-        response = await async_client.identity.put_weights(weights={Hotkey("h2"): Weight(0.1)})
+    ) as sync_client:
+        response = sync_client.identity.put_weights(weights={Hotkey("h2"): Weight(0.1)})
     assert response == SetWeightsResponse()
     assert route.call_count == attempts
 
 
-@pytest.mark.asyncio
-async def test_async_config_retries_error(service_mock, test_url):
+def test_sync_config_retries_error(service_mock, test_url):
     """
     Test that client raises PylonRequestException after all retries exhausted.
     """
@@ -66,15 +64,14 @@ async def test_async_config_retries_error(service_mock, test_url):
     service_mock.post(login_url).mock(return_value=Response(status_code=codes.OK, json=login_response_json))
     route = service_mock.put(weights_url)
     route.mock(side_effect=ConnectTimeout("Connection timed out"))
-    async with AsyncPylonClient(
-        AsyncConfig(
+    with PylonClient(
+        Config(
             address=test_url,
             identity_name=IdentityName("sn1"),
             identity_token=PylonAuthToken("test_token"),
-            # Check if reraise will be forced to True.
-            retry=ASYNC_DEFAULT_RETRIES.copy(stop=stop_after_attempt(2), reraise=False),
+            retry=DEFAULT_RETRIES.copy(stop=stop_after_attempt(2), reraise=False),
         )
-    ) as async_client:
+    ) as sync_client:
         with pytest.raises(PylonRequestException):
-            await async_client.identity.put_weights(weights={Hotkey("h2"): Weight(0.1)})
+            sync_client.identity.put_weights(weights={Hotkey("h2"): Weight(0.1)})
     assert route.call_count == 2

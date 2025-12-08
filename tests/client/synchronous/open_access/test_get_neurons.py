@@ -9,17 +9,17 @@ from pylon._internal.common.models import Block
 from pylon._internal.common.requests import GetNeuronsRequest
 from pylon._internal.common.responses import GetNeuronsResponse
 from pylon._internal.common.types import BlockHash, BlockNumber, NetUid
-from tests.client.asynchronous.base_test import OpenAccessEndpointTest
+from tests.client.synchronous.base_test import OpenAccessEndpointTest
 from tests.factories import NeuronFactory
 
 
-class TestOpenAccessGetNeurons(OpenAccessEndpointTest):
+class TestSyncOpenAccessGetNeurons(OpenAccessEndpointTest):
     endpoint = Endpoint.NEURONS
     route_params = {"netuid": 1, "block_number": 1000}
     http_method = HTTPMethod.GET
 
-    async def make_endpoint_call(self, client):
-        return await client.open_access.get_neurons(netuid=NetUid(1), block_number=BlockNumber(1000))
+    def make_endpoint_call(self, client):
+        return client.open_access.get_neurons(netuid=NetUid(1), block_number=BlockNumber(1000))
 
     @pytest.fixture
     def block(self) -> Block:
@@ -30,16 +30,15 @@ class TestOpenAccessGetNeurons(OpenAccessEndpointTest):
         neurons = neuron_factory.batch(2)
         return GetNeuronsResponse(block=block, neurons={neuron.hotkey: neuron for neuron in neurons})
 
-    @pytest.mark.asyncio
-    async def test_empty_neurons(self, pylon_client, service_mock, route_mock, block: Block):
+    def test_empty_neurons(self, pylon_client, service_mock, route_mock, block: Block):
         """
         Test getting neurons with no neurons returns empty dict.
         """
         expected_response = GetNeuronsResponse(block=block, neurons={})
         route_mock.mock(return_value=Response(status_code=codes.OK, json=expected_response.model_dump(mode="json")))
 
-        async with pylon_client:
-            response = await self.make_endpoint_call(pylon_client)
+        with pylon_client:
+            response = self.make_endpoint_call(pylon_client)
 
         assert response == expected_response
 
@@ -85,7 +84,7 @@ class TestOpenAccessGetNeurons(OpenAccessEndpointTest):
         ),
     ],
 )
-def test_get_neurons_request_validation_error(invalid_block_number, expected_errors):
+def test_sync_get_neurons_request_validation_error(invalid_block_number, expected_errors):
     """
     Test that GetNeuronsRequest validates block_number type correctly.
     """
