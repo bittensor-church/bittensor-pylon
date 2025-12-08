@@ -1,7 +1,7 @@
 from pydantic import BaseModel
 
-from pylon._internal.common.settings import settings
 from pylon._internal.common.types import BlockNumber, NetUid, Tempo
+from pylon.service.settings import settings
 
 
 class Epoch(BaseModel):

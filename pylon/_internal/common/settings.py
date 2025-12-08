@@ -50,6 +50,3 @@ class Settings(BaseSettings):
     debug: bool = False
 
     model_config = SettingsConfigDict(env_file=ENV_FILE, env_file_encoding="utf-8", env_prefix="PYLON_", extra="ignore")
-
-
-settings = Settings()  # type: ignore

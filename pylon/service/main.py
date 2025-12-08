@@ -3,13 +3,13 @@ from litestar.di import Provide
 from litestar.openapi.config import OpenAPIConfig
 from litestar.plugins.prometheus import PrometheusConfig
 
-from pylon._internal.common.settings import settings
 from pylon.service import dependencies
 from pylon.service.lifespans import bittensor_client_pool
 from pylon.service.prometheus_controller import AuthenticatedPrometheusController
 from pylon.service.routers import v1_router
 from pylon.service.schema import PylonSchemaPlugin
 from pylon.service.sentry_config import init_sentry
+from pylon.service.settings import settings
 
 
 def create_app() -> Litestar:

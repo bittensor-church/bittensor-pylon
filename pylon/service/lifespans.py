@@ -4,8 +4,8 @@ from contextlib import asynccontextmanager
 
 from litestar import Litestar
 
-from pylon._internal.common.settings import settings
 from pylon.service.bittensor.pool import BittensorClientPool
+from pylon.service.settings import settings
 
 logger = logging.getLogger(__name__)
 

@@ -4,8 +4,9 @@ from functools import cached_property
 from bittensor_wallet import Wallet
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
-from pylon._internal.common.settings import ENV_FILE, settings
+from pylon._internal.common.settings import ENV_FILE
 from pylon._internal.common.types import HotkeyName, IdentityName, NetUid, PylonAuthToken, WalletName
+from pylon.service.settings import settings
 
 IDENTITIES_ENV_FILE = os.environ.get("PYLON_ID_ENV_FILE", ENV_FILE)
 

@@ -4,7 +4,6 @@ from enum import StrEnum
 from typing import ClassVar, Self
 
 from pylon._internal.common.models import Block, CommitReveal
-from pylon._internal.common.settings import settings
 from pylon._internal.common.types import Hotkey, NetUid, Weight
 from pylon.service.bittensor.client import AbstractBittensorClient
 from pylon.service.metrics import (
@@ -15,6 +14,7 @@ from pylon.service.metrics import (
     apply_weights_job_duration,
     track_operation,
 )
+from pylon.service.settings import settings
 from pylon.service.utils import get_epoch_containing_block
 
 logger = logging.getLogger(__name__)

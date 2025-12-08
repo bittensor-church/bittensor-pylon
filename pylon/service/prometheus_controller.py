@@ -13,7 +13,7 @@ from litestar.exceptions import PermissionDeniedException
 from litestar.handlers import BaseRouteHandler
 from litestar.plugins.prometheus.controller import PrometheusController
 
-from pylon._internal.common.settings import settings
+from pylon.service.settings import settings
 
 logger = logging.getLogger(__name__)
 

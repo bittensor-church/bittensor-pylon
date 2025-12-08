@@ -6,7 +6,7 @@ import docker
 import httpx
 from docker.models.containers import Container
 
-from pylon._internal.common.settings import settings
+from pylon._internal.common.settings import Settings
 
 logger = logging.getLogger(__name__)
 
@@ -18,6 +18,7 @@ class PylonDockerManager:
         self.port = port
         self.container: Container | None = None
         self._docker_client = None
+        self.settings = Settings()  # type: ignore
 
     @property
     def docker_client(self):
@@ -31,10 +32,10 @@ class PylonDockerManager:
         try:
             self.container = await asyncio.to_thread(
                 self.docker_client.containers.run,
-                settings.docker_image_name,
+                self.settings.docker_image_name,
                 detach=True,
                 ports={"8000/tcp": self.port},
-                environment={f"PYLON_{key.upper()}": value for key, value in settings.model_dump().items()},
+                environment={f"PYLON_{key.upper()}": value for key, value in self.settings.model_dump().items()},
             )
             await self._wait_for_service()
             logger.info(f"Pylon container {self.container.short_id} started.")

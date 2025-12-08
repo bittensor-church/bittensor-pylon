@@ -110,5 +110,6 @@ documentation = "https://github.com/backend-developers-ltd/bittensor-pylon#readm
 path = "pylon/__init__.py"
 
 [tool.hatch.build.targets.wheel]
-packages = ["pylon._internal", "pylon.v1"]
+include = ["pylon/"]
+exclude = ["pylon/service/"]
 
