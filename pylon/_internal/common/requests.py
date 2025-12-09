@@ -30,7 +30,7 @@ class PylonRequest(BaseModel, typing.Generic[PylonResponseT]):
     """
 
     version: typing.ClassVar[ApiVersion]
-    response_cls: typing.ClassVar[typing.Any]
+    response_cls: typing.ClassVar[type[PylonResponseT]]  # type: ignore[reportGeneralTypeIssues]
 
 
 # Request classes used to log in into Pylon
@@ -51,7 +51,7 @@ class IdentityLoginRequest(LoginBody, PylonRequest[IdentityLoginResponse]):
 # Request classes for endpoints that require authentication either by open access or identity
 
 
-class AuthenticatedPylonRequest(PylonRequest[PylonResponseT]):
+class AuthenticatedPylonRequest(PylonRequest[PylonResponseT], typing.Generic[PylonResponseT]):
     """
     Request that requires the authentication, either by open access or identity.
     """
@@ -84,7 +84,7 @@ class GetLatestNeuronsRequest(AuthenticatedPylonRequest[GetNeuronsResponse]):
 # Request classes that require identity authentication.
 
 
-class IdentityPylonRequest(AuthenticatedPylonRequest[PylonResponseT]):
+class IdentityPylonRequest(AuthenticatedPylonRequest[PylonResponseT], typing.Generic[PylonResponseT]):
     """
     Request that requires authentication via identity.
     """

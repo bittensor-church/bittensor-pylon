@@ -14,7 +14,8 @@ class OpenAccessAsyncApi(AbstractOpenAccessAsyncApi[OpenAccessLoginResponse]):
     async def _login(self) -> OpenAccessLoginResponse:
         if self._communicator.config.open_access_token is None:
             raise PylonMisconfigured("Can not use open access api - no open access token provided in config.")
-        # TODO: When authentication is implemented, make a real request to obtain the session cookie.
+        # TODO: As part of BACT-168, when authentication is implemented,
+        #  make a real request to obtain the session cookie.
         return OpenAccessLoginResponse()
 
     async def _get_neurons_request(self, netuid: NetUid, block_number: BlockNumber) -> GetNeuronsRequest:
