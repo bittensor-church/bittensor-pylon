@@ -82,8 +82,49 @@ class AbstractAsyncApi(Generic[LoginResponseT], ABC):
 
 class AbstractOpenAccessAsyncApi(AbstractAsyncApi[LoginResponseT], ABC):
     """
-    Interface of the open access API.
+    Open access API for querying Bittensor subnet data via Pylon service without identity authentication.
+
+    This API provides read-only access to the chain data across any subnet.
+    Requests require an open access token configured in the client.
+    The API handles authentication to Pylon service automatically and caches credentials for subsequent requests.
+
+    All methods in this API may raise the following exceptions:
+        PylonClosed: When the api method is called and the communicator is closed.
+        PylonRequestException: When a network or connection error occurs and all retires are exhausted.
+            Requests are retried automatically according to the retry configuration.
+        PylonResponseException: When the server returns an error response.
+        PylonMisconfigured: When the open access token is not configured.
     """
+
+    # Public API
+
+    async def get_neurons(self, netuid: NetUid, block_number: BlockNumber) -> GetNeuronsResponse:
+        """
+        Retrieves neurons for a specific subnet at a given block number.
+
+        Args:
+            netuid: The unique identifier of the subnet.
+            block_number: The blockchain block number to query neurons at.
+
+        Returns:
+            GetNeuronsResponse: containing the block information and a dictionary mapping hotkeys to Neuron objects.
+        """
+        return await self._send_authenticated_request(partial(self._get_neurons_request, netuid, block_number))
+
+    async def get_latest_neurons(self, netuid: NetUid) -> GetNeuronsResponse:
+        """
+        Retrieves neurons for a specific subnet at the latest available block.
+
+        Args:
+            netuid: The unique identifier of the subnet.
+
+        Returns:
+            GetNeuronsResponse: containing the latest block information and a dictionary mapping hotkeys to
+            Neuron objects.
+        """
+        return await self._send_authenticated_request(partial(self._get_latest_neurons_request, netuid))
+
+    # Private API
 
     @abstractmethod
     async def _get_neurons_request(self, netuid: NetUid, block_number: BlockNumber) -> GetNeuronsRequest: ...
@@ -91,19 +132,68 @@ class AbstractOpenAccessAsyncApi(AbstractAsyncApi[LoginResponseT], ABC):
     @abstractmethod
     async def _get_latest_neurons_request(self, netuid: NetUid) -> GetLatestNeuronsRequest: ...
 
-    # Public API
-
-    async def get_neurons(self, netuid: NetUid, block_number: BlockNumber) -> GetNeuronsResponse:
-        return await self._send_authenticated_request(partial(self._get_neurons_request, netuid, block_number))
-
-    async def get_latest_neurons(self, netuid: NetUid) -> GetNeuronsResponse:
-        return await self._send_authenticated_request(partial(self._get_latest_neurons_request, netuid))
-
 
 class AbstractIdentityAsyncApi(AbstractAsyncApi[LoginResponseT], ABC):
     """
-    Interface of the identity API.
+    Identity-authenticated API for subnet-specific operations.
+
+    This API provides access to read and write operations for a specific subnet associated with
+    the configured identity. The subnet is determined automatically from the identity credentials.
+    Authentication is performed on the first request and cached for subsequent requests.
+    The API automatically re-authenticates when sessions expire or authentication errors occur.
+
+    All methods in this API may raise the following exceptions:
+        PylonClosed: When the api method is called and the communicator is closed.
+        PylonRequestException: When a network or connection error occurs and all retires are exhausted.
+            Requests are retried automatically according to the retry configuration.
+        PylonResponseException: When the server returns an error response.
+        PylonUnauthorized: When authentication fails by the reason of wrong credentials.
+        PylonMisconfigured: When required identity credentials (identity_name and identity_token)
+            are not configured.
     """
+
+    # Public API
+
+    async def get_neurons(self, block_number: BlockNumber) -> GetNeuronsResponse:
+        """
+        Retrieves neurons for the authenticated identity's subnet at a given block number.
+
+        Args:
+            block_number: The blockchain block number to query neurons at.
+
+        Returns:
+            GetNeuronsResponse containing the block information and a dictionary mapping hotkeys to Neuron objects.
+        """
+        return await self._send_authenticated_request(partial(self._get_neurons_request, block_number))
+
+    async def get_latest_neurons(self) -> GetNeuronsResponse:
+        """
+        Retrieves neurons for the authenticated identity's subnet at the latest available block.
+
+        Returns:
+            GetNeuronsResponse containing the latest block information and a dictionary mapping hotkeys to
+            Neuron objects.
+        """
+        return await self._send_authenticated_request(self._get_latest_neurons_request)
+
+    async def put_weights(self, weights: dict[Hotkey, Weight]) -> SetWeightsResponse:
+        """
+        Submits weights for neurons in the authenticated identity's subnet.
+
+        Weights are applied asynchronously by the Pylon service. The method returns immediately after
+        scheduling the weight update, without waiting for blockchain confirmation. The service handles
+        commit-reveal or direct weight setting based on subnet hyperparameters.
+
+        Args:
+            weights: Dictionary mapping neuron hotkeys to their respective weight values. Weights should
+                be normalized (sum to 1.0) and only include neurons that should receive non-zero weights.
+
+        Returns:
+            SetWeightsResponse indicating the weights update has been scheduled.
+        """
+        return await self._send_authenticated_request(partial(self._put_weights_request, weights))
+
+    # Private API
 
     @abstractmethod
     async def _get_neurons_request(self, block_number: BlockNumber) -> GetNeuronsRequest: ...
@@ -113,14 +203,3 @@ class AbstractIdentityAsyncApi(AbstractAsyncApi[LoginResponseT], ABC):
 
     @abstractmethod
     async def _put_weights_request(self, weights: dict[Hotkey, Weight]) -> SetWeightsRequest: ...
-
-    # Public API
-
-    async def get_neurons(self, block_number: BlockNumber) -> GetNeuronsResponse:
-        return await self._send_authenticated_request(partial(self._get_neurons_request, block_number))
-
-    async def get_latest_neurons(self) -> GetNeuronsResponse:
-        return await self._send_authenticated_request(self._get_latest_neurons_request)
-
-    async def put_weights(self, weights: dict[Hotkey, Weight]) -> SetWeightsResponse:
-        return await self._send_authenticated_request(partial(self._put_weights_request, weights))
