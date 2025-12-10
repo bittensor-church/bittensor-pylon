@@ -34,13 +34,11 @@ class AsyncHttpCommunicator(AbstractCommunicator[Request, Response]):
         super().__init__(config)
         self._raw_client: AsyncClient | None = None
 
-    async def open(self) -> None:
-        await super().open()
+    async def _open(self) -> None:
         logger.debug(f"Opening communicator for the server {self.config.address}")
         self._raw_client = AsyncClient(base_url=self.config.address)
 
-    async def close(self) -> None:
-        await super().close()
+    async def _close(self) -> None:
         logger.debug(f"Closing communicator for the server {self.config.address}")
         if self._raw_client is not None:
             await self._raw_client.aclose()

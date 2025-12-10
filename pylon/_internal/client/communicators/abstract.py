@@ -33,9 +33,7 @@ class AbstractCommunicator(Generic[RawRequestT, RawResponseT], ABC):
 
     async def open(self) -> None:
         """
-        Prepares the communicator to work. Sets all the fields necessary for the client to work,
-        for example, an http client.
-        It must set the `is_open` attribute to True.
+        Sets the `is_open` attribute to True and calls the open handler specific to the subclass.
 
         Raises:
             ValueError: When trying to open the already opened communicator.
@@ -43,10 +41,11 @@ class AbstractCommunicator(Generic[RawRequestT, RawResponseT], ABC):
         if self.is_open:
             raise ValueError("Communicator is already open.")
         self.is_open = True
+        await self._open()
 
     async def close(self) -> None:
         """
-        Cleans up connections etc. It must set the `is_open` attribute to False.
+        Sets the `is_open` attribute to False and calls the close handler specific to the subclass.
 
         Raises:
             ValueError: When trying to close the already closed communicator.
@@ -54,6 +53,44 @@ class AbstractCommunicator(Generic[RawRequestT, RawResponseT], ABC):
         if not self.is_open:
             raise ValueError("Communicator is already closed.")
         self.is_open = False
+        await self._close()
+
+    async def request(self, request: PylonRequest[PylonResponseT]) -> PylonResponseT:
+        """
+        Entrypoint to the Pylon API.
+
+        Makes a request to the Pylon API based on a passed PylonRequest.
+        Retries on failures based on a retry config.
+        Returns a response translated into a PylonResponse instance.
+
+        Raises:
+            PylonClosed: When the communicator is closed while calling this method.
+            PylonRequestException: If pylon client fails to communicate with the Pylon server after all retry attempts.
+            PylonResponseException: If pylon client receives error response from the Pylon server.
+        """
+        if not self.is_open:
+            raise PylonClosed("The communicator is closed.")
+        raw_request = await self._translate_request(request)
+        raw_response: RawResponseT | None = None
+        async for attempt in self.config.retry.copy():
+            with attempt:
+                raw_response = await self._request(raw_request)
+
+        assert raw_response is not None
+        return await self._translate_response(request, raw_response)
+
+    @abstractmethod
+    async def _open(self) -> None:
+        """
+        Prepares the communicator to work. Sets all the fields necessary for the client to work,
+        for example, an http client.
+        """
+
+    @abstractmethod
+    async def _close(self) -> None:
+        """
+        Performs any cleanup necessary on the communicator closeup. Cleans up connections etc...
+        """
 
     @abstractmethod
     async def _request(self, request: RawRequestT) -> RawResponseT:
@@ -80,27 +117,3 @@ class AbstractCommunicator(Generic[RawRequestT, RawResponseT], ABC):
         Raises:
             PylonResponseError: In case the response is an error response, this exception may be raised.
         """
-
-    async def request(self, request: PylonRequest[PylonResponseT]) -> PylonResponseT:
-        """
-        Entrypoint to the Pylon API.
-
-        Makes a request to the Pylon API based on a passed PylonRequest.
-        Retries on failures based on a retry config.
-        Returns a response translated into a PylonResponse instance.
-
-        Raises:
-            PylonClosed: When the communicator is closed while calling this method.
-            PylonRequestException: If pylon client fails to communicate with the Pylon server after all retry attempts.
-            PylonResponseException: If pylon client receives error response from the Pylon server.
-        """
-        if not self.is_open:
-            raise PylonClosed("The communicator is closed.")
-        raw_request = await self._translate_request(request)
-        raw_response: RawResponseT | None = None
-        async for attempt in self.config.retry.copy():
-            with attempt:
-                raw_response = await self._request(raw_request)
-
-        assert raw_response is not None
-        return await self._translate_response(request, raw_response)
