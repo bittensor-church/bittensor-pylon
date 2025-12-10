@@ -3,7 +3,7 @@ import typing
 from pydantic import BaseModel, field_validator
 
 from pylon._internal.common.apiver import ApiVersion
-from pylon._internal.common.bodies import LoginBody, SetWeightsBody
+from pylon._internal.common.bodies import LoginBody, SetCommitmentBody, SetWeightsBody
 from pylon._internal.common.models import CertificateAlgorithm
 from pylon._internal.common.responses import (
     GetCommitmentResponse,
@@ -13,9 +13,10 @@ from pylon._internal.common.responses import (
     LoginResponse,
     OpenAccessLoginResponse,
     PylonResponse,
+    SetCommitmentResponse,
     SetWeightsResponse,
 )
-from pylon._internal.common.types import BlockNumber, IdentityName, NetUid, CommitmentDataBytes, Hotkey, Weight
+from pylon._internal.common.types import BlockNumber, Hotkey, IdentityName, NetUid
 
 PylonResponseT = typing.TypeVar("PylonResponseT", bound=PylonResponse, covariant=True)
 LoginResponseT = typing.TypeVar("LoginResponseT", bound=LoginResponse, covariant=True)
@@ -83,6 +84,26 @@ class GetLatestNeuronsRequest(AuthenticatedPylonRequest[GetNeuronsResponse]):
     response_cls = GetNeuronsResponse
 
 
+class GetCommitmentRequest(AuthenticatedPylonRequest[GetCommitmentResponse]):
+    """
+    Class used to fetch a commitment for a specific hotkey by the Pylon client.
+    """
+
+    version = ApiVersion.V1
+    response_cls = GetCommitmentResponse
+
+    hotkey: Hotkey
+
+
+class GetCommitmentsRequest(AuthenticatedPylonRequest[GetCommitmentsResponse]):
+    """
+    Class used to fetch all commitments for the subnet by the Pylon client.
+    """
+
+    version = ApiVersion.V1
+    response_cls = GetCommitmentsResponse
+
+
 # Request classes that require identity authentication.
 
 
@@ -103,6 +124,15 @@ class SetWeightsRequest(SetWeightsBody, IdentityPylonRequest[SetWeightsResponse]
     response_cls = SetWeightsResponse
 
 
+class SetCommitmentRequest(SetCommitmentBody, IdentityPylonRequest[SetCommitmentResponse]):
+    """
+    Class used to set a commitment (model metadata) on chain by the Pylon client.
+    """
+
+    version = ApiVersion.V1
+    response_cls = SetCommitmentResponse
+
+
 class GenerateCertificateKeypairRequest(PylonRequest):
     algorithm: CertificateAlgorithm = CertificateAlgorithm.ED25519
 
@@ -112,50 +142,3 @@ class GenerateCertificateKeypairRequest(PylonRequest):
         if v != CertificateAlgorithm.ED25519:
             raise ValueError("Currently, only algorithm equals 1 is supported which is EdDSA using Ed25519 curve")
         return v
-
-
-class SetCommitmentRequest(PylonRequest):
-    """
-    Class used to set a commitment (model metadata) on chain by the Pylon client.
-    """
-
-    version = ApiVersion.V1
-    response_cls = SetCommitmentResponse
-
-    commitment: CommitmentDataBytes
-
-    @field_validator("commitment", mode="before")
-    @classmethod
-    def validate_commitment(cls, v):
-        if isinstance(v, str):
-            # Allow hex string input, convert to bytes
-            if v.startswith("0x"):
-                v = v[2:]
-            try:
-                return bytes.fromhex(v)
-            except ValueError as e:
-                # Give more user-friendly message to the api.
-                raise ValueError("passed commitment data is not a valid hex string.") from e
-        if not isinstance(v, bytes):
-            raise ValueError("commitment must be bytes or hex string")
-        return v
-
-
-class GetCommitmentRequest(PylonRequest):
-    """
-    Class used to fetch a commitment for a specific hotkey by the Pylon client.
-    """
-
-    version = ApiVersion.V1
-    response_cls = GetCommitmentResponse
-
-    hotkey: Hotkey
-
-
-class GetCommitmentsRequest(PylonRequest):
-    """
-    Class used to fetch all commitments for the subnet by the Pylon client.
-    """
-
-    version = ApiVersion.V1
-    response_cls = GetCommitmentsResponse

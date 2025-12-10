@@ -1,7 +1,7 @@
 from pydantic import BaseModel
 
 from pylon._internal.common.models import SubnetNeurons
-from pylon._internal.common.types import IdentityName, NetUid, CommitmentDataBytes, Hotkey
+from pylon._internal.common.types import CommitmentDataBytes, Hotkey, IdentityName, NetUid
 
 
 class PylonResponse(BaseModel):

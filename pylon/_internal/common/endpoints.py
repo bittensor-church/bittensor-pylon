@@ -31,9 +31,9 @@ class Endpoint(EndpointMember, Enum):
     LATEST_NEURONS = (HTTPMethod.GET, "/neurons/latest", "latest_neurons")
     SUBNET_WEIGHTS = (HTTPMethod.PUT, "/weights", "subnet_weights")
     IDENTITY_LOGIN = (HTTPMethod.POST, "/login/identity/{identity_name:str}", "identity_login")
-    COMMITMENTS = "/commitments"
-    LATEST_COMMITMENTS = "/block/latest/commitments"
-    LATEST_COMMITMENTS_HOTKEY = "/block/latest/commitments/{hotkey:str}"
+    COMMITMENTS = (HTTPMethod.POST, "/commitments", "commitments")
+    LATEST_COMMITMENTS = (HTTPMethod.GET, "/block/latest/commitments", "latest_commitments")
+    LATEST_COMMITMENTS_HOTKEY = (HTTPMethod.GET, "/block/latest/commitments/{hotkey:str}", "latest_commitments_hotkey")
 
     def format_url(self, *args, **kwargs) -> str:
         normalized = re.sub(r":.+?}", "}", self.url)

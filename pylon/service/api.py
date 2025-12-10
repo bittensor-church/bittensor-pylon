@@ -5,7 +5,7 @@ from litestar.di import Provide
 from litestar.exceptions import NotFoundException
 from litestar.handlers.http_handlers import decorators as http_decorators
 
-from pylon._internal.common.bodies import LoginBody, SetWeightsBody
+from pylon._internal.common.bodies import LoginBody, SetCommitmentBody, SetWeightsBody
 from pylon._internal.common.endpoints import Endpoint
 from pylon._internal.common.models import Commitment, Hotkey, NeuronCertificate, SubnetCommitments, SubnetNeurons
 from pylon._internal.common.requests import (
@@ -97,7 +97,7 @@ class OpenAccessController(Controller):
 
         return certificate
 
-    @get(Endpoint.LATEST_COMMITMENTS)
+    @handler(Endpoint.LATEST_COMMITMENTS)
     async def get_commitments_endpoint(self, bt_client: AbstractBittensorClient, netuid: NetUid) -> SubnetCommitments:
         """
         Get all commitments for the subnet.
@@ -105,7 +105,7 @@ class OpenAccessController(Controller):
         block = await bt_client.get_latest_block()
         return await bt_client.get_commitments(netuid, block)
 
-    @get(Endpoint.LATEST_COMMITMENTS_HOTKEY)
+    @handler(Endpoint.LATEST_COMMITMENTS_HOTKEY)
     async def get_commitment_endpoint(
         self, hotkey: Hotkey, bt_client: AbstractBittensorClient, netuid: NetUid
     ) -> Commitment:
@@ -143,9 +143,9 @@ class IdentityController(OpenAccessController):
             status_code=status_codes.HTTP_200_OK,
         )
 
-    @post(Endpoint.COMMITMENTS)
+    @handler(Endpoint.COMMITMENTS)
     async def set_commitment_endpoint(
-        self, bt_client: AbstractBittensorClient, data: SetCommitmentRequest, netuid: NetUid
+        self, bt_client: AbstractBittensorClient, data: SetCommitmentBody, netuid: NetUid
     ) -> Response:
         """
         Set a commitment (model metadata) on chain for the wallet's hotkey.
