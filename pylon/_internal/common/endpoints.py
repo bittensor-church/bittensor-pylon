@@ -1,5 +1,6 @@
 import re
 from enum import Enum, unique
+from http import HTTPMethod
 from typing import NamedTuple
 
 from pylon._internal.common.apiver import ApiVersion
@@ -7,6 +8,7 @@ from pylon._internal.common.types import IdentityName, NetUid
 
 
 class EndpointMember(NamedTuple):
+    method: HTTPMethod
     url: str
     reverse: str
 
@@ -21,14 +23,14 @@ class Endpoint(EndpointMember, Enum):
     they must have separate enum members to ensure unique reverse names in Litestar.
     """
 
-    CERTIFICATES = ("/certificates", "certificates")
-    CERTIFICATES_SELF = ("/certificates/self", "certificates_self")
-    CERTIFICATES_GENERATE = ("/certificates/self", "certificates_generate")
-    CERTIFICATES_HOTKEY = ("/certificates/{hotkey:str}", "certificates_hotkey")
-    NEURONS = ("/neurons/{block_number:int}", "neurons")
-    LATEST_NEURONS = ("/neurons/latest", "latest_neurons")
-    SUBNET_WEIGHTS = ("/weights", "subnet_weights")
-    IDENTITY_LOGIN = ("/login/identity/{identity_name:str}", "identity_login")
+    CERTIFICATES = (HTTPMethod.GET, "/certificates", "certificates")
+    CERTIFICATES_SELF = (HTTPMethod.GET, "/certificates/self", "certificates_self")
+    CERTIFICATES_GENERATE = (HTTPMethod.POST, "/certificates/self", "certificates_generate")
+    CERTIFICATES_HOTKEY = (HTTPMethod.GET, "/certificates/{hotkey:str}", "certificates_hotkey")
+    NEURONS = (HTTPMethod.GET, "/neurons/{block_number:int}", "neurons")
+    LATEST_NEURONS = (HTTPMethod.GET, "/neurons/latest", "latest_neurons")
+    SUBNET_WEIGHTS = (HTTPMethod.PUT, "/weights", "subnet_weights")
+    IDENTITY_LOGIN = (HTTPMethod.POST, "/login/identity/{identity_name:str}", "identity_login")
 
     def format_url(self, *args, **kwargs) -> str:
         normalized = re.sub(r":.+?}", "}", self.url)

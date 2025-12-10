@@ -1,6 +1,5 @@
 import logging
 from functools import singledispatchmethod
-from http import HTTPMethod
 from typing import TypeVar
 
 from httpx import AsyncClient, HTTPStatusError, Request, RequestError, Response
@@ -63,7 +62,7 @@ class AsyncHttpCommunicator(AbstractCommunicator[Request, Response]):
         assert self._raw_client is not None
         url = self._build_url(Endpoint.SUBNET_WEIGHTS, request)
         return self._raw_client.build_request(
-            method=HTTPMethod.PUT,
+            method=Endpoint.SUBNET_WEIGHTS.method,
             url=url,
             json=request.model_dump(include={"weights"}),
         )
@@ -72,19 +71,19 @@ class AsyncHttpCommunicator(AbstractCommunicator[Request, Response]):
     async def _(self, request: GetNeuronsRequest) -> Request:
         assert self._raw_client is not None
         url = self._build_url(Endpoint.NEURONS, request)
-        return self._raw_client.build_request(method=HTTPMethod.GET, url=url)
+        return self._raw_client.build_request(method=Endpoint.NEURONS.method, url=url)
 
     @_translate_request.register
     async def _(self, request: GetLatestNeuronsRequest) -> Request:
         assert self._raw_client is not None
         url = self._build_url(Endpoint.LATEST_NEURONS, request)
-        return self._raw_client.build_request(method=HTTPMethod.GET, url=url)
+        return self._raw_client.build_request(method=Endpoint.LATEST_NEURONS.method, url=url)
 
     @_translate_request.register
     async def _(self, request: IdentityLoginRequest) -> Request:
         assert self._raw_client is not None
         url = self._build_url(Endpoint.IDENTITY_LOGIN, request)
-        return self._raw_client.build_request(method=HTTPMethod.POST, url=url, json=request.model_dump())
+        return self._raw_client.build_request(method=Endpoint.IDENTITY_LOGIN.method, url=url, json=request.model_dump())
 
     async def _translate_response(
         self, pylon_request: PylonRequest[PylonResponseT], response: Response
