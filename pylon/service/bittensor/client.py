@@ -7,6 +7,7 @@ from enum import StrEnum
 from typing import Any, Generic, TypeVar
 
 from bittensor_wallet import Wallet
+from turbobt.block import Block as TurboBtBlock
 from turbobt.client import Bittensor
 from turbobt.neuron import Neuron as TurboBtNeuron
 from turbobt.subnet import (
@@ -247,8 +248,8 @@ class TurboBtClient(AbstractBittensorClient):
         assert self._raw_client is not None, (
             "The client is not open, please use the client as a context manager or call the open() method."
         )
-        block = await self._raw_client.block(block.number).get()
-        timestamp = await block.get_timestamp()
+        tubobt_block: TurboBtBlock = await self._raw_client.block(block.number).get()
+        timestamp = await tubobt_block.get_timestamp()
         return Timestamp(int(timestamp.timestamp()))
 
     @staticmethod
