@@ -5,6 +5,8 @@ from litestar.datastructures import State
 from litestar.exceptions import NotFoundException
 
 from pylon._internal.common.types import IdentityName
+from pylon.service.bittensor.cache.recent import RecentDataConfig, RecentDataProvider
+from pylon.service.bittensor.cache.settings import settings
 from pylon.service.bittensor.client import AbstractBittensorClient
 from pylon.service.bittensor.pool import BittensorClientPool
 from pylon.service.identities import Identity, identities
@@ -38,3 +40,18 @@ async def bt_client_identity_dep(
 async def bt_client_open_access_dep(bt_client_pool: BittensorClientPool[BtClient]) -> AsyncGenerator[BtClient]:
     async with bt_client_pool.acquire(wallet=None) as client:
         yield client
+
+
+async def recent_data_provider_dep(state: State) -> RecentDataProvider:
+    config = RecentDataConfig(
+        recent_neurons_soft_limit=settings.recent_neurons_soft_limit,
+        recent_neurons_hard_limit=settings.recent_neurons_hard_limit,
+    )
+    return RecentDataProvider(config, state.cache_manager)
+
+
+# 'identity' dep is needed to make 'identity_name' required in the URL. 'recent_data_provider_dep'
+# doesn't have a use for identity for now. But it might be useful in the future.
+# noinspection PyUnusedLocal
+async def recent_data_provider_identity_dep(state: State, identity: Identity) -> RecentDataProvider:
+    return await recent_data_provider_dep(state)

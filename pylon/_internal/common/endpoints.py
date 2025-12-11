@@ -29,6 +29,7 @@ class Endpoint(EndpointMember, Enum):
     CERTIFICATES_HOTKEY = (HTTPMethod.GET, "/certificates/{hotkey:str}", "certificates_hotkey")
     NEURONS = (HTTPMethod.GET, "/neurons/{block_number:int}", "neurons")
     LATEST_NEURONS = (HTTPMethod.GET, "/neurons/latest", "latest_neurons")
+    RECENT_NEURONS = (HTTPMethod.GET, "/neurons/recent", "recent_neurons")
     SUBNET_WEIGHTS = (HTTPMethod.PUT, "/weights", "subnet_weights")
     IDENTITY_LOGIN = (HTTPMethod.POST, "/login/identity/{identity_name:str}", "identity_login")
 
