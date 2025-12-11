@@ -6,9 +6,8 @@ from httpx import Response, codes
 from pydantic import ValidationError
 
 from pylon._internal.common.endpoints import Endpoint
-from pylon._internal.common.requests import SetCommitmentRequest
 from pylon._internal.common.responses import SetCommitmentResponse
-from pylon._internal.common.types import CommitmentDataBytes, CommitmentDataHex, IdentityName, NetUid
+from pylon._internal.common.types import CommitmentDataBytes, CommitmentDataHex
 from tests.client.asynchronous.base_test import IdentityEndpointTest
 
 

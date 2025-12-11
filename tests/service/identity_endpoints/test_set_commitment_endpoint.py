@@ -126,6 +126,13 @@ async def test_set_commitment_identity_retries_on_failure(
         pytest.param("not_hex", "Value error, passed commitment data is not a valid hex string.", id="invalid_hex"),
         pytest.param(123, "Value error, commitment must be bytes or hex string", id="invalid_type_int"),
         pytest.param([], "Value error, commitment must be bytes or hex string", id="invalid_type_list"),
+        pytest.param(
+            "0xGGHH", "Value error, passed commitment data is not a valid hex string.", id="invalid_hex_chars"
+        ),
+        pytest.param("0xabc", "Value error, passed commitment data is not a valid hex string.", id="odd_length_hex"),
+        pytest.param(None, "Value error, commitment must be bytes or hex string", id="none_value"),
+        pytest.param("", "Data should have at least 1 byte", id="empty_hex_string"),
+        pytest.param("0x", "Data should have at least 1 byte", id="empty_0x_prefix"),
     ],
 )
 async def test_set_commitment_identity_invalid_data(test_client: AsyncTestClient, invalid_data, expected_message):

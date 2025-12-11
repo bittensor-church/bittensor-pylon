@@ -6,9 +6,8 @@ from httpx import Response, codes
 from pydantic import ValidationError
 
 from pylon._internal.common.endpoints import Endpoint
-from pylon._internal.common.requests import SetCommitmentRequest
 from pylon._internal.common.responses import SetCommitmentResponse
-from pylon._internal.common.types import CommitmentDataBytes, CommitmentDataHex, IdentityName, NetUid
+from pylon._internal.common.types import CommitmentDataBytes, CommitmentDataHex
 from tests.client.synchronous.base_test import IdentityEndpointTest
 
 
@@ -52,7 +51,7 @@ class TestSyncIdentitySetCommitment(IdentityEndpointTest):
         assert json.loads(route_mock.calls.last.request.content) == {"commitment": "aabbccdd"}
 
     @pytest.mark.parametrize(
-    "invalid_commitment,expected_errors",
+        "invalid_commitment,expected_errors",
         [
             pytest.param(
                 "not_hex",
