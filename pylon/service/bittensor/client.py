@@ -7,6 +7,7 @@ from enum import StrEnum
 from typing import Any, Generic, TypeVar
 
 from bittensor_wallet import Wallet
+from turbobt.block import Block as TurboBtBlock
 from turbobt.client import Bittensor
 from turbobt.neuron import Neuron as TurboBtNeuron
 from turbobt.subnet import (
@@ -124,6 +125,12 @@ class AbstractBittensorClient(ABC):
         """
 
     @abstractmethod
+    async def get_block_timestamp(self, block: Block) -> Timestamp:
+        """
+        Returns the timestamp of a block in seconds.
+        """
+
+    @abstractmethod
     async def get_neurons_list(self, netuid: NetUid, block: Block) -> list[Neuron]:
         """
         Fetches all neurons at the given block.
@@ -236,6 +243,14 @@ class TurboBtClient(AbstractBittensorClient):
         block = await self.get_block(BlockNumber(LATEST_BLOCK_MARK))
         assert block is not None, "Latest block should always exist"
         return block
+
+    async def get_block_timestamp(self, block: Block) -> Timestamp:
+        assert self._raw_client is not None, (
+            "The client is not open, please use the client as a context manager or call the open() method."
+        )
+        tubobt_block: TurboBtBlock = await self._raw_client.block(block.number).get()
+        timestamp = await tubobt_block.get_timestamp()
+        return Timestamp(int(timestamp.timestamp()))
 
     @staticmethod
     async def _translate_neuron(neuron: TurboBtNeuron, stakes: Stakes) -> Neuron:
@@ -553,6 +568,9 @@ class BittensorClient(Generic[SubClient], AbstractBittensorClient):
 
     async def get_subnet_state(self, netuid: NetUid, block: Block) -> SubnetState:
         return await self._delegate(self.subclient_cls.get_subnet_state, netuid=netuid, block=block)
+
+    async def get_block_timestamp(self, block: Block) -> Timestamp:
+        return await self._delegate(self.subclient_cls.get_block_timestamp, block=block)
 
     async def _delegate(
         self, operation: Callable[..., Awaitable[DelegateReturn]], *args, block: Block | None = None, **kwargs
