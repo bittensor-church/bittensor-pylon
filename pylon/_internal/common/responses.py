@@ -1,6 +1,6 @@
 from pydantic import BaseModel
 
-from pylon._internal.common.models import SubnetNeurons
+from pylon._internal.common.models import Commitment, SubnetCommitments, SubnetNeurons
 from pylon._internal.common.types import IdentityName, NetUid
 
 
@@ -53,6 +53,30 @@ class SetWeightsResponse(PylonResponse):
 class GetNeuronsResponse(PylonResponse, SubnetNeurons):
     """
     Response class that is returned for the GetNeuronsRequest.
+    """
+
+    pass
+
+
+class SetCommitmentResponse(PylonResponse):
+    """
+    Response class that is returned for the SetCommitmentRequest.
+    """
+
+    pass
+
+
+class GetCommitmentResponse(PylonResponse, Commitment):
+    """
+    Response class that is returned for the GetCommitmentRequest.
+    """
+
+    pass
+
+
+class GetCommitmentsResponse(PylonResponse, SubnetCommitments):
+    """
+    Response class that is returned for the GetCommitmentsRequest.
     """
 
     pass

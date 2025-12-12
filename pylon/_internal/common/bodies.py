@@ -1,6 +1,6 @@
-from pydantic import BaseModel, field_validator
+from pydantic import BaseModel, field_serializer, field_validator
 
-from pylon._internal.common.types import Hotkey, PylonAuthToken, Weight
+from pylon._internal.common.types import CommitmentDataBytes, CommitmentDataHex, Hotkey, PylonAuthToken, Weight
 
 
 class PylonBody(BaseModel):
@@ -39,3 +39,28 @@ class SetWeightsBody(PylonBody):
                 raise ValueError(f"Invalid weight for hotkey '{hotkey}': '{weight}' must be a number")
 
         return v
+
+
+class SetCommitmentBody(PylonBody):
+    """
+    Class used to perform setting commitment via the API.
+    """
+
+    commitment: CommitmentDataBytes
+
+    @field_validator("commitment", mode="before")
+    @classmethod
+    def validate_commitment(cls, v):
+        if isinstance(v, str):
+            try:
+                return CommitmentDataBytes.fromhex(v)
+            except ValueError as e:
+                # Give more user-friendly message to the api.
+                raise ValueError("passed commitment data is not a valid hex string.") from e
+        if not isinstance(v, bytes):
+            raise ValueError("commitment must be bytes or hex string")
+        return v
+
+    @field_serializer("commitment")
+    def serialize_commitment(self, commitment: CommitmentDataBytes) -> CommitmentDataHex:
+        return commitment.hex()

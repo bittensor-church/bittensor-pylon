@@ -28,6 +28,7 @@ from turbobt import Bittensor
 from turbobt import BlockReference as TurboBtBlockReference
 from turbobt import Subnet as TurboBtSubnet
 from turbobt.neuron import NeuronReference as TurboBtNeuronReference
+from turbobt.subnet import SubnetCommitments as TurboBtSubnetCommitments
 from turbobt.subnet import SubnetNeurons as TurboBtSubnetNeurons
 from turbobt.subnet import SubnetWeights as TurboBtSubnetWeights
 
@@ -50,6 +51,7 @@ def subnet_spec(neuron_spec):
     # Manually add attributes with proper autospec
     subnet_mock.neurons = create_autospec(TurboBtSubnetNeurons, instance=True)
     subnet_mock.weights = create_autospec(TurboBtSubnetWeights, instance=True)
+    subnet_mock.commitments = create_autospec(TurboBtSubnetCommitments, instance=True)
     subnet_mock.neuron.return_value = neuron_spec
     return subnet_mock
 
