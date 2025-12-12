@@ -26,7 +26,7 @@ class TestAsyncIdentitySetCommitment(IdentityEndpointTest):
     @pytest.mark.asyncio
     async def test_success(self, pylon_client, service_mock, route_mock, success_response):
         await super().test_success(pylon_client, service_mock, route_mock, success_response)
-        assert json.loads(route_mock.calls.last.request.content) == {"commitment": "aabbccdd"}
+        assert json.loads(route_mock.calls.last.request.content) == {"commitment": "0xaabbccdd"}
 
     @pytest.mark.asyncio
     async def test_success_with_hex_string(self, pylon_client, service_mock, route_mock, success_response):
@@ -37,7 +37,7 @@ class TestAsyncIdentitySetCommitment(IdentityEndpointTest):
             response = await pylon_client.identity.set_commitment(commitment=CommitmentDataHex("0xAaBbCcDd"))
 
         assert response == success_response
-        assert json.loads(route_mock.calls.last.request.content) == {"commitment": "aabbccdd"}
+        assert json.loads(route_mock.calls.last.request.content) == {"commitment": "0xaabbccdd"}
 
     @pytest.mark.asyncio
     async def test_success_with_hex_without_0x_prefix(self, pylon_client, service_mock, route_mock, success_response):
@@ -51,7 +51,7 @@ class TestAsyncIdentitySetCommitment(IdentityEndpointTest):
             response = await pylon_client.identity.set_commitment(commitment=CommitmentDataHex("aabbccdd"))
 
         assert response == success_response
-        assert json.loads(route_mock.calls.last.request.content) == {"commitment": "aabbccdd"}
+        assert json.loads(route_mock.calls.last.request.content) == {"commitment": "0xaabbccdd"}
 
     @pytest.mark.asyncio
     @pytest.mark.parametrize(

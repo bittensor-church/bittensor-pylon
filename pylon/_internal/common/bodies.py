@@ -1,6 +1,6 @@
-from pydantic import BaseModel, Field, field_serializer, field_validator
+from pydantic import BaseModel, field_serializer, field_validator
 
-from pylon._internal.common.types import CommitmentDataBytes, Hotkey, PylonAuthToken, Weight
+from pylon._internal.common.types import CommitmentDataBytes, CommitmentDataHex, Hotkey, PylonAuthToken, Weight
 
 
 class PylonBody(BaseModel):
@@ -46,17 +46,14 @@ class SetCommitmentBody(PylonBody):
     Class used to perform setting commitment via the API.
     """
 
-    commitment: CommitmentDataBytes = Field(min_length=1)
+    commitment: CommitmentDataBytes
 
     @field_validator("commitment", mode="before")
     @classmethod
     def validate_commitment(cls, v):
         if isinstance(v, str):
-            # Allow hex string input, convert to bytes
-            if v.startswith("0x"):
-                v = v[2:]
             try:
-                return CommitmentDataBytes(bytes.fromhex(v))
+                return CommitmentDataBytes.fromhex(v)
             except ValueError as e:
                 # Give more user-friendly message to the api.
                 raise ValueError("passed commitment data is not a valid hex string.") from e
@@ -65,5 +62,5 @@ class SetCommitmentBody(PylonBody):
         return v
 
     @field_serializer("commitment")
-    def serialize_commitment(self, commitment: CommitmentDataBytes) -> str:
+    def serialize_commitment(self, commitment: CommitmentDataBytes) -> CommitmentDataHex:
         return commitment.hex()

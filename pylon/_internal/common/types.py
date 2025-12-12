@@ -44,5 +44,33 @@ WalletName = NewType("WalletName", str)
 HotkeyName = NewType("HotkeyName", str)
 PylonAuthToken = NewType("PylonAuthToken", str)
 IdentityName = NewType("IdentityName", str)
-CommitmentDataBytes = NewType("CommitmentDataBytes", bytes)
-CommitmentDataHex = NewType("CommitmentDataHex", str)
+
+
+class CommitmentDataHex(str):
+    def __new__(cls, value: str) -> "CommitmentDataHex":
+        if not value.startswith("0x"):
+            value = "0x" + value
+        return super().__new__(cls, value)
+
+    @classmethod
+    def __get_pydantic_core_schema__(cls, source_type, handler):
+        from pydantic_core import core_schema
+
+        return core_schema.no_info_after_validator_function(cls, handler(str))
+
+
+class CommitmentDataBytes(bytes):
+    def hex(self, *args, **kwargs) -> CommitmentDataHex:
+        return CommitmentDataHex(super().hex(*args, **kwargs))
+
+    @classmethod
+    def fromhex(cls, value: str | CommitmentDataHex) -> "CommitmentDataBytes":
+        if value.startswith("0x"):
+            value = value[2:]
+        return cls(super().fromhex(value))
+
+    @classmethod
+    def __get_pydantic_core_schema__(cls, source_type, handler):
+        from pydantic_core import core_schema
+
+        return core_schema.no_info_after_validator_function(cls, core_schema.bytes_schema(min_length=1))

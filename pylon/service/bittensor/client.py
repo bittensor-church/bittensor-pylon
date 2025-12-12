@@ -46,7 +46,6 @@ from pylon._internal.common.types import (
     BlockNumber,
     Coldkey,
     CommitmentDataBytes,
-    CommitmentDataHex,
     Consensus,
     Dividends,
     Emission,
@@ -504,7 +503,7 @@ class TurboBtClient(AbstractBittensorClient):
         commitment = await self._raw_client.subnet(netuid).commitments.get(hotkey, block_hash=block.hash)
         if commitment is None:
             return None
-        return Commitment(block=block, hotkey=Hotkey(hotkey), commitment=CommitmentDataHex("0x" + commitment.hex()))
+        return Commitment(block=block, hotkey=Hotkey(hotkey), commitment=CommitmentDataBytes(commitment).hex())
 
     async def get_commitments(self, netuid: NetUid, block: Block) -> SubnetCommitments:
         assert self._raw_client is not None, (
@@ -514,7 +513,7 @@ class TurboBtClient(AbstractBittensorClient):
         commitments = await self._raw_client.subnet(netuid).commitments.fetch(block_hash=block.hash)
         return SubnetCommitments(
             block=block,
-            commitments={Hotkey(hotkey): CommitmentDataHex("0x" + data.hex()) for hotkey, data in commitments.items()},
+            commitments={Hotkey(hotkey): CommitmentDataBytes(data).hex() for hotkey, data in commitments.items()},
         )
 
     async def set_commitment(self, netuid: NetUid, data: CommitmentDataBytes) -> None:
