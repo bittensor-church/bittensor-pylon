@@ -99,13 +99,6 @@ extend-immutable-calls = [
 requires = ["hatchling"]
 build-backend = "hatchling.build"
 
-[dependency-groups]
-dev = [
-    "pytest>=8.4.1",
-    "pytest-asyncio>=1.1.0",
-    "respx>=0.22.0",
-    "ruff>=0.12.9",
-]
 
 [project.urls]
 homepage = "https://github.com/backend-developers-ltd/bittensor-pylon"
