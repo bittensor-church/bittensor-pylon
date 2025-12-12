@@ -504,7 +504,7 @@ class TurboBtClient(AbstractBittensorClient):
         commitment = await self._raw_client.subnet(netuid).commitments.get(hotkey, block_hash=block.hash)
         if commitment is None:
             return None
-        return Commitment(hotkey=Hotkey(hotkey), commitment=CommitmentDataHex("0x" + commitment.hex()))
+        return Commitment(block=block, hotkey=Hotkey(hotkey), commitment=CommitmentDataHex("0x" + commitment.hex()))
 
     async def get_commitments(self, netuid: NetUid, block: Block) -> SubnetCommitments:
         assert self._raw_client is not None, (

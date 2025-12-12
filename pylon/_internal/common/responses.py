@@ -1,7 +1,7 @@
 from pydantic import BaseModel
 
-from pylon._internal.common.models import SubnetNeurons
-from pylon._internal.common.types import CommitmentDataHex, Hotkey, IdentityName, NetUid
+from pylon._internal.common.models import Commitment, SubnetCommitments, SubnetNeurons
+from pylon._internal.common.types import IdentityName, NetUid
 
 
 class PylonResponse(BaseModel):
@@ -66,18 +66,17 @@ class SetCommitmentResponse(PylonResponse):
     pass
 
 
-class GetCommitmentResponse(PylonResponse):
+class GetCommitmentResponse(PylonResponse, Commitment):
     """
     Response class that is returned for the GetCommitmentRequest.
     """
 
-    hotkey: Hotkey
-    data: CommitmentDataHex | None
+    pass
 
 
-class GetCommitmentsResponse(PylonResponse):
+class GetCommitmentsResponse(PylonResponse, SubnetCommitments):
     """
     Response class that is returned for the GetCommitmentsRequest.
     """
 
-    commitments: dict[Hotkey, CommitmentDataHex]
+    pass

@@ -168,6 +168,7 @@ class SubnetState(BittensorModel):
 
 
 class Commitment(BittensorModel):
+    block: Block
     hotkey: Hotkey
     commitment: CommitmentDataHex
 

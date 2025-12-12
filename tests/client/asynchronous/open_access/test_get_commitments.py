@@ -28,15 +28,12 @@ class TestAsyncOpenAccessGetCommitments(OpenAccessEndpointTest):
             Hotkey("hotkey1"): CommitmentDataHex("0xaabbccdd"),
             Hotkey("hotkey2"): CommitmentDataHex("0x11223344"),
         }
-        return GetCommitmentsResponse(commitments=commitments)
+        return GetCommitmentsResponse(block=block, commitments=commitments)
 
     @pytest.mark.asyncio
-    async def test_success_with_empty_commitments(self, pylon_client, service_mock, route_mock):
-        """
-        Test getting commitments when no commitments exist.
-        """
+    async def test_success_with_empty_commitments(self, pylon_client, service_mock, route_mock, block):
         self._setup_login_mock(service_mock)
-        response_data = GetCommitmentsResponse(commitments={})
+        response_data = GetCommitmentsResponse(block=block, commitments={})
         route_mock.mock(return_value=Response(status_code=codes.OK, json=response_data.model_dump(mode="json")))
 
         async with pylon_client:
