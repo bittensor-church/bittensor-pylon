@@ -12,6 +12,7 @@ from pylon._internal.common.requests import (
     AuthenticatedPylonRequest,
     GetCommitmentRequest,
     GetCommitmentsRequest,
+    GetExtrinsicRequest,
     GetLatestNeuronsRequest,
     GetNeuronsRequest,
     IdentityLoginRequest,
@@ -219,6 +220,12 @@ class AsyncHttpCommunicator(AbstractAsyncCommunicator[Request, Response]):
             url=url,
             json=request.model_dump(include={"commitment"}),
         )
+
+    @_translate_request.register
+    async def _(self, request: GetExtrinsicRequest) -> Request:
+        assert self._raw_client is not None
+        url = self._build_url(Endpoint.EXTRINSIC, request)
+        return self._raw_client.build_request(method=Endpoint.EXTRINSIC.method, url=url)
 
     async def _translate_response(
         self, pylon_request: PylonRequest[PylonResponseT], response: Response
