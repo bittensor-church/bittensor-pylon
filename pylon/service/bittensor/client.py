@@ -521,7 +521,9 @@ class TurboBtClient(AbstractBittensorClient):
             "The client is not open, please use the client as a context manager or call the open() method."
         )
         logger.debug(f"Setting commitment on subnet {netuid} at {self.uri}")
-        await self._raw_client.subnet(netuid).commitments.set(data)
+        # Convert to plain bytes because scalecodec uses `type(value) is bytes` check
+        # which fails for bytes subclasses like CommitmentDataBytes
+        await self._raw_client.subnet(netuid).commitments.set(bytes(data))
 
 
 SubClient = TypeVar("SubClient", bound=AbstractBittensorClient)
