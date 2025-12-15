@@ -14,14 +14,14 @@ nox.options.reuse_existing_virtualenvs = True
 @nox.session(name="test", python=PYTHON_VERSION)
 def test(session):
     """Run pytest with optional arguments forwarded from the command line."""
-    session.run("uv", "sync", "--active", "--extra", "dev")
+    session.run("uv", "sync", "--active", "--extra", "dev", "--extra", "service")
     session.run("pytest", "-s", "-vv", ".", *session.posargs, env={"PYLON_ENV_FILE": "tests/.test-env"})
 
 
 @nox.session(name="format", python=PYTHON_VERSION)
 def format(session):
     """Lint the code and apply fixes in-place whenever possible."""
-    session.run("uv", "sync", "--active", "--extra", "format", "--extra", "dev")
+    session.run("uv", "sync", "--active", "--extra", "format", "--extra", "dev", "--extra", "service")
     session.run("ruff", "format", ".")
     session.run("ruff", "check", "--fix", ".")
     session.run("pyright")
@@ -31,7 +31,7 @@ def format(session):
 @nox.session(name="lint", python=PYTHON_VERSION)
 def lint(session):
     """Check code formatting and typing without making any changes."""
-    session.run("uv", "sync", "--active", "--extra", "format", "--extra", "dev")
+    session.run("uv", "sync", "--active", "--extra", "format", "--extra", "dev", "--extra", "service")
     session.run("ruff", "format", "--check", "--diff", ".")
     session.run("ruff", "check", ".")
     session.run("pyright")

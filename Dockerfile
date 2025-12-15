@@ -18,7 +18,7 @@ COPY pylon/service ./pylon/service
 
 # install uv and dependencies
 COPY --from=ghcr.io/astral-sh/uv:0.5 /uv /uvx /bin/
-RUN /bin/uv sync --no-install-project
+RUN /bin/uv sync --extra service --no-install-project
 
 
 EXPOSE 8000

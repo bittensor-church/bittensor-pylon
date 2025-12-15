@@ -352,8 +352,55 @@ Both clients follow the Communicator pattern, allowing for different transport i
 5. Run service: `uvicorn pylon.service.main:app --reload --host 127.0.0.1 --port 8000`
 
 ### Release Process
-1. Update version in `pylon/__init__.py`
-2. Push git tag: `git tag v0.0.4 && git push`
+
+The project has two independent products with separate release workflows:
+
+#### Client Release (PyPI)
+
+The client library is published to PyPI when a `client-v*` tag is pushed:
+
+```bash
+# 1. Update version in pylon/__init__.py
+#    __version__ = "0.2.0"
+
+# 2. Commit and push
+git commit -am "chore: bump client version to 0.2.0"
+git push origin master
+
+# 3. Create and push tag
+git tag client-v0.2.0
+git push origin client-v0.2.0
+
+# 4. CI runs, then CD publishes to PyPI
+```
+
+#### Service Release (Docker Hub)
+
+The service is published to Docker Hub when a `service-v*` tag is pushed:
+
+```bash
+# 1. Update version in pylon/service/__init__.py
+#    __version__ = "1.0.0"
+
+# 2. Commit and push
+git commit -am "chore: bump service version to 1.0.0"
+git push origin master
+
+# 3. Create and push tag
+git tag service-v1.0.0
+git push origin service-v1.0.0
+
+# 4. CI runs, then CD publishes to Docker Hub
+```
+
+#### Version Files
+
+| Product | Version File | Tag Pattern |
+|---------|--------------|-------------|
+| Client (PyPI) | `pylon/__init__.py` | `client-v<semver>` |
+| Service (Docker) | `pylon/service/__init__.py` | `service-v<semver>` |
+
+**Important**: The CD workflow validates that the tag version matches the version in the code. If they don't match, the build will fail.
 
 ## Common Gotchas and Important Notes
 

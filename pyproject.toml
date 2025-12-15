@@ -1,48 +1,40 @@
 [project]
-name = "bittensor-pylon"
+name = "bittensor-pylon-client"
 
 dynamic = ["version"]
-description = "Bittensor Pylon: fast subnet data proxy."
+description = "Bittensor Pylon client: client for Bittensor Pylon service."
 authors = [
-    { name = "Reef", email = "reef@reef.sh" }
+    {name = "Reef Technologies", email = "opensource@reef.pl"}
 ]
 requires-python = ">=3.11"
 dependencies = [
     "pydantic-settings",
     "pydantic",
-    "turbobt>=0.3.0",
-    "litestar[standard,prometheus]",
-    "cachetools",
-    "docker",
-    "requests",
-    "bittensor_wallet",
-    "sqlalchemy",
-    "aiosqlite",
-    "alembic",
     "tenacity",
-    "sentry-sdk[litestar]",
-    "greenlet",
-    "flask",
-    "uvicorn>=0.35.0",
+    "httpx",
 ]
 
 [project.optional-dependencies]
+service = [
+    "turbobt>=0.3.0",
+    "litestar[standard,prometheus]",
+    "bittensor_wallet",
+    "sentry-sdk[litestar]",
+    "uvicorn>=0.35.0",
+]
 dev = [
-    "freezegun",
     "uv",
     "nox",
     "pytest",
     "pytest-asyncio>=1.0.0",
     "pytest-httpx",
-    "turbobt>=0.2.2",
     "respx>=0.22.0",
     "polyfactory>=2.22.2",
+    "docker",
 ]
 format = [
     "ruff",
-    "ty", 
     "pyright",
-    "freezegun",
     "sentry-sdk[litestar]"
 ]
 
