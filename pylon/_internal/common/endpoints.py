@@ -23,12 +23,12 @@ class Endpoint(EndpointMember, Enum):
     they must have separate enum members to ensure unique reverse names in Litestar.
     """
 
-    CERTIFICATES = (HTTPMethod.GET, "/certificates", "certificates")
-    CERTIFICATES_SELF = (HTTPMethod.GET, "/certificates/self", "certificates_self")
+    CERTIFICATES = (HTTPMethod.GET, "/block/latest/certificates", "certificates")
+    CERTIFICATES_SELF = (HTTPMethod.GET, "/block/latest/certificates/self", "certificates_self")
     CERTIFICATES_GENERATE = (HTTPMethod.POST, "/certificates/self", "certificates_generate")
-    CERTIFICATES_HOTKEY = (HTTPMethod.GET, "/certificates/{hotkey:str}", "certificates_hotkey")
-    NEURONS = (HTTPMethod.GET, "/neurons/{block_number:int}", "neurons")
-    LATEST_NEURONS = (HTTPMethod.GET, "/neurons/latest", "latest_neurons")
+    CERTIFICATES_HOTKEY = (HTTPMethod.GET, "/block/latest/certificates/{hotkey:str}", "certificates_hotkey")
+    NEURONS = (HTTPMethod.GET, "/block/{block_number:int}/neurons", "neurons")
+    LATEST_NEURONS = (HTTPMethod.GET, "/block/latest/neurons", "latest_neurons")
     SUBNET_WEIGHTS = (HTTPMethod.PUT, "/weights", "subnet_weights")
     IDENTITY_LOGIN = (HTTPMethod.POST, "/login/identity/{identity_name:str}", "identity_login")
     COMMITMENTS = (HTTPMethod.POST, "/commitments", "commitments")

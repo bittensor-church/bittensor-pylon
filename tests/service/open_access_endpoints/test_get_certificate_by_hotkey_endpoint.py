@@ -1,5 +1,5 @@
 """
-Tests for the GET /subnet/{netuid}/certificates/{hotkey} endpoint.
+Tests for the GET /subnet/{netuid}/block/latest/certificates/{hotkey} endpoint.
 """
 
 import pytest
@@ -29,7 +29,7 @@ async def test_get_certificate_open_access_success(
         get_latest_block=[latest_block],
         get_certificate=[certificate],
     ):
-        response = await test_client.get(f"/api/v1/subnet/1/certificates/{hotkey}")
+        response = await test_client.get(f"/api/v1/subnet/1/block/latest/certificates/{hotkey}")
 
         assert response.status_code == HTTP_200_OK
         assert response.json() == {
@@ -52,7 +52,7 @@ async def test_get_certificate_open_access_not_found(
         get_latest_block=[latest_block],
         get_certificate=[None],
     ):
-        response = await test_client.get(f"/api/v1/subnet/1/certificates/{hotkey}")
+        response = await test_client.get(f"/api/v1/subnet/1/block/latest/certificates/{hotkey}")
 
         assert response.status_code == HTTP_404_NOT_FOUND
         assert response.json() == {

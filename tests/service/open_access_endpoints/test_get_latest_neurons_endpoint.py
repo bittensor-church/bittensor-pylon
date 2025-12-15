@@ -1,5 +1,5 @@
 """
-Tests for the GET /subnet/{netuid}/neurons/latest endpoint.
+Tests for the GET /subnet/{netuid}/block/latest/neurons endpoint.
 """
 
 import pytest
@@ -44,7 +44,7 @@ async def test_get_latest_neurons_open_access_success(
         get_latest_block=[block],
         get_neurons=[subnet_neurons],
     ):
-        response = await test_client.get("/api/v1/subnet/1/neurons/latest")
+        response = await test_client.get("/api/v1/subnet/1/block/latest/neurons")
 
         assert response.status_code == HTTP_200_OK, response.content
         assert response.json() == subnet_neurons.model_dump(mode="json")
@@ -67,7 +67,7 @@ async def test_get_latest_neurons_open_access_empty_neurons(
         get_latest_block=[block],
         get_neurons=[subnet_neurons],
     ):
-        response = await test_client.get("/api/v1/subnet/2/neurons/latest")
+        response = await test_client.get("/api/v1/subnet/2/block/latest/neurons")
 
         assert response.status_code == HTTP_200_OK, response.content
         assert response.json() == subnet_neurons.model_dump(mode="json")

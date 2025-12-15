@@ -1,5 +1,5 @@
 """
-Tests for the GET /subnet/{netuid}/neurons/{block_number} endpoint.
+Tests for the GET /subnet/{netuid}/block/{block_number}/neurons endpoint.
 """
 
 import pytest
@@ -50,7 +50,7 @@ async def test_get_neurons_open_access_with_block_number(
         get_block=[block],
         get_neurons=[subnet_neurons],
     ):
-        response = await test_client.get(f"/api/v1/subnet/1/neurons/{block_number}")
+        response = await test_client.get(f"/api/v1/subnet/1/block/{block_number}/neurons")
 
         assert response.status_code == HTTP_200_OK, response.content
         assert response.json() == subnet_neurons.model_dump(mode="json")
@@ -73,7 +73,7 @@ async def test_get_neurons_open_access_empty_neurons(
         get_block=[block],
         get_neurons=[neurons],
     ):
-        response = await test_client.get("/api/v1/subnet/2/neurons/100")
+        response = await test_client.get("/api/v1/subnet/2/block/100/neurons")
 
         assert response.status_code == HTTP_200_OK, response.content
         assert response.json() == {
@@ -97,7 +97,7 @@ async def test_get_neurons_open_access_invalid_block_number_type(
     """
     Test that invalid block number types return 404.
     """
-    response = await test_client.get(f"/api/v1/subnet/1/neurons/{invalid_block_number}")
+    response = await test_client.get(f"/api/v1/subnet/1/block/{invalid_block_number}/neurons")
 
     assert response.status_code == HTTP_404_NOT_FOUND, response.content
     assert response.json() == {
@@ -114,7 +114,7 @@ async def test_get_neurons_open_access_block_not_found(
     Test that non-existent block returns 404.
     """
     async with open_access_mock_bt_client.mock_behavior(get_block=[None]):
-        response = await test_client.get("/api/v1/subnet/1/neurons/123")
+        response = await test_client.get("/api/v1/subnet/1/block/123/neurons")
 
         assert response.status_code == HTTP_404_NOT_FOUND, response.content
         assert response.json() == {
