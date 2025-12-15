@@ -1,5 +1,5 @@
 version = 1
-revision = 3
+revision = 2
 requires-python = ">=3.11"
 
 [[package]]
@@ -120,6 +120,7 @@ dependencies = [
     { name = "sqlalchemy" },
     { name = "tenacity" },
     { name = "turbobt" },
+    { name = "uvicorn" },
 ]
 
 [package.optional-dependencies]
@@ -173,6 +174,7 @@ requires-dist = [
     { name = "turbobt", marker = "extra == 'dev'", specifier = ">=0.2.2" },
     { name = "ty", marker = "extra == 'format'" },
     { name = "uv", marker = "extra == 'dev'" },
+    { name = "uvicorn", specifier = ">=0.35.0" },
 ]
 provides-extras = ["dev", "format"]
 

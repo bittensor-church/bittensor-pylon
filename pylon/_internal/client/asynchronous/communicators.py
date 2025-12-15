@@ -10,10 +10,13 @@ from pylon._internal.common.endpoints import Endpoint
 from pylon._internal.common.exceptions import PylonClosed, PylonRequestException, PylonResponseException
 from pylon._internal.common.requests import (
     AuthenticatedPylonRequest,
+    GetCommitmentRequest,
+    GetCommitmentsRequest,
     GetLatestNeuronsRequest,
     GetNeuronsRequest,
     IdentityLoginRequest,
     PylonRequest,
+    SetCommitmentRequest,
     SetWeightsRequest,
 )
 from pylon._internal.common.responses import PylonResponse
@@ -194,6 +197,28 @@ class AsyncHttpCommunicator(AbstractAsyncCommunicator[Request, Response]):
         assert self._raw_client is not None
         url = self._build_url(Endpoint.IDENTITY_LOGIN, request)
         return self._raw_client.build_request(method=Endpoint.IDENTITY_LOGIN.method, url=url, json=request.model_dump())
+
+    @_translate_request.register
+    async def _(self, request: GetCommitmentsRequest) -> Request:
+        assert self._raw_client is not None
+        url = self._build_url(Endpoint.LATEST_COMMITMENTS, request)
+        return self._raw_client.build_request(method=Endpoint.LATEST_COMMITMENTS.method, url=url)
+
+    @_translate_request.register
+    async def _(self, request: GetCommitmentRequest) -> Request:
+        assert self._raw_client is not None
+        url = self._build_url(Endpoint.LATEST_COMMITMENTS_HOTKEY, request)
+        return self._raw_client.build_request(method=Endpoint.LATEST_COMMITMENTS_HOTKEY.method, url=url)
+
+    @_translate_request.register
+    async def _(self, request: SetCommitmentRequest) -> Request:
+        assert self._raw_client is not None
+        url = self._build_url(Endpoint.COMMITMENTS, request)
+        return self._raw_client.build_request(
+            method=Endpoint.COMMITMENTS.method,
+            url=url,
+            json=request.model_dump(include={"commitment"}),
+        )
 
     async def _translate_response(
         self, pylon_request: PylonRequest[PylonResponseT], response: Response

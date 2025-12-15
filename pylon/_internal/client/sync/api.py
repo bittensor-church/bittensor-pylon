@@ -2,26 +2,39 @@ import threading
 from abc import ABC, abstractmethod
 from collections.abc import Callable
 from functools import partial
-from typing import Generic, NewType, TypeVar
+from typing import Generic, NewType, TypeVar, cast
 
 from pylon._internal.client.sync.communicators import AbstractCommunicator
 from pylon._internal.common.exceptions import PylonClosed, PylonForbidden, PylonMisconfigured, PylonUnauthorized
 from pylon._internal.common.requests import (
+    GetCommitmentRequest,
+    GetCommitmentsRequest,
     GetLatestNeuronsRequest,
     GetNeuronsRequest,
     IdentityLoginRequest,
     PylonRequest,
+    SetCommitmentRequest,
     SetWeightsRequest,
 )
 from pylon._internal.common.responses import (
+    GetCommitmentResponse,
+    GetCommitmentsResponse,
     GetNeuronsResponse,
     IdentityLoginResponse,
     LoginResponse,
     OpenAccessLoginResponse,
     PylonResponse,
+    SetCommitmentResponse,
     SetWeightsResponse,
 )
-from pylon._internal.common.types import BlockNumber, Hotkey, NetUid, Weight
+from pylon._internal.common.types import (
+    BlockNumber,
+    CommitmentDataBytes,
+    CommitmentDataHex,
+    Hotkey,
+    NetUid,
+    Weight,
+)
 
 ResponseT = TypeVar("ResponseT", bound=PylonResponse)
 LoginResponseT = TypeVar("LoginResponseT", bound=LoginResponse)
@@ -132,6 +145,31 @@ class AbstractOpenAccessApi(AbstractApi[LoginResponseT], ABC):
         """
         return self._send_authenticated_request(partial(self._get_latest_neurons_request, netuid))
 
+    def get_commitments(self, netuid: NetUid) -> GetCommitmentsResponse:
+        """
+        Retrieves all commitments for a specific subnet at the latest available block.
+
+        Args:
+            netuid: The unique identifier of the subnet.
+
+        Returns:
+            GetCommitmentsResponse: containing commitments data mapping hotkeys to commitment data.
+        """
+        return self._send_authenticated_request(partial(self._get_commitments_request, netuid))
+
+    def get_commitment(self, netuid: NetUid, hotkey: Hotkey) -> GetCommitmentResponse:
+        """
+        Retrieves a specific commitment for a hotkey in a subnet at the latest available block.
+
+        Args:
+            netuid: The unique identifier of the subnet.
+            hotkey: The hotkey to retrieve the commitment for.
+
+        Returns:
+            GetCommitmentResponse: containing the hotkey and its commitment data (None if not found).
+        """
+        return self._send_authenticated_request(partial(self._get_commitment_request, netuid, hotkey))
+
     # Private API
 
     @abstractmethod
@@ -139,6 +177,12 @@ class AbstractOpenAccessApi(AbstractApi[LoginResponseT], ABC):
 
     @abstractmethod
     def _get_latest_neurons_request(self, netuid: NetUid) -> GetLatestNeuronsRequest: ...
+
+    @abstractmethod
+    def _get_commitments_request(self, netuid: NetUid) -> GetCommitmentsRequest: ...
+
+    @abstractmethod
+    def _get_commitment_request(self, netuid: NetUid, hotkey: Hotkey) -> GetCommitmentRequest: ...
 
 
 class AbstractIdentityApi(AbstractApi[LoginResponseT], ABC):
@@ -201,6 +245,42 @@ class AbstractIdentityApi(AbstractApi[LoginResponseT], ABC):
         """
         return self._send_authenticated_request(partial(self._put_weights_request, weights))
 
+    def get_commitments(self) -> GetCommitmentsResponse:
+        """
+        Retrieves all commitments for the authenticated identity's subnet at the latest available block.
+
+        Returns:
+            GetCommitmentsResponse: containing commitments data mapping hotkeys to commitment data.
+        """
+        return self._send_authenticated_request(self._get_commitments_request)
+
+    def get_commitment(self, hotkey: Hotkey) -> GetCommitmentResponse:
+        """
+        Retrieves a specific commitment for a hotkey in the authenticated identity's subnet.
+
+        Args:
+            hotkey: The hotkey to retrieve the commitment for.
+
+        Returns:
+            GetCommitmentResponse: containing the hotkey and its commitment data (None if not found).
+        """
+        return self._send_authenticated_request(partial(self._get_commitment_request, hotkey))
+
+    def set_commitment(self, commitment: CommitmentDataBytes | CommitmentDataHex) -> SetCommitmentResponse:
+        """
+        Sets a commitment (model metadata) on-chain for the authenticated identity's wallet hotkey.
+
+        The commitment is applied asynchronously by the Pylon service. The method returns immediately after
+        scheduling the commitment update, without waiting for blockchain confirmation.
+
+        Args:
+            commitment: The commitment data to set. Can be bytes or hex string format (with or without 0x prefix).
+
+        Returns:
+            SetCommitmentResponse indicating the commitment has been set successfully.
+        """
+        return self._send_authenticated_request(partial(self._set_commitment_request, commitment))
+
     # Private API
 
     @abstractmethod
@@ -211,6 +291,15 @@ class AbstractIdentityApi(AbstractApi[LoginResponseT], ABC):
 
     @abstractmethod
     def _put_weights_request(self, weights: dict[Hotkey, Weight]) -> SetWeightsRequest: ...
+
+    @abstractmethod
+    def _get_commitments_request(self) -> GetCommitmentsRequest: ...
+
+    @abstractmethod
+    def _get_commitment_request(self, hotkey: Hotkey) -> GetCommitmentRequest: ...
+
+    @abstractmethod
+    def _set_commitment_request(self, commitment: CommitmentDataBytes | CommitmentDataHex) -> SetCommitmentRequest: ...
 
 
 class OpenAccessApi(AbstractOpenAccessApi[OpenAccessLoginResponse]):
@@ -227,6 +316,12 @@ class OpenAccessApi(AbstractOpenAccessApi[OpenAccessLoginResponse]):
 
     def _get_latest_neurons_request(self, netuid: NetUid) -> GetLatestNeuronsRequest:
         return GetLatestNeuronsRequest(netuid=netuid)
+
+    def _get_commitments_request(self, netuid: NetUid) -> GetCommitmentsRequest:
+        return GetCommitmentsRequest(netuid=netuid)
+
+    def _get_commitment_request(self, netuid: NetUid, hotkey: Hotkey) -> GetCommitmentRequest:
+        return GetCommitmentRequest(netuid=netuid, hotkey=hotkey)
 
 
 class IdentityApi(AbstractIdentityApi[IdentityLoginResponse]):
@@ -260,4 +355,27 @@ class IdentityApi(AbstractIdentityApi[IdentityLoginResponse]):
             netuid=self._login_response.netuid,
             identity_name=self._login_response.identity_name,
             weights=weights,
+        )
+
+    def _get_commitments_request(self) -> GetCommitmentsRequest:
+        assert self._login_response, "Attempted api request without authentication."
+        return GetCommitmentsRequest(
+            netuid=self._login_response.netuid,
+            identity_name=self._login_response.identity_name,
+        )
+
+    def _get_commitment_request(self, hotkey: Hotkey) -> GetCommitmentRequest:
+        assert self._login_response, "Attempted api request without authentication."
+        return GetCommitmentRequest(
+            netuid=self._login_response.netuid,
+            identity_name=self._login_response.identity_name,
+            hotkey=hotkey,
+        )
+
+    def _set_commitment_request(self, commitment: CommitmentDataBytes | CommitmentDataHex) -> SetCommitmentRequest:
+        assert self._login_response, "Attempted api request without authentication."
+        return SetCommitmentRequest(
+            netuid=self._login_response.netuid,
+            identity_name=self._login_response.identity_name,
+            commitment=cast(CommitmentDataBytes, commitment),
         )

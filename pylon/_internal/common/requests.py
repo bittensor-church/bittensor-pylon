@@ -3,17 +3,20 @@ import typing
 from pydantic import BaseModel, field_validator
 
 from pylon._internal.common.apiver import ApiVersion
-from pylon._internal.common.bodies import LoginBody, SetWeightsBody
+from pylon._internal.common.bodies import LoginBody, SetCommitmentBody, SetWeightsBody
 from pylon._internal.common.models import CertificateAlgorithm
 from pylon._internal.common.responses import (
+    GetCommitmentResponse,
+    GetCommitmentsResponse,
     GetNeuronsResponse,
     IdentityLoginResponse,
     LoginResponse,
     OpenAccessLoginResponse,
     PylonResponse,
+    SetCommitmentResponse,
     SetWeightsResponse,
 )
-from pylon._internal.common.types import BlockNumber, IdentityName, NetUid
+from pylon._internal.common.types import BlockNumber, Hotkey, IdentityName, NetUid
 
 PylonResponseT = typing.TypeVar("PylonResponseT", bound=PylonResponse, covariant=True)
 LoginResponseT = typing.TypeVar("LoginResponseT", bound=LoginResponse, covariant=True)
@@ -81,6 +84,26 @@ class GetLatestNeuronsRequest(AuthenticatedPylonRequest[GetNeuronsResponse]):
     response_cls = GetNeuronsResponse
 
 
+class GetCommitmentRequest(AuthenticatedPylonRequest[GetCommitmentResponse]):
+    """
+    Class used to fetch a commitment for a specific hotkey by the Pylon client.
+    """
+
+    version = ApiVersion.V1
+    response_cls = GetCommitmentResponse
+
+    hotkey: Hotkey
+
+
+class GetCommitmentsRequest(AuthenticatedPylonRequest[GetCommitmentsResponse]):
+    """
+    Class used to fetch all commitments for the subnet by the Pylon client.
+    """
+
+    version = ApiVersion.V1
+    response_cls = GetCommitmentsResponse
+
+
 # Request classes that require identity authentication.
 
 
@@ -99,6 +122,15 @@ class SetWeightsRequest(SetWeightsBody, IdentityPylonRequest[SetWeightsResponse]
 
     version = ApiVersion.V1
     response_cls = SetWeightsResponse
+
+
+class SetCommitmentRequest(SetCommitmentBody, IdentityPylonRequest[SetCommitmentResponse]):
+    """
+    Class used to set a commitment (model metadata) on chain by the Pylon client.
+    """
+
+    version = ApiVersion.V1
+    response_cls = SetCommitmentResponse
 
 
 class GenerateCertificateKeypairRequest(PylonRequest):

@@ -23,6 +23,7 @@ dependencies = [
     "sentry-sdk[litestar]",
     "greenlet",
     "flask",
+    "uvicorn>=0.35.0",
 ]
 
 [project.optional-dependencies]
@@ -97,6 +98,7 @@ extend-immutable-calls = [
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"
+
 
 [project.urls]
 homepage = "https://github.com/backend-developers-ltd/bittensor-pylon"

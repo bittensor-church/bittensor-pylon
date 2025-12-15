@@ -5,9 +5,9 @@ from litestar.di import Provide
 from litestar.exceptions import NotFoundException
 from litestar.handlers.http_handlers import decorators as http_decorators
 
-from pylon._internal.common.bodies import LoginBody, SetWeightsBody
+from pylon._internal.common.bodies import LoginBody, SetCommitmentBody, SetWeightsBody
 from pylon._internal.common.endpoints import Endpoint
-from pylon._internal.common.models import Hotkey, SubnetNeurons
+from pylon._internal.common.models import Commitment, Hotkey, NeuronCertificate, SubnetCommitments, SubnetNeurons
 from pylon._internal.common.requests import (
     GenerateCertificateKeypairRequest,
 )
@@ -17,7 +17,7 @@ from pylon.service.bittensor.client import AbstractBittensorClient
 from pylon.service.dependencies import bt_client_identity_dep, bt_client_open_access_dep, identity_dep
 from pylon.service.exceptions import BadGatewayException
 from pylon.service.identities import Identity
-from pylon.service.tasks import ApplyWeights
+from pylon.service.tasks import ApplyWeights, SetCommitment
 
 logger = logging.getLogger(__name__)
 
@@ -71,19 +71,19 @@ class OpenAccessController(Controller):
         return await bt_client.get_neurons(netuid, block=block)
 
     @handler(Endpoint.CERTIFICATES)
-    async def get_certificates_endpoint(self, bt_client: AbstractBittensorClient, netuid: NetUid) -> Response:
+    async def get_certificates_endpoint(
+        self, bt_client: AbstractBittensorClient, netuid: NetUid
+    ) -> dict[Hotkey, NeuronCertificate]:
         """
         Get all certificates for the subnet at the latest block.
         """
         block = await bt_client.get_latest_block()
-        certificates = await bt_client.get_certificates(netuid, block)
-
-        return Response(certificates, status_code=status_codes.HTTP_200_OK)
+        return await bt_client.get_certificates(netuid, block)
 
     @handler(Endpoint.CERTIFICATES_HOTKEY)
     async def get_certificate_endpoint(
         self, hotkey: Hotkey, bt_client: AbstractBittensorClient, netuid: NetUid
-    ) -> Response:
+    ) -> NeuronCertificate:
         """
         Get a specific certificate for a hotkey.
 
@@ -95,7 +95,31 @@ class OpenAccessController(Controller):
         if certificate is None:
             raise NotFoundException(detail="Certificate not found or error fetching.")
 
-        return Response(certificate, status_code=status_codes.HTTP_200_OK)
+        return certificate
+
+    @handler(Endpoint.LATEST_COMMITMENTS)
+    async def get_commitments_endpoint(self, bt_client: AbstractBittensorClient, netuid: NetUid) -> SubnetCommitments:
+        """
+        Get all commitments for the subnet.
+        """
+        block = await bt_client.get_latest_block()
+        return await bt_client.get_commitments(netuid, block)
+
+    @handler(Endpoint.LATEST_COMMITMENTS_HOTKEY)
+    async def get_commitment_endpoint(
+        self, hotkey: Hotkey, bt_client: AbstractBittensorClient, netuid: NetUid
+    ) -> Commitment:
+        """
+        Get a specific commitment for a hotkey.
+
+        Raises:
+            NotFoundException: If commitment could not be found in the blockchain.
+        """
+        block = await bt_client.get_latest_block()
+        commitment = await bt_client.get_commitment(netuid, block, hotkey=hotkey)
+        if commitment is None:
+            raise NotFoundException(detail="Commitment not found.")
+        return commitment
 
 
 class IdentityController(OpenAccessController):
@@ -117,6 +141,25 @@ class IdentityController(OpenAccessController):
                 "count": len(data.weights),
             },
             status_code=status_codes.HTTP_200_OK,
+        )
+
+    @handler(Endpoint.COMMITMENTS)
+    async def set_commitment_endpoint(
+        self, bt_client: AbstractBittensorClient, data: SetCommitmentBody, netuid: NetUid
+    ) -> Response:
+        """
+        Set a commitment (model metadata) on chain for the wallet's hotkey.
+
+        Raises:
+            BadGatewayException: When commitment could not be set after all retries.
+        """
+        try:
+            await SetCommitment(bt_client).execute(netuid, data.commitment)
+        except RuntimeError as exc:
+            raise BadGatewayException(detail=str(exc)) from exc
+        return Response(
+            {"detail": "Commitment set successfully."},
+            status_code=status_codes.HTTP_201_CREATED,
         )
 
     @handler(Endpoint.CERTIFICATES_SELF)
