@@ -12,6 +12,7 @@ dependencies = [
     "pydantic",
     "tenacity",
     "httpx",
+    "docker"
 ]
 
 [project.optional-dependencies]
@@ -30,7 +31,6 @@ dev = [
     "pytest-httpx",
     "respx>=0.22.0",
     "polyfactory>=2.22.2",
-    "docker",
 ]
 format = [
     "ruff",
