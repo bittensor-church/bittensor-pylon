@@ -76,9 +76,10 @@ wheels = [
 ]
 
 [[package]]
-name = "bittensor-pylon"
+name = "bittensor-pylon-client"
 source = { editable = "." }
 dependencies = [
+    { name = "docker" },
     { name = "httpx" },
     { name = "pydantic" },
     { name = "pydantic-settings" },
@@ -87,7 +88,6 @@ dependencies = [
 
 [package.optional-dependencies]
 dev = [
-    { name = "docker" },
     { name = "nox" },
     { name = "polyfactory" },
     { name = "pytest" },
@@ -112,7 +112,7 @@ service = [
 [package.metadata]
 requires-dist = [
     { name = "bittensor-wallet", marker = "extra == 'service'" },
-    { name = "docker", marker = "extra == 'dev'" },
+    { name = "docker" },
     { name = "httpx" },
     { name = "litestar", extras = ["prometheus", "standard"], marker = "extra == 'service'" },
     { name = "nox", marker = "extra == 'dev'" },
