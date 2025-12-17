@@ -151,5 +151,5 @@ class RecentDataProvider:
         Args:
             netuid: subnet netuid
         """
-        recent_object = RecentCacheAdapter[SubnetNeurons](self._store, SubnetNeurons)
-        return await self._get(netuid, recent_object)
+        cache_adapter = RecentCacheAdapter[SubnetNeurons](self._store, SubnetNeurons)
+        return await self._get(netuid, cache_adapter)
