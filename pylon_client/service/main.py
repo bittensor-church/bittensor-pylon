@@ -3,8 +3,7 @@ from litestar.di import Provide
 from litestar.openapi.config import OpenAPIConfig
 from litestar.plugins.prometheus import PrometheusConfig
 
-from pylon_client.service import dependencies
-from pylon_client.service.lifespans import bittensor_client_pool
+from pylon_client.service import dependencies, lifespans
 from pylon_client.service.prometheus_controller import AuthenticatedPrometheusController
 from pylon_client.service.routers import v1_router
 from pylon_client.service.schema import PylonSchemaPlugin
@@ -32,7 +31,11 @@ def create_app() -> Litestar:
             description="REST API for the bittensor-pylon service",
         ),
         middleware=[prometheus_config.middleware],
-        lifespan=[bittensor_client_pool],
+        lifespan=[
+            lifespans.bittensor_client_pool,
+            lifespans.litestar_store,
+            lifespans.ap_scheduler,
+        ],
         dependencies={"bt_client_pool": Provide(dependencies.bt_client_pool_dep, use_cache=True)},
         plugins=[PylonSchemaPlugin()],
         debug=settings.debug,

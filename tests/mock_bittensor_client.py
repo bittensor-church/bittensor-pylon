@@ -6,12 +6,8 @@ to return specific values or raise exceptions, enabling comprehensive testing of
 without requiring actual blockchain interactions.
 """
 
-import asyncio
-import inspect
-from collections import defaultdict
-from collections.abc import Callable
 from contextlib import asynccontextmanager
-from typing import Any, TypeAlias
+from typing import Any
 
 from pylon_client._internal.common.models import (
     Block,
@@ -32,22 +28,18 @@ from pylon_client._internal.common.types import (
     Hotkey,
     NetUid,
     RevealRound,
+    Timestamp,
     Weight,
 )
 from pylon_client.service.bittensor.client import AbstractBittensorClient
-
-Behavior: TypeAlias = Callable | Exception | Any
-MethodName: TypeAlias = str
-Call: TypeAlias = tuple
+from tests.behave import Behave, Behavior
 
 
 class MockBittensorClient(AbstractBittensorClient):
     """
     Mock implementation of AbstractBittensorClient for testing.
 
-    This client allows tests to configure behavior through context manager that define
-    how each method should behave (return values, exceptions, etc.).
-
+    This client uses the Behave to configure method behaviors and track calls.
     Each method maintains a queue of behaviors that are consumed in order.
 
     Example usage:
@@ -70,12 +62,8 @@ class MockBittensorClient(AbstractBittensorClient):
         uri: BittensorNetwork = BittensorNetwork("mock://test"),
     ):
         super().__init__(wallet=wallet, uri=uri)
-        self._behaviors: dict[MethodName, list[Behavior]] = defaultdict(list)
-        self._behavior_lock = asyncio.Lock()
+        self._behave = Behave()
         self._is_open = False
-
-        # Track method calls for assertion in tests
-        self.calls: dict[MethodName, list[Call]] = defaultdict(list)
 
     async def open(self) -> None:
         self._is_open = True
@@ -86,17 +74,14 @@ class MockBittensorClient(AbstractBittensorClient):
     @asynccontextmanager
     async def mock_behavior(self, **behaviors: list[Behavior] | Behavior):
         """
-        Async context manager to configure mock behavior for methods.
+        Configure mock behavior for methods.
+
+        Delegates to the internal Behave instance.
 
         Args:
             **behaviors: Method names as keys, and either:
                 - A list of behaviors (each can be a callable, value, or exception)
                 - A single behavior (callable, value, or exception)
-
-        Each behavior can be:
-            - A callable that will be called with the method's arguments
-            - A value to be returned directly
-            - An exception instance to be raised
 
         Example:
             async with mock_client.mock_behavior(
@@ -109,54 +94,16 @@ class MockBittensorClient(AbstractBittensorClient):
             ):
                 # Test code here
         """
-        for method_name, behavior in behaviors.items():
-            if not isinstance(behavior, list):
-                self._behaviors[method_name].append(behavior)
-            else:
-                self._behaviors[method_name].extend(behavior)
-
-        try:
+        async with self._behave.mock(**behaviors):
             yield
-        finally:
-            self._behaviors.clear()
 
     async def _execute_behavior(self, method_name: str, *args, **kwargs) -> Any:
-        """
-        Execute the next configured behavior for a method.
+        return await self._behave.execute(method_name, *args, **kwargs)
 
-        Args:
-            method_name: Name of the method
-            *args: Positional arguments passed to the method
-            **kwargs: Keyword arguments passed to the method
-
-        Returns:
-            The result of the configured behavior
-
-        Raises:
-            Exception: If the behavior is configured to raise an exception
-            NotImplementedError: If no behavior is configured for the method
-        """
-        async with self._behavior_lock:
-            if not self._behaviors[method_name]:
-                raise NotImplementedError(
-                    f"No mock behavior configured for {method_name}. Use mock_behavior() context manager to configure it."
-                )
-
-            # Get the next behavior from the queue
-            behavior = self._behaviors[method_name].pop(0)
-
-        if isinstance(behavior, Exception):
-            raise behavior
-
-        if callable(behavior):
-            result = behavior(*args, **kwargs)
-            # If the result is awaitable (coroutine), await it
-            if inspect.iscoroutine(result):
-                return await result
-
-            return result
-
-        return behavior
+    @property
+    def calls(self):
+        """Access call tracking from the behavior engine."""
+        return self._behave.calls
 
     async def get_block(self, number: BlockNumber) -> Block | None:
         """
@@ -171,6 +118,10 @@ class MockBittensorClient(AbstractBittensorClient):
         """
         self.calls["get_latest_block"].append(())
         return await self._execute_behavior("get_latest_block")
+
+    async def get_block_timestamp(self, block: Block) -> Timestamp:
+        self.calls["get_block_timestamp"].append((block,))
+        return await self._execute_behavior("get_block_timestamp", block)
 
     async def get_neurons_list(self, netuid: NetUid, block: Block) -> list[Neuron]:
         """

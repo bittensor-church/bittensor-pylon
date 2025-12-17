@@ -25,3 +25,8 @@ PYLON_SENTRY_ENVIRONMENT=development
 # Token for accessing /metrics endpoint. Must be passed as Bearer token in Authorization header.
 # If empty, /metrics endpoint will return 403 Forbidden.
 PYLON_METRICS_TOKEN=
+
+# Settings for proactive caching of recent objects. Configure them as needed, or remove them to use default values.
+PYLON_RECENT_OBJECTS_SOFT_LIMIT=
+PYLON_RECENT_OBJECTS_HARD_LIMIT=
+PYLON_RECENT_OBJECTS_NETUIDS=
