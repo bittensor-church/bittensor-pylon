@@ -7,7 +7,14 @@ from httpx import AsyncClient, HTTPStatusError, Request, RequestError, Response
 
 from pylon._internal.client.asynchronous.config import AsyncConfig
 from pylon._internal.common.endpoints import Endpoint
-from pylon._internal.common.exceptions import PylonClosed, PylonRequestException, PylonResponseException
+from pylon._internal.common.exceptions import (
+    PylonClosed,
+    PylonForbidden,
+    PylonNotFound,
+    PylonRequestException,
+    PylonResponseException,
+    PylonUnauthorized,
+)
 from pylon._internal.common.requests import (
     AuthenticatedPylonRequest,
     GetCommitmentRequest,
@@ -250,6 +257,25 @@ class AsyncHttpCommunicator(AbstractAsyncCommunicator[Request, Response]):
     async def _handle_request_error(self, exc: RequestError) -> Response:
         raise PylonRequestException("An error occurred while making a request to Pylon API.") from exc
 
-    # TODO: Add more info about error response to the exception.
     async def _handle_status_error(self, exc: HTTPStatusError) -> Response:
-        raise PylonResponseException("Invalid response from Pylon API.") from exc
+        status_code = exc.response.status_code
+        detail = self._extract_error_detail(exc.response)
+
+        if status_code == 401:
+            raise PylonUnauthorized(detail=detail) from exc
+        elif status_code == 403:
+            raise PylonForbidden(detail=detail) from exc
+        elif status_code == 404:
+            raise PylonNotFound(detail=detail) from exc
+        else:
+            raise PylonResponseException(
+                "Invalid response from Pylon API", status_code=status_code, detail=detail
+            ) from exc
+
+    @staticmethod
+    def _extract_error_detail(response: Response) -> str | None:
+        try:
+            data = response.json()
+            return data.get("detail")
+        except Exception:
+            return None

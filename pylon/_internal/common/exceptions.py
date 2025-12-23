@@ -13,19 +13,47 @@ class PylonRequestException(BasePylonException):
 class PylonResponseException(BasePylonException):
     """
     Error that pylon client issues on receiving an error response from Pylon.
+
+    Attributes:
+        status_code: HTTP status code from the response (if available).
+        detail: Error detail message from the server (if available).
     """
+
+    def __init__(self, message: str, status_code: int | None = None, detail: str | None = None):
+        self.status_code = status_code
+        self.detail = detail
+        if status_code is not None:
+            message = f"{message} (HTTP {status_code})"
+        if detail:
+            message = f"{message}: {detail}"
+        super().__init__(message)
 
 
 class PylonUnauthorized(PylonResponseException):
     """
-    Error raised when the request to Pylon failed due to unauthorized access.
+    Error raised when the request to Pylon failed due to unauthorized access (HTTP 401).
     """
+
+    def __init__(self, detail: str | None = None):
+        super().__init__("Unauthorized", status_code=401, detail=detail)
 
 
 class PylonForbidden(PylonResponseException):
     """
-    Error raised when the request to Pylon failed due to lack of permissions.
+    Error raised when the request to Pylon failed due to lack of permissions (HTTP 403).
     """
+
+    def __init__(self, detail: str | None = None):
+        super().__init__("Forbidden", status_code=403, detail=detail)
+
+
+class PylonNotFound(PylonResponseException):
+    """
+    Error raised when the requested resource was not found (HTTP 404).
+    """
+
+    def __init__(self, detail: str | None = None):
+        super().__init__("Not found", status_code=404, detail=detail)
 
 
 class PylonClosed(BasePylonException):
