@@ -45,10 +45,15 @@ async def sn2_mock_bt_client(mock_bt_client_pool):
 
 
 @pytest.fixture
-def mock_stores(behave) -> dict[StoreName, MockStore]:
+def mock_stores() -> dict[StoreName, MockStore]:
     return {
-        StoreName.RECENT_OBJECTS: MockStore(behave),
+        StoreName.RECENT_OBJECTS: MockStore(),
     }
+
+
+@pytest.fixture
+def mock_recent_objects_store(mock_stores) -> MockStore:
+    return mock_stores[StoreName.RECENT_OBJECTS]
 
 
 @pytest_asyncio.fixture(loop_scope="session")
@@ -68,12 +73,12 @@ async def test_app(mock_bt_client_pool: MockBittensorClient, monkeypatch, mock_s
 
     # Mock the scheduler lifespan to prevent background task execution during tests
     @asynccontextmanager
-    async def mock_ap_scheduler(app):
+    async def mock_scheduler_lifespan(app):
         yield
 
     # Replace the lifespans
     monkeypatch.setattr("pylon_client.service.lifespans.bittensor_client_pool", mock_lifespan)
-    monkeypatch.setattr("pylon_client.service.lifespans.ap_scheduler", mock_ap_scheduler)
+    monkeypatch.setattr("pylon_client.service.lifespans.scheduler_lifespan", mock_scheduler_lifespan)
     monkeypatch.setattr("pylon_client.service.main.stores", mock_stores)
 
     app = create_app()

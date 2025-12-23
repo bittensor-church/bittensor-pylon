@@ -1,14 +1,17 @@
-from .exceptions import RecentObjectMissing, RecentObjectStale
 from .adapter import RecentCacheAdapter
+from .exceptions import RecentObjectMissing, RecentObjectStale
 from .provider import RecentObjectProvider
-from .scope import SubnetScope, IdentitySubnetScope, Scope
+from .context import IdentitySubnetContext, AbstractContext, SubnetContext
+from .types import HardLimit, SoftLimit
 
 __all__ = [
     "RecentCacheAdapter",
     "RecentObjectMissing",
     "RecentObjectStale",
     "RecentObjectProvider",
-    "Scope",
-    "SubnetScope",
-    "IdentitySubnetScope",
+    "AbstractContext",
+    "SubnetContext",
+    "IdentitySubnetContext",
+    "HardLimit",
+    "SoftLimit",
 ]

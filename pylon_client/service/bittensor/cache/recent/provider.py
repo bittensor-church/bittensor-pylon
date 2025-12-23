@@ -8,8 +8,9 @@ from pylon_client._internal.common.constants import BLOCK_PROCESSING_TIME
 from pylon_client._internal.common.models import BittensorModel
 
 from .adapter import RecentCacheAdapter
+from .context import AbstractContext
 from .exceptions import RecentObjectMissing, RecentObjectStale
-from .scope import Scope
+from .types import HardLimit, SoftLimit
 
 logger = logging.getLogger(__name__)
 
@@ -23,19 +24,19 @@ class RecentObjectProvider:
     checks on the objects and raises exceptions if they are stale or missing.
     """
 
-    def __init__(self, soft_limit: int, hard_limit: int, store: Store, scope: Scope) -> None:
+    def __init__(self, soft_limit: SoftLimit, hard_limit: HardLimit, store: Store, context: AbstractContext) -> None:
         """
         Args:
             soft_limit: soft limit for recent object age in blocks.
             hard_limit: hard limit for recent object age in blocks.
             store: litestar store instance. It is directly passed to cache adapters for accessing
                 recent objects.
-            scope: a Scope instance that defines the scope to build the cache key for a given model.
+            context: a Context instance that defines the context to build the cache key for a given model.
         """
         self._soft_limit = soft_limit
         self._hard_limit = hard_limit
         self._store = store
-        self._scope = scope
+        self._context = context
 
     async def get(self, model: type[T]) -> T:
         """
@@ -48,7 +49,7 @@ class RecentObjectProvider:
             RecentObjectMissing: if the object is missing from the cache.
             RecentObjectStale: if the object is stale (older than hard limit).
         """
-        cache_adapter = RecentCacheAdapter(self._scope.build_key(model), self._store, model)
+        cache_adapter = RecentCacheAdapter(self._context.build_key(model), self._store, model)
 
         cache_entry = await cache_adapter.get()
         if cache_entry is None:
@@ -60,13 +61,13 @@ class RecentObjectProvider:
 
         if elapsed_blocks > self._hard_limit:
             raise RecentObjectStale(
-                f"Recent object is stale. scope: {self._scope}, object: {model.__name__}, "
+                f"Recent object is stale. context: {self._context}, object: {model.__name__}, "
                 f"elapsed_blocks: {elapsed_blocks}, hard_limit: {self._hard_limit}"
             )
 
         if elapsed_blocks > self._soft_limit:
             logger.warning(
-                f"Recent object is older than soft limit. scope: {self._scope}, object: {model.__name__},"
+                f"Recent object is older than soft limit. context: {self._context}, object: {model.__name__},"
                 f"elapsed blocks: {elapsed_blocks}, soft_limit: {self._soft_limit}"
             )
 

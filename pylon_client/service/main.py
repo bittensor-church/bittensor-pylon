@@ -32,7 +32,7 @@ def create_app() -> Litestar:
             description="REST API for the bittensor-pylon service",
         ),
         middleware=[prometheus_config.middleware],
-        lifespan=[lifespans.bittensor_client_pool, lifespans.ap_scheduler],
+        lifespan=[lifespans.bittensor_client_pool, lifespans.scheduler_lifespan],
         dependencies={"bt_client_pool": Provide(dependencies.bt_client_pool_dep, use_cache=True)},
         plugins=[PylonSchemaPlugin()],
         stores=stores,

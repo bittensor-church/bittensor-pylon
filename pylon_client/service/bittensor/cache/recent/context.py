@@ -11,15 +11,15 @@ from .adapter import CacheKey
 T = TypeVar("T", bound=BittensorModel)
 
 
-class Scope(ABC):
+class AbstractContext(ABC):
     """
-    Scope is an abstraction to define the params needed to fetch an object and to
-    'scope' the fetched object to those params in the cache by building a cache key.
+    Context is an abstraction to define the params needed to fetch an object and to
+    save the fetched object in that 'context' in the cache by building a cache key.
 
-    Update tasks use the scope to get necessary params to fetch the object from
+    Update tasks use the context to get necessary params to fetch the object from
     upstream network and to create a cache key for saving the object in the cache.
 
-    RecentObjectProvider uses the scope to fetch the object from the cache.
+    RecentObjectProvider uses the context to fetch the object from the cache.
     """
 
     @property
@@ -31,7 +31,7 @@ class Scope(ABC):
         pass
 
 
-class SubnetScope(Scope):
+class SubnetContext(AbstractContext):
     def __init__(self, netuid: NetUid):
         super().__init__()
         self.netuid = netuid
@@ -40,10 +40,10 @@ class SubnetScope(Scope):
         return CacheKey(model, self.netuid, None)
 
     def __str__(self) -> str:
-        return f"SubnetScope(netuid={self.netuid})"
+        return f"SubnetContext(netuid={self.netuid})"
 
 
-class IdentitySubnetScope(SubnetScope):
+class IdentitySubnetContext(SubnetContext):
     def __init__(self, netuid: NetUid, wallet: Wallet):
         self._wallet = wallet
         super().__init__(netuid)
@@ -56,4 +56,4 @@ class IdentitySubnetScope(SubnetScope):
         return CacheKey(model, self.netuid, HotkeyName(self._wallet.hotkey_str))
 
     def __str__(self) -> str:
-        return f"IdentitySubnetScope(netuid={self.netuid}, wallet={self._wallet.hotkey_str})"
+        return f"IdentitySubnetContext(netuid={self.netuid}, wallet={self._wallet.name})"

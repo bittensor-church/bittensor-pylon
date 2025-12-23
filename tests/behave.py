@@ -17,15 +17,25 @@ class Behave:
     The behavior can be verified through recorded calls and tests.
 
     Example usage:
-        behave = Behave()
-        async with behave.mock_behavior(
-            get_data=[{"id": 1}, {"id": 2}],
-            process=[Exception("Error")],
-        ):
-            result1 = await behave.execute("get_data") # Returns {"id": 1}
-            result2 = await behave.execute("get_data") # Returns {"id": 2}
+        One can add an instance of this class to a concrete implementation class, and record
+        calls act according to configured behaviors.
+        class MockConcreteClass(AbstractClass):
+            def __init__(self):
+                self.behave = Behave()
 
-        assert behave.calls["get_data"] == [(), ()]
+            def method_to_mock(self, arg1, arg2):
+                self.behave.track("method_to_mock", arg1, arg2)
+                return self.behave.execute("method_to_mock", arg1, arg2)
+
+        # In the test:
+        mock_instance = MockConcreteClass()
+
+        async with mock_instance.behave.mock(method_to_mock=[1, Exception("Error")]):
+            assert mock_instance.method_to_mock("A", "B") == 1
+            with pytest.raises(Exception, match="Error"):
+                mock_instance.method_to_mock("C", "D")
+
+        assert mock_instance.behave.calls["method_to_mock"] == [("A", "B"), ("C", "D")]
     """
 
     def __init__(self) -> None:

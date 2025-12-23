@@ -7,7 +7,6 @@ from pylon_client._internal.common.types import (
     ArchiveBlocksCutoff,
     BittensorNetwork,
     IdentityName,
-    NetUid,
     Tempo,
 )
 
@@ -50,11 +49,6 @@ class Settings(BaseSettings):
     # sentry
     sentry_dsn: str = ""
     sentry_environment: str = "development"
-
-    # recent objects
-    recent_objects_soft_limit: int = 100
-    recent_objects_hard_limit: int = 150
-    recent_objects_netuids: list[NetUid] = Field(default_factory=list)
 
     # debug
     debug: bool = False

@@ -2,18 +2,18 @@ import logging
 
 from litestar import Controller, Response, status_codes
 from litestar.di import Provide
-from litestar.exceptions import NotFoundException
+from litestar.exceptions import NotFoundException, ServiceUnavailableException
 from litestar.handlers.http_handlers import decorators as http_decorators
 
 from pylon_client._internal.common.bodies import LoginBody, SetCommitmentBody, SetWeightsBody
 from pylon_client._internal.common.endpoints import Endpoint
-from pylon_client._internal.common.exceptions import PylonCacheException
 from pylon_client._internal.common.models import Commitment, Hotkey, NeuronCertificate, SubnetCommitments, SubnetNeurons
 from pylon_client._internal.common.requests import (
     GenerateCertificateKeypairRequest,
 )
 from pylon_client._internal.common.responses import IdentityLoginResponse
 from pylon_client._internal.common.types import BlockNumber, NetUid
+from pylon_client.service.bittensor.cache.recent.exceptions import RecentObjectMissing, RecentObjectStale
 from pylon_client.service.bittensor.cache.recent.provider import RecentObjectProvider
 from pylon_client.service.bittensor.client import AbstractBittensorClient
 from pylon_client.service.dependencies import (
@@ -85,8 +85,13 @@ class OpenAccessController(Controller):
     async def get_recent_neurons(self, recent_object_provider: RecentObjectProvider) -> SubnetNeurons:
         try:
             return await recent_object_provider.get(SubnetNeurons)
-        except PylonCacheException as e:
-            raise NotFoundException(detail="Recent neurons not found.") from e
+        except RecentObjectMissing as e:
+            raise ServiceUnavailableException(
+                "Recent neurons data is not available. Cache update may not have finished "
+                "yet or subnet may not have configured for caching recent objects."
+            ) from e
+        except RecentObjectStale as e:
+            raise ServiceUnavailableException("Recent neurons data is stale. Cache update may be failing.") from e
 
     @handler(Endpoint.CERTIFICATES)
     async def get_certificates_endpoint(
