@@ -34,6 +34,7 @@ class Endpoint(EndpointMember, Enum):
     COMMITMENTS = (HTTPMethod.POST, "/commitments", "commitments")
     LATEST_COMMITMENTS = (HTTPMethod.GET, "/block/latest/commitments", "latest_commitments")
     LATEST_COMMITMENTS_HOTKEY = (HTTPMethod.GET, "/block/latest/commitments/{hotkey:str}", "latest_commitments_hotkey")
+    EXTRINSIC = (HTTPMethod.GET, "/block/{block_number:int}/extrinsic/{extrinsic_index:int}", "extrinsic")
 
     def format_url(self, *args, **kwargs) -> str:
         normalized = re.sub(r":.+?}", "}", self.url)

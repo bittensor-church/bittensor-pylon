@@ -30,6 +30,8 @@ from pylon_client._internal.common.models import (
     CertificateAlgorithm,
     Commitment,
     CommitReveal,
+    Extrinsic,
+    ExtrinsicCall,
     Neuron,
     NeuronCertificate,
     NeuronCertificateKeypair,
@@ -49,6 +51,7 @@ from pylon_client._internal.common.types import (
     Consensus,
     Dividends,
     Emission,
+    ExtrinsicIndex,
     Hotkey,
     Incentive,
     NetUid,
@@ -199,6 +202,20 @@ class AbstractBittensorClient(ABC):
     async def set_commitment(self, netuid: NetUid, data: CommitmentDataBytes) -> None:
         """
         Sets commitment data on chain for the wallet's hotkey.
+        """
+
+    @abstractmethod
+    async def get_extrinsic(self, block_number: BlockNumber, extrinsic_index: ExtrinsicIndex) -> Extrinsic | None:
+        """
+        Fetches a decoded extrinsic from a specific block.
+
+        Args:
+            block_number: The block number containing the extrinsic.
+            extrinsic_index: The index of the extrinsic within the block.
+
+        Returns:
+            The decoded extrinsic if found, None if the block doesn't exist
+            or the index is out of bounds.
         """
 
 
@@ -525,6 +542,58 @@ class TurboBtClient(AbstractBittensorClient):
         # which fails for bytes subclasses like CommitmentDataBytes
         await self._raw_client.subnet(netuid).commitments.set(bytes(data))
 
+    async def get_extrinsic(self, block_number: BlockNumber, extrinsic_index: ExtrinsicIndex) -> Extrinsic | None:
+        assert self._raw_client is not None, (
+            "The client is not open, please use the client as a context manager or call the open() method."
+        )
+        logger.debug(f"Fetching extrinsic {extrinsic_index} from block {block_number} at {self.uri}")
+
+        # Get block hash from block number
+        block_hash = await self._raw_client.subtensor.chain.getBlockHash(block_number)
+        if block_hash is None:
+            return None
+
+        # Get block with decoded extrinsics
+        signed_block = await self._raw_client.subtensor.chain.getBlock(block_hash)
+        if signed_block is None:
+            return None
+
+        extrinsics: list[dict] = signed_block["block"]["extrinsics"]  # type: ignore[assignment]
+        if extrinsic_index >= len(extrinsics):
+            return None
+
+        raw_extrinsic = extrinsics[int(extrinsic_index)]
+        return self._translate_extrinsic(raw_extrinsic, block_number, extrinsic_index)
+
+    @staticmethod
+    def _translate_extrinsic(
+        raw_extrinsic: dict, block_number: BlockNumber, extrinsic_index: ExtrinsicIndex
+    ) -> Extrinsic:
+        """
+        Translates a raw decoded extrinsic dict to an Extrinsic model.
+        """
+        call_data = raw_extrinsic.get("call", {})
+        call = ExtrinsicCall(
+            call_module=call_data.get("call_module", ""),
+            call_function=call_data.get("call_function", ""),
+            call_args=call_data.get("call_args", []),
+            **{k: v for k, v in call_data.items() if k not in ("call_module", "call_function", "call_args")},
+        )
+
+        return Extrinsic(
+            block_number=block_number,
+            extrinsic_index=extrinsic_index,
+            extrinsic_hash=raw_extrinsic.get("extrinsic_hash", ""),
+            extrinsic_length=raw_extrinsic.get("extrinsic_length", 0),
+            address=raw_extrinsic.get("address"),
+            call=call,
+            **{
+                k: v
+                for k, v in raw_extrinsic.items()
+                if k not in ("extrinsic_hash", "extrinsic_length", "address", "call")
+            },
+        )
+
 
 SubClient = TypeVar("SubClient", bound=AbstractBittensorClient)
 DelegateReturn = TypeVar("DelegateReturn")
@@ -611,6 +680,11 @@ class BittensorClient(Generic[SubClient], AbstractBittensorClient):
 
     async def set_commitment(self, netuid: NetUid, data: CommitmentDataBytes) -> None:
         return await self._delegate(self.subclient_cls.set_commitment, netuid=netuid, data=data)
+
+    async def get_extrinsic(self, block_number: BlockNumber, extrinsic_index: ExtrinsicIndex) -> Extrinsic | None:
+        return await self._delegate(
+            self.subclient_cls.get_extrinsic, block_number=block_number, extrinsic_index=extrinsic_index
+        )
 
     async def _delegate(
         self, operation: Callable[..., Awaitable[DelegateReturn]], *args, block: Block | None = None, **kwargs

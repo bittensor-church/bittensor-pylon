@@ -8,6 +8,7 @@ from pylon_client._internal.common.models import CertificateAlgorithm
 from pylon_client._internal.common.responses import (
     GetCommitmentResponse,
     GetCommitmentsResponse,
+    GetExtrinsicResponse,
     GetNeuronsResponse,
     IdentityLoginResponse,
     LoginResponse,
@@ -16,7 +17,7 @@ from pylon_client._internal.common.responses import (
     SetCommitmentResponse,
     SetWeightsResponse,
 )
-from pylon_client._internal.common.types import BlockNumber, Hotkey, IdentityName, NetUid
+from pylon_client._internal.common.types import BlockNumber, ExtrinsicIndex, Hotkey, IdentityName, NetUid
 
 PylonResponseT = typing.TypeVar("PylonResponseT", bound=PylonResponse, covariant=True)
 LoginResponseT = typing.TypeVar("LoginResponseT", bound=LoginResponse, covariant=True)
@@ -102,6 +103,20 @@ class GetCommitmentsRequest(AuthenticatedPylonRequest[GetCommitmentsResponse]):
 
     version = ApiVersion.V1
     response_cls = GetCommitmentsResponse
+
+
+class GetExtrinsicRequest(PylonRequest[GetExtrinsicResponse]):
+    """
+    Class used to fetch an extrinsic from a specific block by the Pylon client.
+
+    This request does not require subnet context as extrinsics are block-level data.
+    """
+
+    version = ApiVersion.V1
+    response_cls = GetExtrinsicResponse
+
+    block_number: BlockNumber
+    extrinsic_index: ExtrinsicIndex
 
 
 # Request classes that require identity authentication.

@@ -17,6 +17,7 @@ from pylon_client._internal.common.models import (
     Block,
     CertificateAlgorithm,
     Commitment,
+    Extrinsic,
     Neuron,
     NeuronCertificate,
     NeuronCertificateKeypair,
@@ -29,6 +30,7 @@ from pylon_client._internal.common.types import (
     BittensorNetwork,
     BlockNumber,
     CommitmentDataBytes,
+    ExtrinsicIndex,
     Hotkey,
     NetUid,
     RevealRound,
@@ -259,6 +261,13 @@ class MockBittensorClient(AbstractBittensorClient):
         """
         self.calls["set_commitment"].append((netuid, data))
         return await self._execute_behavior("set_commitment", netuid, data)
+
+    async def get_extrinsic(self, block_number: BlockNumber, extrinsic_index: ExtrinsicIndex) -> Extrinsic | None:
+        """
+        Get a decoded extrinsic from a block.
+        """
+        self.calls["get_extrinsic"].append((block_number, extrinsic_index))
+        return await self._execute_behavior("get_extrinsic", block_number, extrinsic_index)
 
     async def reset_call_tracking(self) -> None:
         """

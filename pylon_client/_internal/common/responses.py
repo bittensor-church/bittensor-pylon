@@ -1,6 +1,6 @@
 from pydantic import BaseModel
 
-from pylon_client._internal.common.models import Commitment, SubnetCommitments, SubnetNeurons
+from pylon_client._internal.common.models import Commitment, Extrinsic, SubnetCommitments, SubnetNeurons
 from pylon_client._internal.common.types import IdentityName, NetUid
 
 
@@ -77,6 +77,14 @@ class GetCommitmentResponse(PylonResponse, Commitment):
 class GetCommitmentsResponse(PylonResponse, SubnetCommitments):
     """
     Response class that is returned for the GetCommitmentsRequest.
+    """
+
+    pass
+
+
+class GetExtrinsicResponse(PylonResponse, Extrinsic):
+    """
+    Response class that is returned for the GetExtrinsicRequest.
     """
 
     pass

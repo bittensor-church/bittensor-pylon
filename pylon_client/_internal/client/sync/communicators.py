@@ -7,11 +7,19 @@ from httpx import Client, HTTPStatusError, Request, RequestError, Response
 
 from pylon_client._internal.client.sync.config import Config
 from pylon_client._internal.common.endpoints import Endpoint
-from pylon_client._internal.common.exceptions import PylonClosed, PylonRequestException, PylonResponseException
+from pylon_client._internal.common.exceptions import (
+    PylonClosed,
+    PylonForbidden,
+    PylonNotFound,
+    PylonRequestException,
+    PylonResponseException,
+    PylonUnauthorized,
+)
 from pylon_client._internal.common.requests import (
     AuthenticatedPylonRequest,
     GetCommitmentRequest,
     GetCommitmentsRequest,
+    GetExtrinsicRequest,
     GetLatestNeuronsRequest,
     GetNeuronsRequest,
     IdentityLoginRequest,
@@ -220,6 +228,12 @@ class HttpCommunicator(AbstractCommunicator[Request, Response]):
             json=request.model_dump(include={"commitment"}),
         )
 
+    @_translate_request.register
+    def _(self, request: GetExtrinsicRequest) -> Request:
+        assert self._raw_client is not None
+        url = self._build_url(Endpoint.EXTRINSIC, request)
+        return self._raw_client.build_request(method=Endpoint.EXTRINSIC.method, url=url)
+
     def _translate_response(self, pylon_request: PylonRequest[PylonResponseT], response: Response) -> PylonResponseT:
         return pylon_request.response_cls(**response.json())
 
@@ -241,6 +255,24 @@ class HttpCommunicator(AbstractCommunicator[Request, Response]):
     def _handle_request_error(self, exc: RequestError) -> Response:
         raise PylonRequestException("An error occurred while making a request to Pylon API.") from exc
 
-    # TODO: Add more info about error response to the exception.
     def _handle_status_error(self, exc: HTTPStatusError) -> Response:
-        raise PylonResponseException("Invalid response from Pylon API.") from exc
+        status_code = exc.response.status_code
+        detail = self._extract_error_detail(exc.response)
+        if status_code == 401:
+            raise PylonUnauthorized(detail=detail) from exc
+        if status_code == 403:
+            raise PylonForbidden(detail=detail) from exc
+        if status_code == 404:
+            raise PylonNotFound(detail=detail) from exc
+        raise PylonResponseException("Invalid response from Pylon API", status_code=status_code, detail=detail) from exc
+
+    @staticmethod
+    def _extract_error_detail(response: Response) -> str | None:
+        """
+        Extract error detail from the response body if it's valid JSON with a 'detail' field.
+        """
+        try:
+            data = response.json()
+            return data.get("detail")
+        except Exception:
+            return None
