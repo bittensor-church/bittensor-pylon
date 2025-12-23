@@ -9,6 +9,7 @@ from pylon_client.service.routers import v1_router
 from pylon_client.service.schema import PylonSchemaPlugin
 from pylon_client.service.sentry_config import init_sentry
 from pylon_client.service.settings import settings
+from pylon_client.service.stores import stores
 
 
 def create_app() -> Litestar:
@@ -31,13 +32,10 @@ def create_app() -> Litestar:
             description="REST API for the bittensor-pylon service",
         ),
         middleware=[prometheus_config.middleware],
-        lifespan=[
-            lifespans.bittensor_client_pool,
-            lifespans.litestar_store,
-            lifespans.ap_scheduler,
-        ],
+        lifespan=[lifespans.bittensor_client_pool, lifespans.ap_scheduler],
         dependencies={"bt_client_pool": Provide(dependencies.bt_client_pool_dep, use_cache=True)},
         plugins=[PylonSchemaPlugin()],
+        stores=stores,
         debug=settings.debug,
     )
 

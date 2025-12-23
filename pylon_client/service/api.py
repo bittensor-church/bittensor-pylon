@@ -7,21 +7,21 @@ from litestar.handlers.http_handlers import decorators as http_decorators
 
 from pylon_client._internal.common.bodies import LoginBody, SetCommitmentBody, SetWeightsBody
 from pylon_client._internal.common.endpoints import Endpoint
+from pylon_client._internal.common.exceptions import PylonCacheException
 from pylon_client._internal.common.models import Commitment, Hotkey, NeuronCertificate, SubnetCommitments, SubnetNeurons
 from pylon_client._internal.common.requests import (
     GenerateCertificateKeypairRequest,
 )
 from pylon_client._internal.common.responses import IdentityLoginResponse
 from pylon_client._internal.common.types import BlockNumber, NetUid
-from pylon_client.service.bittensor.cache.exceptions import BittensorCacheException
-from pylon_client.service.bittensor.cache.recent import RecentDataProvider
+from pylon_client.service.bittensor.cache.recent.provider import RecentObjectProvider
 from pylon_client.service.bittensor.client import AbstractBittensorClient
 from pylon_client.service.dependencies import (
     bt_client_identity_dep,
     bt_client_open_access_dep,
     identity_dep,
-    recent_data_provider_dep,
-    recent_data_provider_identity_dep,
+    recent_object_provider_identity_dep,
+    recent_object_provider_open_access_dep,
 )
 from pylon_client.service.exceptions import BadGatewayException
 from pylon_client.service.identities import Identity
@@ -56,7 +56,7 @@ class OpenAccessController(Controller):
     path = "/subnet/{netuid:int}/"
     dependencies = {
         "bt_client": Provide(bt_client_open_access_dep),
-        "recent_data_provider": Provide(recent_data_provider_dep),
+        "recent_object_provider": Provide(recent_object_provider_open_access_dep),
     }
 
     @handler(Endpoint.NEURONS)
@@ -82,14 +82,10 @@ class OpenAccessController(Controller):
         return await bt_client.get_neurons(netuid, block=block)
 
     @handler(Endpoint.RECENT_NEURONS)
-    async def get_recent_neurons(
-        self,
-        netuid: NetUid,
-        recent_data_provider: RecentDataProvider,
-    ) -> SubnetNeurons:
+    async def get_recent_neurons(self, recent_object_provider: RecentObjectProvider) -> SubnetNeurons:
         try:
-            return await recent_data_provider.get_recent_neurons(netuid)
-        except BittensorCacheException as e:
+            return await recent_object_provider.get(SubnetNeurons)
+        except PylonCacheException as e:
             raise NotFoundException(detail="Recent neurons not found.") from e
 
     @handler(Endpoint.CERTIFICATES)
@@ -149,7 +145,7 @@ class IdentityController(OpenAccessController):
     dependencies = {
         "identity": Provide(identity_dep),
         "bt_client": Provide(bt_client_identity_dep),
-        "recent_data_provider": Provide(recent_data_provider_identity_dep),
+        "recent_object_provider": Provide(recent_object_provider_identity_dep),
     }
 
     @handler(Endpoint.SUBNET_WEIGHTS)

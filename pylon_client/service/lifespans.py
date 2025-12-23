@@ -5,14 +5,14 @@ from contextlib import asynccontextmanager
 
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from litestar import Litestar
-from litestar.stores.memory import MemoryStore
 
 from pylon_client._internal.common.constants import BLOCK_PROCESSING_TIME
 from pylon_client._internal.common.types import NetUid
 from pylon_client.service.bittensor.pool import BittensorClientPool
 from pylon_client.service.identities import identities
 from pylon_client.service.settings import settings
-from pylon_client.service.tasks import UpdateRecentNeurons
+from pylon_client.service.stores import StoreName
+from pylon_client.service.tasks import UpdateRecentNeurons, UpdateTaskExecutor
 
 logger = logging.getLogger(__name__)
 
@@ -57,14 +57,11 @@ async def ap_scheduler(app: Litestar) -> AsyncGenerator[None, None]:
     """
     scheduler = AsyncIOScheduler()
     scheduler.add_job(
-        UpdateRecentNeurons.task,
+        UpdateTaskExecutor(
+            UpdateRecentNeurons(app.stores.get(StoreName.RECENT_OBJECTS), app.state.bittensor_client_pool)
+        ).execute,
         "interval",
         seconds=_recent_objects_update_task_interval(),
-        kwargs={
-            "netuids": _all_recent_objects_netuids(),
-            "store": app.state.store,
-            "pool": app.state.bittensor_client_pool,
-        },
         next_run_time=dt.datetime.now(),  # run first time immediately
     )
     scheduler.start()
@@ -72,14 +69,3 @@ async def ap_scheduler(app: Litestar) -> AsyncGenerator[None, None]:
         yield
     finally:
         scheduler.shutdown()
-
-
-@asynccontextmanager
-async def litestar_store(app: Litestar) -> AsyncGenerator[None, None]:
-    """
-    Lifespan for providing a litestar in-memory store for bittensor. We need to maintain it throughout
-    the app lifetime because it is in-memory.
-    """
-    store = MemoryStore()
-    app.state.store = store
-    yield

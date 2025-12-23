@@ -1,15 +1,17 @@
 from collections.abc import AsyncGenerator
 from typing import TypeVar
 
+from litestar import Request
 from litestar.datastructures import State
 from litestar.exceptions import NotFoundException
 
-from pylon_client._internal.common.types import IdentityName
-from pylon_client.service.bittensor.cache.recent import RecentDataProvider
+from pylon_client._internal.common.types import IdentityName, NetUid
+from pylon_client.service.bittensor.cache.recent import IdentitySubnetScope, RecentObjectProvider, Scope, SubnetScope
 from pylon_client.service.bittensor.client import AbstractBittensorClient
 from pylon_client.service.bittensor.pool import BittensorClientPool
 from pylon_client.service.identities import Identity, identities
 from pylon_client.service.settings import settings
+from pylon_client.service.stores import StoreName
 
 BtClient = TypeVar("BtClient", bound=AbstractBittensorClient)
 
@@ -42,16 +44,21 @@ async def bt_client_open_access_dep(bt_client_pool: BittensorClientPool[BtClient
         yield client
 
 
-async def recent_data_provider_dep(state: State) -> RecentDataProvider:
-    return RecentDataProvider(
+def _create_recent_object_provider(request: Request, scope: Scope) -> RecentObjectProvider:
+    return RecentObjectProvider(
         soft_limit=settings.recent_objects_soft_limit,
         hard_limit=settings.recent_objects_hard_limit,
-        store=state.store,
+        store=request.app.stores.get(StoreName.RECENT_OBJECTS),
+        scope=scope,
     )
 
 
-# 'identity' dep is needed to make 'identity_name' required in the URL. 'recent_data_provider_dep'
-# doesn't have a use for identity for now. But it might be useful in the future.
-# noinspection PyUnusedLocal
-async def recent_data_provider_identity_dep(state: State, identity: Identity) -> RecentDataProvider:
-    return await recent_data_provider_dep(state)
+async def recent_object_provider_open_access_dep(netuid: NetUid, request: Request) -> RecentObjectProvider:
+    return _create_recent_object_provider(request, SubnetScope(netuid))
+
+
+async def recent_object_provider_identity_dep(
+    netuid: NetUid, identity: Identity, request: Request
+) -> RecentObjectProvider:
+    scope = IdentitySubnetScope(netuid, identity.wallet)
+    return _create_recent_object_provider(request, scope)

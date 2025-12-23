@@ -9,6 +9,7 @@ from litestar.testing import AsyncTestClient
 from pylon_client._internal.common.types import IdentityName
 from pylon_client.service.bittensor.pool import BittensorClientPool
 from pylon_client.service.identities import identities
+from pylon_client.service.stores import StoreName
 from tests.mock_bittensor_client import MockBittensorClient
 from tests.mock_store import MockStore
 
@@ -44,12 +45,14 @@ async def sn2_mock_bt_client(mock_bt_client_pool):
 
 
 @pytest.fixture
-def mock_store(behave):
-    return MockStore(behave)
+def mock_stores(behave) -> dict[StoreName, MockStore]:
+    return {
+        StoreName.RECENT_OBJECTS: MockStore(behave),
+    }
 
 
 @pytest_asyncio.fixture(loop_scope="session")
-async def test_app(mock_bt_client_pool: MockBittensorClient, mock_store: MockStore, monkeypatch):
+async def test_app(mock_bt_client_pool: MockBittensorClient, monkeypatch, mock_stores):
     """
     Create a test Litestar app with the mock client pool.
     """
@@ -63,20 +66,15 @@ async def test_app(mock_bt_client_pool: MockBittensorClient, mock_store: MockSto
         app.state.bittensor_client_pool = mock_bt_client_pool
         yield
 
-    # Mock the ap_scheduler lifespan to prevent background task execution during tests
+    # Mock the scheduler lifespan to prevent background task execution during tests
     @asynccontextmanager
     async def mock_ap_scheduler(app):
-        yield
-
-    @asynccontextmanager
-    async def mock_litestar_store(app):
-        app.state.store = mock_store
         yield
 
     # Replace the lifespans
     monkeypatch.setattr("pylon_client.service.lifespans.bittensor_client_pool", mock_lifespan)
     monkeypatch.setattr("pylon_client.service.lifespans.ap_scheduler", mock_ap_scheduler)
-    monkeypatch.setattr("pylon_client.service.lifespans.litestar_store", mock_litestar_store)
+    monkeypatch.setattr("pylon_client.service.main.stores", mock_stores)
 
     app = create_app()
     app.debug = True  # Enable detailed error responses

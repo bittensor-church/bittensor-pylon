@@ -5,8 +5,8 @@ from litestar.status_codes import HTTP_200_OK, HTTP_404_NOT_FOUND
 
 from pylon_client._internal.common.constants import BLOCK_PROCESSING_TIME
 from pylon_client._internal.common.models import Block, Neuron, SubnetNeurons
-from pylon_client._internal.common.types import Timestamp
-from pylon_client.service.bittensor.cache.recent import _RecentCacheEntry
+from pylon_client._internal.common.types import NetUid, Timestamp
+from pylon_client.service.bittensor.cache.recent.adapter import CacheKey, _CacheEntry
 from tests.factories import BlockFactory, NeuronFactory
 
 
@@ -36,30 +36,30 @@ async def test_get_recent_neurons_cache_missing(test_client, behave):
         assert response.status_code == HTTP_404_NOT_FOUND
         assert response.json() == {"status_code": 404, "detail": "Recent neurons not found."}
 
-    assert behave.calls["get"] == [("recent_SubnetNeurons_1", None)]
+    assert behave.calls["get"] == [(CacheKey(SubnetNeurons, NetUid(1), None), None)]
 
 
 @pytest.mark.asyncio
 async def test_get_recent_neurons_cache_expired(test_client, behave, subnet_neurons):
     timestamp = Timestamp(int(dt.datetime.now().timestamp()) - BLOCK_PROCESSING_TIME * 50)  # 40 BLOCK hard limit set.
-    cache_entry = _RecentCacheEntry[SubnetNeurons](entry=subnet_neurons, timestamp=timestamp)
+    cache_entry = _CacheEntry(data=subnet_neurons.model_dump_json(), timestamp=timestamp)
     async with behave.mock(get=[cache_entry.model_dump_json().encode()]):
         response = await test_client.get(_ENDPOINT)
 
         assert response.status_code == HTTP_404_NOT_FOUND
         assert response.json() == {"status_code": 404, "detail": "Recent neurons not found."}
 
-    assert behave.calls["get"] == [("recent_SubnetNeurons_1", None)]
+    assert behave.calls["get"] == [(CacheKey(SubnetNeurons, NetUid(1), None), None)]
 
 
 @pytest.mark.asyncio
 async def test_get_recent_neurons_success(test_client, behave, subnet_neurons):
     timestamp = Timestamp(int(dt.datetime.now().timestamp()))
-    cache_entry = _RecentCacheEntry[SubnetNeurons](entry=subnet_neurons, timestamp=timestamp)
+    cache_entry = _CacheEntry(data=subnet_neurons.model_dump_json(), timestamp=timestamp)
     async with behave.mock(get=[cache_entry.model_dump_json().encode()]):
         response = await test_client.get(_ENDPOINT)
 
         assert response.status_code == HTTP_200_OK
         assert response.json() == subnet_neurons.model_dump(mode="json")
 
-    assert behave.calls["get"] == [("recent_SubnetNeurons_1", None)]
+    assert behave.calls["get"] == [(CacheKey(SubnetNeurons, NetUid(1), None), None)]
