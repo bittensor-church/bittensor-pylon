@@ -1,6 +1,6 @@
 import pytest
 
-from pylon._internal.common.types import CommitmentDataBytes
+from pylon_client._internal.common.types import CommitmentDataBytes
 
 
 @pytest.fixture

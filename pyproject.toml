@@ -60,31 +60,31 @@ extend-select = ["DOC501"]
 
 [tool.ruff.lint.flake8-bugbear]
 extend-immutable-calls = [
-    "pylon._internal.common.types.ArchiveBlocksCutoff",
-    "pylon._internal.common.types.BittensorNetwork",
-    "pylon._internal.common.types.BlockHash",
-    "pylon._internal.common.types.BlockNumber",
-    "pylon._internal.common.types.Coldkey",
-    "pylon._internal.common.types.Consensus",
-    "pylon._internal.common.types.Dividends",
-    "pylon._internal.common.types.Emission",
-    "pylon._internal.common.types.Hotkey",
-    "pylon._internal.common.types.Incentive",
-    "pylon._internal.common.types.MaxWeightsLimit",
-    "pylon._internal.common.types.NetUid",
-    "pylon._internal.common.types.NeuronUid",
-    "pylon._internal.common.types.Port",
-    "pylon._internal.common.types.PrivateKey",
-    "pylon._internal.common.types.PruningScore",
-    "pylon._internal.common.types.PublicKey",
-    "pylon._internal.common.types.Rank",
-    "pylon._internal.common.types.RevealRound",
-    "pylon._internal.common.types.Stake",
-    "pylon._internal.common.types.Tempo",
-    "pylon._internal.common.types.Timestamp",
-    "pylon._internal.common.types.Trust",
-    "pylon._internal.common.types.ValidatorTrust",
-    "pylon._internal.common.types.Weight",
+    "pylon_client._internal.common.types.ArchiveBlocksCutoff",
+    "pylon_client._internal.common.types.BittensorNetwork",
+    "pylon_client._internal.common.types.BlockHash",
+    "pylon_client._internal.common.types.BlockNumber",
+    "pylon_client._internal.common.types.Coldkey",
+    "pylon_client._internal.common.types.Consensus",
+    "pylon_client._internal.common.types.Dividends",
+    "pylon_client._internal.common.types.Emission",
+    "pylon_client._internal.common.types.Hotkey",
+    "pylon_client._internal.common.types.Incentive",
+    "pylon_client._internal.common.types.MaxWeightsLimit",
+    "pylon_client._internal.common.types.NetUid",
+    "pylon_client._internal.common.types.NeuronUid",
+    "pylon_client._internal.common.types.Port",
+    "pylon_client._internal.common.types.PrivateKey",
+    "pylon_client._internal.common.types.PruningScore",
+    "pylon_client._internal.common.types.PublicKey",
+    "pylon_client._internal.common.types.Rank",
+    "pylon_client._internal.common.types.RevealRound",
+    "pylon_client._internal.common.types.Stake",
+    "pylon_client._internal.common.types.Tempo",
+    "pylon_client._internal.common.types.Timestamp",
+    "pylon_client._internal.common.types.Trust",
+    "pylon_client._internal.common.types.ValidatorTrust",
+    "pylon_client._internal.common.types.Weight",
 ]
 
 [build-system]
@@ -101,9 +101,9 @@ documentation = "https://github.com/backend-developers-ltd/bittensor-pylon#readm
 # uv-specific settings can go here
 
 [tool.hatch.version]
-path = "pylon/__init__.py"
+path = "pylon_client/__init__.py"
 
 [tool.hatch.build.targets.wheel]
-include = ["pylon/"]
-exclude = ["pylon/service/"]
+include = ["pylon_client/"]
+exclude = ["pylon_client/service/"]
 

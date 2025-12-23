@@ -1,8 +1,8 @@
 import pytest
 
-from pylon._internal.common.currency import CurrencyRao, Token
-from pylon._internal.common.models import Block, SubnetState
-from pylon._internal.common.types import (
+from pylon_client._internal.common.currency import CurrencyRao, Token
+from pylon_client._internal.common.models import Block, SubnetState
+from pylon_client._internal.common.types import (
     AlphaStakeRao,
     BlockHash,
     BlockNumber,

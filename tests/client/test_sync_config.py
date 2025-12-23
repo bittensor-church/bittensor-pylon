@@ -2,13 +2,13 @@ import pytest
 from httpx import ConnectTimeout, Response, codes
 from tenacity import stop_after_attempt
 
-from pylon._internal.client.sync.client import PylonClient
-from pylon._internal.client.sync.config import DEFAULT_RETRIES, Config
-from pylon._internal.common.endpoints import Endpoint
-from pylon._internal.common.exceptions import PylonRequestException
-from pylon._internal.common.responses import SetWeightsResponse
-from pylon._internal.common.types import Hotkey, IdentityName, PylonAuthToken, Weight
-from pylon.service.main import app
+from pylon_client._internal.client.sync.client import PylonClient
+from pylon_client._internal.client.sync.config import DEFAULT_RETRIES, Config
+from pylon_client._internal.common.endpoints import Endpoint
+from pylon_client._internal.common.exceptions import PylonRequestException
+from pylon_client._internal.common.responses import SetWeightsResponse
+from pylon_client._internal.common.types import Hotkey, IdentityName, PylonAuthToken, Weight
+from pylon_client.service.main import app
 
 
 @pytest.mark.parametrize(

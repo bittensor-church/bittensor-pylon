@@ -6,7 +6,7 @@ inputs:
     description: 'Prefix to strip from the tag (e.g., "client-v" or "service-v")'
     required: true
   version-file:
-    description: 'Path to the file containing __version__ (e.g., "pylon/__init__.py")'
+    description: 'Path to the file containing __version__ (e.g., "pylon_client/__init__.py")'
     required: true
 
 outputs:

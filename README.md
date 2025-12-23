@@ -18,7 +18,7 @@ Create a `.env` file with your Bittensor settings by copying the template:
 
 ```bash
 # Copy the template and edit it
-cp pylon/service/envs/test_env.template .env
+cp pylon_client/service/envs/test_env.template .env
 ```
 
 Edit the example values in `.env` file to the desired ones. The meaning of each setting is described in the file.
@@ -40,7 +40,7 @@ file to the same location as `.env` file:
 
 ```bash
 # Make sure to remove .example from the file name!
-cp pylon/service/envs/docker-compose.yaml.example docker-compose.yaml
+cp pylon_client/service/envs/docker-compose.yaml.example docker-compose.yaml
 ```
 
 Edit the file according to your needs (especially wallets volume) and run:
@@ -135,7 +135,7 @@ Use the Pylon client to connect with the running service:
 ```python
 import asyncio
 
-from pylon.v1 import (
+from pylon_client.v1 import (
     AsyncPylonClient,
     AsyncConfig,
     BlockNumber,
@@ -170,7 +170,7 @@ If you need to manage the Pylon service programmatically, you can use the `Pylon
 It's a context manager that starts the Pylon service and stops it when the `async with` block is exited. Only suitable for ad-hoc use cases like scripts, short-lived tasks or testing.
 
 ```python
-from pylon.v1 import AsyncPylonClient, AsyncConfig, SetWeightsRequest, PylonDockerManager, Hotkey, Weight
+from pylon_client.v1 import AsyncPylonClient, AsyncConfig, SetWeightsRequest, PylonDockerManager, Hotkey, Weight
 
 
 async def main():
@@ -196,7 +196,7 @@ This example shows how to configure the client to retry up to 5 times, waiting b
 attempt.
 
 ```python
-from pylon.v1 import AsyncPylonClient, AsyncConfig, PylonRequestException
+from pylon_client.v1 import AsyncPylonClient, AsyncConfig, PylonRequestException
 
 from tenacity import AsyncRetrying, stop_after_attempt, retry_if_exception_type, wait_random
 
@@ -214,10 +214,10 @@ async def main():
         ...
 ```
 
-To avoid manual exception handling, we recommend using `pylon.v1.DEFAULT_RETRIES` object as following:
+To avoid manual exception handling, we recommend using `pylon_client.v1.DEFAULT_RETRIES` object as following:
 
 ```python
-from pylon.v1 import AsyncPylonClient, AsyncConfig, DEFAULT_RETRIES
+from pylon_client.v1 import AsyncPylonClient, AsyncConfig, DEFAULT_RETRIES
 
 from tenacity import stop_after_attempt, wait_random
 

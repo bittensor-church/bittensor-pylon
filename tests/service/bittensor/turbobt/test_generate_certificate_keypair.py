@@ -1,6 +1,6 @@
 import pytest
 
-from pylon._internal.common.models import (
+from pylon_client._internal.common.models import (
     CertificateAlgorithm,
     NeuronCertificateKeypair,
     PrivateKey,

@@ -4,11 +4,11 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-Bittensor Pylon is a high-performance, asynchronous proxy for a Bittensor subnet. It is a single unified package `pylon` with the following sub-packages:
+Bittensor Pylon is a high-performance, asynchronous proxy for a Bittensor subnet. It is a single unified package `pylon_client` with the following sub-packages:
 
-- **`pylon.service`**: Core REST API service that connects to Bittensor network and exposes API endpoints
-- **`pylon._internal.client`**: Lightweight Python client library for interacting with the pylon service API
-- **`pylon._internal.common`**: Shared utilities, settings, and request/response models
+- **`pylon_client.service`**: Core REST API service that connects to Bittensor network and exposes API endpoints
+- **`pylon_client._internal.client`**: Lightweight Python client library for interacting with the pylon service API
+- **`pylon_client._internal.common`**: Shared utilities, settings, and request/response models
 
 ## Development Commands
 
@@ -16,8 +16,8 @@ Bittensor Pylon is a high-performance, asynchronous proxy for a Bittensor subnet
 - Install dependencies: `uv sync --extra dev`
 - Uses `uv` as the package manager (faster than pip)
 - Build package: `uv build` (uses hatchling backend with dynamic versioning)
-  - **Important**: The wheel build **excludes** `pylon/service/` (only client library and common code are packaged)
-  - Version is dynamically read from `pylon/__init__.py`
+  - **Important**: The wheel build **excludes** `pylon_client/service/` (only client library and common code are packaged)
+  - Version is dynamically read from `pylon_client/__init__.py`
 
 ### Running python commands
 
@@ -34,7 +34,7 @@ Bittensor Pylon is a high-performance, asynchronous proxy for a Bittensor subnet
 
 
 ### Running the Service
-- Local development: `uvicorn pylon.service.main:app --host 0.0.0.0 --port 8000`
+- Local development: `uvicorn pylon_client.service.main:app --host 0.0.0.0 --port 8000`
 - Docker: `PYLON_DOCKER_IMAGE_NAME="bittensor_pylon" ./docker-run.sh`
 
 ## Architecture
@@ -42,20 +42,20 @@ Bittensor Pylon is a high-performance, asynchronous proxy for a Bittensor subnet
 The application follows a clear separation of concerns with these core components:
 
 ### Core Components
-- **`pylon/service/bittensor/client.py`**: Manages all interactions with the Bittensor network using the `turbobt` library, including wallet operations. Provides `AbstractBittensorClient` base class and `TurboBtClient` implementation
-- **`pylon/service/bittensor/pool.py`**: Manages `BittensorClientPool` for acquiring and sharing client instances per wallet
-- **`pylon/service/identities.py`**: Identity system for multi-subnet/multi-wallet support with per-identity authentication
-- **`pylon/service/api.py`**: The Litestar-based API layer that defines all external endpoints using two controllers:
+- **`pylon_client/service/bittensor/client.py`**: Manages all interactions with the Bittensor network using the `turbobt` library, including wallet operations. Provides `AbstractBittensorClient` base class and `TurboBtClient` implementation
+- **`pylon_client/service/bittensor/pool.py`**: Manages `BittensorClientPool` for acquiring and sharing client instances per wallet
+- **`pylon_client/service/identities.py`**: Identity system for multi-subnet/multi-wallet support with per-identity authentication
+- **`pylon_client/service/api.py`**: The Litestar-based API layer that defines all external endpoints using two controllers:
   - `OpenAccessController`: Endpoints under `/subnet/{netuid}/` (requires `open_access_token`)
   - `IdentityController`: Endpoints under `/identity/{identity_name}/subnet/{netuid}` (requires per-identity token)
-- **`pylon/service/main.py`**: The main entry point. It wires up the application, manages the startup/shutdown lifecycle
-- **`pylon/service/tasks.py`**: Contains `ApplyWeights` task for applying weights to the subnet on-demand
-- **`pylon/_internal/common/models.py`**: Bittensor-specific models (Block, Neuron, Certificate, SubnetHyperparams, etc.)
-- **`pylon/_internal/common/endpoints.py`**: Endpoint path definitions using the `Endpoint` enum
-- **`pylon/_internal/common/settings.py`**: Manages application configuration using `pydantic-settings`, loading from a `.env` file
-- **`pylon/_internal/common/requests.py`**: Pydantic request models for API validation
-- **`pylon/_internal/common/responses.py`**: Pydantic response models for API serialization
-- **`pylon/_internal/client/`**: Client library implementation with both sync and async clients
+- **`pylon_client/service/main.py`**: The main entry point. It wires up the application, manages the startup/shutdown lifecycle
+- **`pylon_client/service/tasks.py`**: Contains `ApplyWeights` task for applying weights to the subnet on-demand
+- **`pylon_client/_internal/common/models.py`**: Bittensor-specific models (Block, Neuron, Certificate, SubnetHyperparams, etc.)
+- **`pylon_client/_internal/common/endpoints.py`**: Endpoint path definitions using the `Endpoint` enum
+- **`pylon_client/_internal/common/settings.py`**: Manages application configuration using `pydantic-settings`, loading from a `.env` file
+- **`pylon_client/_internal/common/requests.py`**: Pydantic request models for API validation
+- **`pylon_client/_internal/common/responses.py`**: Pydantic response models for API serialization
+- **`pylon_client/_internal/client/`**: Client library implementation with both sync and async clients
 
 ### Key Dependencies
 - **Web Framework**: Litestar (not FastAPI)
@@ -65,7 +65,7 @@ The application follows a clear separation of concerns with these core component
 - **Containerization**: Docker
 
 ### Background Tasks
-- **`ApplyWeights`** (`pylon/service/tasks.py`): Applies weights to the subnet on-demand (triggered by PUT /subnet/weights endpoint)
+- **`ApplyWeights`** (`pylon_client/service/tasks.py`): Applies weights to the subnet on-demand (triggered by PUT /subnet/weights endpoint)
   - Uses retry logic with exponential backoff (configurable: default 200 attempts, 1-second delay)
   - Handles both commit-reveal and direct weight setting based on subnet hyperparameters
 
@@ -80,7 +80,7 @@ All endpoints are prefixed with `/api/v1`. The API supports two access patterns:
 
 ### Authentication & Identities
 
-The service supports multi-subnet/multi-wallet operations through an identity system (`pylon/service/identities.py`):
+The service supports multi-subnet/multi-wallet operations through an identity system (`pylon_client/service/identities.py`):
 - Each identity has its own wallet (coldkey/hotkey pair), subnet, and authentication token
 - Identities are configured via environment variables: `PYLON_ID_{IDENTITY_NAME}_*`
 - Required per-identity settings: `wallet_name`, `hotkey_name`, `netuid`, `token`
@@ -116,7 +116,7 @@ The service supports multi-subnet/multi-wallet operations through an identity sy
 
 ## turbobt Integration
 
-`turbobt` is a Python library providing core functionalities for interacting with the Bittensor blockchain. The application uses it through the `TurboBtClient` implementation in `pylon/service/bittensor/client.py`:
+`turbobt` is a Python library providing core functionalities for interacting with the Bittensor blockchain. The application uses it through the `TurboBtClient` implementation in `pylon_client/service/bittensor/client.py`:
 
 ### Client Architecture
 - **`AbstractBittensorClient`**: Abstract base class defining the interface for Bittensor operations
@@ -138,7 +138,7 @@ The service supports multi-subnet/multi-wallet operations through an identity sy
 
 ## Configuration
 
-Configuration is managed in `pylon/_internal/common/settings.py` using `pydantic-settings`. Environment variables are loaded from a `.env` file (template at `pylon/service/envs/test_env.template`).
+Configuration is managed in `pylon_client/_internal/common/settings.py` using `pydantic-settings`. Environment variables are loaded from a `.env` file (template at `pylon_client/service/envs/test_env.template`).
 
 All settings use the `PYLON_` prefix. Example: `PYLON_BITTENSOR_NETWORK=finney`
 
@@ -325,16 +325,16 @@ The service endpoints are tested using `MockBittensorClient` (`tests/mock_bitten
 
 ### Client Library Structure
 
-The client library (`pylon/_internal/client/`) provides both synchronous and asynchronous clients:
+The client library (`pylon_client/_internal/client/`) provides both synchronous and asynchronous clients:
 
-#### Sync Client (`pylon/_internal/client/sync/`)
+#### Sync Client (`pylon_client/_internal/client/sync/`)
 - **`PylonClient`**: Main synchronous client class
 - **`OpenAccessApi`**: Methods for open access endpoints
 - **`IdentityApi`**: Methods for identity-scoped endpoints
 - **`HttpCommunicator`**: HTTP client for making requests
 - Usage: `with PylonClient(config) as client: ...`
 
-#### Async Client (`pylon/_internal/client/asynchronous/`)
+#### Async Client (`pylon_client/_internal/client/asynchronous/`)
 - **`AsyncPylonClient`**: Main asynchronous client class
 - **`AsyncOpenAccessApi`**: Async methods for open access endpoints
 - **`AsyncIdentityApi`**: Async methods for identity-scoped endpoints
@@ -345,11 +345,11 @@ Both clients follow the Communicator pattern, allowing for different transport i
 
 ## Development Workflow
 
-1. Create `.env` from template: `cp pylon/service/envs/test_env.template .env`
+1. Create `.env` from template: `cp pylon_client/service/envs/test_env.template .env`
 2. Install dependencies: `uv sync --extra dev`
 3. Run tests: `nox -s test`
 4. Format code: `nox -s format`
-5. Run service: `uvicorn pylon.service.main:app --reload --host 127.0.0.1 --port 8000`
+5. Run service: `uvicorn pylon_client.service.main:app --reload --host 127.0.0.1 --port 8000`
 
 ### Release Process
 
@@ -360,7 +360,7 @@ The project has two independent products with separate release workflows:
 The client library is published to PyPI when a `client-v*` tag is pushed:
 
 ```bash
-# 1. Update version in pylon/__init__.py
+# 1. Update version in pylon_client/__init__.py
 #    __version__ = "0.2.0"
 
 # 2. Commit and push
@@ -379,7 +379,7 @@ git push origin client-v0.2.0
 The service is published to Docker Hub when a `service-v*` tag is pushed:
 
 ```bash
-# 1. Update version in pylon/service/__init__.py
+# 1. Update version in pylon_client/service/__init__.py
 #    __version__ = "1.0.0"
 
 # 2. Commit and push
@@ -397,15 +397,15 @@ git push origin service-v1.0.0
 
 | Product | Version File | Tag Pattern |
 |---------|--------------|-------------|
-| Client (PyPI) | `pylon/__init__.py` | `client-v<semver>` |
-| Service (Docker) | `pylon/service/__init__.py` | `service-v<semver>` |
+| Client (PyPI) | `pylon_client/__init__.py` | `client-v<semver>` |
+| Service (Docker) | `pylon_client/service/__init__.py` | `service-v<semver>` |
 
 **Important**: The CD workflow validates that the tag version matches the version in the code. If they don't match, the build will fail.
 
 ## Common Gotchas and Important Notes
 
 ### Package Structure
-- **Service is not packaged**: The `pylon/service/` directory is excluded from wheel builds. Only `pylon._internal.client` and `pylon._internal.common` are distributed as a library
+- **Service is not packaged**: The `pylon_client/service/` directory is excluded from wheel builds. Only `pylon_client._internal.client` and `pylon_client._internal.common` are distributed as a library
 - **Service runs standalone**: The service is meant to be run directly via uvicorn, not imported as a library
 
 ### Testing

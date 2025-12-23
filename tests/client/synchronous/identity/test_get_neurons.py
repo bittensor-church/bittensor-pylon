@@ -3,10 +3,10 @@ from http import HTTPMethod
 import pytest
 from httpx import Response, codes
 
-from pylon._internal.common.endpoints import Endpoint
-from pylon._internal.common.models import Block
-from pylon._internal.common.responses import GetNeuronsResponse
-from pylon._internal.common.types import BlockHash, BlockNumber
+from pylon_client._internal.common.endpoints import Endpoint
+from pylon_client._internal.common.models import Block
+from pylon_client._internal.common.responses import GetNeuronsResponse
+from pylon_client._internal.common.types import BlockHash, BlockNumber
 from tests.client.synchronous.base_test import IdentityEndpointTest
 from tests.factories import NeuronFactory
 

@@ -2,10 +2,10 @@ from http import HTTPMethod
 
 import pytest
 
-from pylon._internal.common.endpoints import Endpoint
-from pylon._internal.common.models import Block
-from pylon._internal.common.responses import GetCommitmentResponse
-from pylon._internal.common.types import BlockHash, BlockNumber, CommitmentDataHex, Hotkey
+from pylon_client._internal.common.endpoints import Endpoint
+from pylon_client._internal.common.models import Block
+from pylon_client._internal.common.responses import GetCommitmentResponse
+from pylon_client._internal.common.types import BlockHash, BlockNumber, CommitmentDataHex, Hotkey
 from tests.client.asynchronous.base_test import IdentityEndpointTest
 
 

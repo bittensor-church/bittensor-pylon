@@ -21,7 +21,7 @@ jobs:
         uses: ./.github/actions/validate-version
         with:
           tag-prefix: 'client-v'
-          version-file: 'pylon/__init__.py'
+          version-file: 'pylon_client/__init__.py'
 
   release-build:
     runs-on: ubuntu-latest

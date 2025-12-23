@@ -5,9 +5,9 @@ import pytest
 from httpx import Response, codes
 from pydantic import ValidationError
 
-from pylon._internal.common.endpoints import Endpoint
-from pylon._internal.common.responses import SetCommitmentResponse
-from pylon._internal.common.types import CommitmentDataBytes, CommitmentDataHex
+from pylon_client._internal.common.endpoints import Endpoint
+from pylon_client._internal.common.responses import SetCommitmentResponse
+from pylon_client._internal.common.types import CommitmentDataBytes, CommitmentDataHex
 from tests.client.synchronous.base_test import IdentityEndpointTest
 
 
