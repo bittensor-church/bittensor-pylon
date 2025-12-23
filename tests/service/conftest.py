@@ -5,9 +5,9 @@ Shared fixtures for service endpoint tests.
 import pytest_asyncio
 from litestar.testing import AsyncTestClient
 
-from pylon._internal.common.types import IdentityName
-from pylon.service.bittensor.pool import BittensorClientPool
-from pylon.service.identities import identities
+from pylon_client._internal.common.types import IdentityName
+from pylon_client.service.bittensor.pool import BittensorClientPool
+from pylon_client.service.identities import identities
 from tests.mock_bittensor_client import MockBittensorClient
 
 
@@ -48,7 +48,7 @@ async def test_app(mock_bt_client_pool: MockBittensorClient, monkeypatch):
     """
     from contextlib import asynccontextmanager
 
-    from pylon.service.main import create_app
+    from pylon_client.service.main import create_app
 
     # Mock the bittensor_client lifespan to just set our mock client
     @asynccontextmanager
@@ -57,7 +57,7 @@ async def test_app(mock_bt_client_pool: MockBittensorClient, monkeypatch):
         yield
 
     # Replace the lifespan in the main module
-    monkeypatch.setattr("pylon.service.main.bittensor_client_pool", mock_lifespan)
+    monkeypatch.setattr("pylon_client.service.main.bittensor_client_pool", mock_lifespan)
 
     app = create_app()
     app.debug = True  # Enable detailed error responses

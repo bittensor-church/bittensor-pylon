@@ -39,7 +39,7 @@ jobs:
           python-version: '3.12'
 
       - name: Create dotenv file
-        run: cp ./pylon/service/envs/test_env.template .env
+        run: cp ./pylon_client/service/envs/test_env.template .env
 
       - name: Run unit tests with nox
         env:

@@ -6,9 +6,9 @@ from turbobt.neuron import AxonInfo as TurboBtAxonInfo
 from turbobt.neuron import AxonProtocolEnum as TurboBtAxonProtocolEnum
 from turbobt.neuron import Neuron as TurboBtNeuron
 
-from pylon._internal.common.currency import Currency, Token
-from pylon._internal.common.models import AxonInfo, AxonProtocol, Block, Neuron, Stakes
-from pylon._internal.common.types import (
+from pylon_client._internal.common.currency import Currency, Token
+from pylon_client._internal.common.models import AxonInfo, AxonProtocol, Block, Neuron, Stakes
+from pylon_client._internal.common.types import (
     AlphaStake,
     BlockHash,
     BlockNumber,

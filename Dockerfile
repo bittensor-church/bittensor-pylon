@@ -13,8 +13,8 @@ ENV PATH="/root/.cargo/bin:/app/.venv/bin:${PATH}"
 COPY pyproject.toml uv.lock alembic.ini ./
 
 # copy source packages
-COPY pylon/_internal/common ./pylon/_internal/common
-COPY pylon/service ./pylon/service
+COPY pylon_client/_internal/common ./pylon_client/_internal/common
+COPY pylon_client/service ./pylon_client/service
 
 # install uv and dependencies
 COPY --from=ghcr.io/astral-sh/uv:0.5 /uv /uvx /bin/
@@ -22,5 +22,5 @@ RUN /bin/uv sync --extra service --no-install-project
 
 
 EXPOSE 8000
-CMD [".venv/bin/python", "-m", "uvicorn", "pylon.service.main:app", "--host", "0.0.0.0", "--port", "8000"]
+CMD [".venv/bin/python", "-m", "uvicorn", "pylon_client.service.main:app", "--host", "0.0.0.0", "--port", "8000"]
 

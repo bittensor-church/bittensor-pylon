@@ -1,6 +1,6 @@
 from polyfactory.factories.pydantic_factory import ModelFactory
 
-from pylon._internal.common.models import Block, Neuron
+from pylon_client._internal.common.models import Block, Neuron
 
 
 class BlockFactory(ModelFactory[Block]):

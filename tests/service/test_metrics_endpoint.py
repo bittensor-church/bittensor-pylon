@@ -2,7 +2,7 @@ import pytest
 from litestar.status_codes import HTTP_200_OK, HTTP_403_FORBIDDEN
 from litestar.testing import AsyncTestClient
 
-from pylon.service.settings import settings
+from pylon_client.service.settings import settings
 
 
 class TestMetricsEndpoint:

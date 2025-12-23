@@ -6,7 +6,7 @@ import pytest
 from litestar.status_codes import HTTP_200_OK
 from litestar.testing import AsyncTestClient
 
-from pylon._internal.common.models import (
+from pylon_client._internal.common.models import (
     Block,
     Neuron,
     SubnetNeurons,

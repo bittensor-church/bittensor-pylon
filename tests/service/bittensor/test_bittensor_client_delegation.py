@@ -11,9 +11,9 @@ import pytest
 from bittensor_wallet import Wallet
 from turbobt.substrate.exceptions import UnknownBlock
 
-from pylon._internal.common.currency import Currency, Token
-from pylon._internal.common.models import AxonInfo, AxonProtocol, Block, Neuron, Stakes
-from pylon._internal.common.types import (
+from pylon_client._internal.common.currency import Currency, Token
+from pylon_client._internal.common.models import AxonInfo, AxonProtocol, Block, Neuron, Stakes
+from pylon_client._internal.common.types import (
     AlphaStake,
     ArchiveBlocksCutoff,
     BittensorNetwork,
@@ -39,7 +39,7 @@ from pylon._internal.common.types import (
     ValidatorPermit,
     ValidatorTrust,
 )
-from pylon.service.bittensor.client import BittensorClient
+from pylon_client.service.bittensor.client import BittensorClient
 from tests.mock_bittensor_client import MockBittensorClient
 
 

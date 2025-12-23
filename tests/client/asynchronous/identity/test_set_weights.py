@@ -4,10 +4,10 @@ from http import HTTPMethod
 import pytest
 from pydantic import ValidationError
 
-from pylon._internal.common.endpoints import Endpoint
-from pylon._internal.common.requests import SetWeightsRequest
-from pylon._internal.common.responses import SetWeightsResponse
-from pylon._internal.common.types import Hotkey, IdentityName, NetUid, Weight
+from pylon_client._internal.common.endpoints import Endpoint
+from pylon_client._internal.common.requests import SetWeightsRequest
+from pylon_client._internal.common.responses import SetWeightsResponse
+from pylon_client._internal.common.types import Hotkey, IdentityName, NetUid, Weight
 from tests.client.asynchronous.base_test import IdentityEndpointTest
 
 

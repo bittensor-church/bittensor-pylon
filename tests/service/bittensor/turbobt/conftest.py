@@ -32,7 +32,7 @@ from turbobt.subnet import SubnetCommitments as TurboBtSubnetCommitments
 from turbobt.subnet import SubnetNeurons as TurboBtSubnetNeurons
 from turbobt.subnet import SubnetWeights as TurboBtSubnetWeights
 
-from pylon.service.bittensor.client import TurboBtClient
+from pylon_client.service.bittensor.client import TurboBtClient
 
 
 @pytest.fixture
@@ -71,17 +71,17 @@ def bittensor_spec(block_spec, subnet_spec):
 
 @pytest_asyncio.fixture
 async def turbobt_client(monkeypatch, bittensor_spec, wallet):
-    from pylon._internal.common.types import BittensorNetwork
+    from pylon_client._internal.common.types import BittensorNetwork
 
-    monkeypatch.setattr("pylon.service.bittensor.client.Bittensor", bittensor_spec)
+    monkeypatch.setattr("pylon_client.service.bittensor.client.Bittensor", bittensor_spec)
     async with TurboBtClient(wallet=wallet, uri=BittensorNetwork("ws://testserver")) as client:
         yield client
 
 
 @pytest_asyncio.fixture
 async def turbobt_client_no_wallet(monkeypatch, bittensor_spec):
-    from pylon._internal.common.types import BittensorNetwork
+    from pylon_client._internal.common.types import BittensorNetwork
 
-    monkeypatch.setattr("pylon.service.bittensor.client.Bittensor", bittensor_spec)
+    monkeypatch.setattr("pylon_client.service.bittensor.client.Bittensor", bittensor_spec)
     async with TurboBtClient(wallet=None, uri=BittensorNetwork("ws://testserver")) as client:
         yield client

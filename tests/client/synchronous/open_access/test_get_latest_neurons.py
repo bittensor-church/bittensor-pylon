@@ -2,10 +2,10 @@ from http import HTTPMethod
 
 import pytest
 
-from pylon._internal.common.endpoints import Endpoint
-from pylon._internal.common.models import Block
-from pylon._internal.common.responses import GetNeuronsResponse
-from pylon._internal.common.types import BlockHash, BlockNumber, NetUid
+from pylon_client._internal.common.endpoints import Endpoint
+from pylon_client._internal.common.models import Block
+from pylon_client._internal.common.responses import GetNeuronsResponse
+from pylon_client._internal.common.types import BlockHash, BlockNumber, NetUid
 from tests.client.synchronous.base_test import OpenAccessEndpointTest
 from tests.factories import NeuronFactory
 

@@ -13,7 +13,7 @@ from collections.abc import Callable
 from contextlib import asynccontextmanager
 from typing import Any, TypeAlias
 
-from pylon._internal.common.models import (
+from pylon_client._internal.common.models import (
     Block,
     CertificateAlgorithm,
     Commitment,
@@ -25,7 +25,7 @@ from pylon._internal.common.models import (
     SubnetNeurons,
     SubnetState,
 )
-from pylon._internal.common.types import (
+from pylon_client._internal.common.types import (
     BittensorNetwork,
     BlockNumber,
     CommitmentDataBytes,
@@ -34,7 +34,7 @@ from pylon._internal.common.types import (
     RevealRound,
     Weight,
 )
-from pylon.service.bittensor.client import AbstractBittensorClient
+from pylon_client.service.bittensor.client import AbstractBittensorClient
 
 Behavior: TypeAlias = Callable | Exception | Any
 MethodName: TypeAlias = str

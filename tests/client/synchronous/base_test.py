@@ -4,16 +4,16 @@ from http import HTTPMethod
 import pytest
 from httpx import ConnectTimeout, Response, codes
 
-from pylon._internal.client.sync.client import PylonClient
-from pylon._internal.common.endpoints import Endpoint
-from pylon._internal.common.exceptions import (
+from pylon_client._internal.client.sync.client import PylonClient
+from pylon_client._internal.common.endpoints import Endpoint
+from pylon_client._internal.common.exceptions import (
     PylonClosed,
     PylonMisconfigured,
     PylonRequestException,
     PylonResponseException,
 )
-from pylon._internal.common.responses import PylonResponse
-from pylon.service.main import app
+from pylon_client._internal.common.responses import PylonResponse
+from pylon_client.service.main import app
 
 
 class BaseEndpointTest(ABC):

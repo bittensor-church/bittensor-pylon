@@ -6,9 +6,9 @@ import pytest
 from litestar.status_codes import HTTP_200_OK, HTTP_400_BAD_REQUEST
 from litestar.testing import AsyncTestClient
 
-from pylon._internal.common.models import Block, CommitReveal, SubnetHyperparams
-from pylon._internal.common.types import BlockHash, BlockNumber, RevealRound
-from pylon.service.tasks import ApplyWeights
+from pylon_client._internal.common.models import Block, CommitReveal, SubnetHyperparams
+from pylon_client._internal.common.types import BlockHash, BlockNumber, RevealRound
+from pylon_client.service.tasks import ApplyWeights
 from tests.helpers import wait_for_background_tasks
 from tests.mock_bittensor_client import MockBittensorClient
 

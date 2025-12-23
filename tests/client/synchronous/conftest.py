@@ -1,9 +1,9 @@
 import pytest
 from tenacity import wait_none
 
-from pylon._internal.client.sync.client import PylonClient
-from pylon._internal.client.sync.config import DEFAULT_RETRIES, Config
-from pylon._internal.common.types import IdentityName, PylonAuthToken
+from pylon_client._internal.client.sync.client import PylonClient
+from pylon_client._internal.client.sync.config import DEFAULT_RETRIES, Config
+from pylon_client._internal.common.types import IdentityName, PylonAuthToken
 
 
 @pytest.fixture

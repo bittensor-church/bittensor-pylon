@@ -1,7 +1,7 @@
 import pytest
 
-from pylon._internal.common.models import Block, SubnetCommitments
-from pylon._internal.common.types import BlockHash, BlockNumber, CommitmentDataHex, Hotkey
+from pylon_client._internal.common.models import Block, SubnetCommitments
+from pylon_client._internal.common.types import BlockHash, BlockNumber, CommitmentDataHex, Hotkey
 
 
 @pytest.fixture

@@ -4,9 +4,9 @@ import pytest
 import pytest_asyncio
 from bittensor_wallet import Wallet
 
-from pylon._internal.common.types import HotkeyName, WalletName
-from pylon.service.bittensor.client import BittensorClient
-from pylon.service.bittensor.pool import (
+from pylon_client._internal.common.types import HotkeyName, WalletName
+from pylon_client.service.bittensor.client import BittensorClient
+from pylon_client.service.bittensor.pool import (
     BittensorClientPool,
     BittensorClientPoolInvalidState,
     WalletKey,

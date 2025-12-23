@@ -3,10 +3,10 @@ from http import HTTPMethod
 import pytest
 from httpx import Response, codes
 
-from pylon._internal.common.endpoints import Endpoint
-from pylon._internal.common.models import Block
-from pylon._internal.common.responses import GetCommitmentsResponse
-from pylon._internal.common.types import BlockHash, BlockNumber, CommitmentDataHex, Hotkey, NetUid
+from pylon_client._internal.common.endpoints import Endpoint
+from pylon_client._internal.common.models import Block
+from pylon_client._internal.common.responses import GetCommitmentsResponse
+from pylon_client._internal.common.types import BlockHash, BlockNumber, CommitmentDataHex, Hotkey, NetUid
 from tests.client.synchronous.base_test import OpenAccessEndpointTest
 
 

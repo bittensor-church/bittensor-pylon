@@ -6,8 +6,8 @@ import pytest
 from litestar.status_codes import HTTP_200_OK, HTTP_404_NOT_FOUND
 from litestar.testing import AsyncTestClient
 
-from pylon._internal.common.models import Block, Commitment
-from pylon._internal.common.types import BlockHash, BlockNumber, CommitmentDataHex, Hotkey
+from pylon_client._internal.common.models import Block, Commitment
+from pylon_client._internal.common.types import BlockHash, BlockNumber, CommitmentDataHex, Hotkey
 from tests.mock_bittensor_client import MockBittensorClient
 
 

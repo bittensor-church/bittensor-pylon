@@ -1,8 +1,8 @@
 import pytest
 
-from pylon._internal.common.settings import Settings
-from pylon._internal.common.types import HotkeyName, IdentityName, NetUid, PylonAuthToken, WalletName
-from pylon.service.identities import Identity, get_identities
+from pylon_client._internal.common.settings import Settings
+from pylon_client._internal.common.types import HotkeyName, IdentityName, NetUid, PylonAuthToken, WalletName
+from pylon_client.service.identities import Identity, get_identities
 
 
 @pytest.fixture

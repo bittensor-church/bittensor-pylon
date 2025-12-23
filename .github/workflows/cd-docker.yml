@@ -24,7 +24,7 @@ jobs:
         uses: ./.github/actions/validate-version
         with:
           tag-prefix: 'service-v'
-          version-file: 'pylon/service/__init__.py'
+          version-file: 'pylon_client/service/__init__.py'
 
   docker-push:
     runs-on: ubuntu-latest
