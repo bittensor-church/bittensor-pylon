@@ -13,8 +13,16 @@ from pylon._internal.common.requests import (
 )
 from pylon._internal.common.responses import IdentityLoginResponse
 from pylon._internal.common.types import BlockNumber, NetUid
+from pylon.service.bittensor.cache.exceptions import BittensorCacheException
+from pylon.service.bittensor.cache.recent import RecentDataProvider
 from pylon.service.bittensor.client import AbstractBittensorClient
-from pylon.service.dependencies import bt_client_identity_dep, bt_client_open_access_dep, identity_dep
+from pylon.service.dependencies import (
+    bt_client_identity_dep,
+    bt_client_open_access_dep,
+    identity_dep,
+    recent_data_provider_dep,
+    recent_data_provider_identity_dep,
+)
 from pylon.service.exceptions import BadGatewayException
 from pylon.service.identities import Identity
 from pylon.service.tasks import ApplyWeights, SetCommitment
@@ -46,7 +54,10 @@ async def identity_login(data: LoginBody, identity: Identity) -> IdentityLoginRe
 
 class OpenAccessController(Controller):
     path = "/subnet/{netuid:int}/"
-    dependencies = {"bt_client": Provide(bt_client_open_access_dep)}
+    dependencies = {
+        "bt_client": Provide(bt_client_open_access_dep),
+        "recent_data_provider": Provide(recent_data_provider_dep),
+    }
 
     @handler(Endpoint.NEURONS)
     async def get_neurons(
@@ -69,6 +80,17 @@ class OpenAccessController(Controller):
     async def get_latest_neurons(self, bt_client: AbstractBittensorClient, netuid: NetUid) -> SubnetNeurons:
         block = await bt_client.get_latest_block()
         return await bt_client.get_neurons(netuid, block=block)
+
+    @handler(Endpoint.RECENT_NEURONS)
+    async def get_recent_neurons(
+        self,
+        netuid: NetUid,
+        recent_data_provider: RecentDataProvider,
+    ) -> SubnetNeurons:
+        try:
+            return await recent_data_provider.get_recent_neurons(netuid)
+        except BittensorCacheException as e:
+            raise NotFoundException(detail="Recent neurons not found.") from e
 
     @handler(Endpoint.CERTIFICATES)
     async def get_certificates_endpoint(
@@ -124,7 +146,11 @@ class OpenAccessController(Controller):
 
 class IdentityController(OpenAccessController):
     path = "/identity/{identity_name:str}/subnet/{netuid:int}"
-    dependencies = {"identity": Provide(identity_dep), "bt_client": Provide(bt_client_identity_dep)}
+    dependencies = {
+        "identity": Provide(identity_dep),
+        "bt_client": Provide(bt_client_identity_dep),
+        "recent_data_provider": Provide(recent_data_provider_identity_dep),
+    }
 
     @handler(Endpoint.SUBNET_WEIGHTS)
     async def put_weights_endpoint(

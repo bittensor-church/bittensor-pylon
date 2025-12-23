@@ -12,7 +12,8 @@ dependencies = [
     "pydantic",
     "tenacity",
     "httpx",
-    "docker"
+    "docker",
+    "apscheduler",
 ]
 
 [project.optional-dependencies]

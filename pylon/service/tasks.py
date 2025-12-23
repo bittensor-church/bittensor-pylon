@@ -1,11 +1,17 @@
 import asyncio
 import logging
+from abc import ABC, abstractmethod
 from enum import StrEnum
-from typing import ClassVar, Self
+from typing import ClassVar, Generic, Self, TypeVar
 
-from pylon._internal.common.models import Block, CommitReveal
+from litestar.stores.base import Store
+from tenacity import AsyncRetrying, stop_after_attempt, wait_fixed
+
+from pylon._internal.common.models import BittensorModel, Block, CommitReveal, SubnetNeurons
 from pylon._internal.common.types import CommitmentDataBytes, Hotkey, NetUid, Weight
+from pylon.service.bittensor.cache.recent import RecentCacheAdapter
 from pylon.service.bittensor.client import AbstractBittensorClient
+from pylon.service.bittensor.pool import BittensorClientPool
 from pylon.service.metrics import (
     Attr,
     MetricsContext,
@@ -168,3 +174,73 @@ class SetCommitment:
         raise RuntimeError(
             f"Failed to set commitment after {retry_count + 1} attempts: {last_exception}"
         ) from last_exception
+
+
+T = TypeVar("T", bound=BittensorModel)
+
+
+class UpdateRecentObject(ABC, Generic[T]):
+    """
+    A generic base task for implementing tasks for updating recent objects.
+    """
+
+    _Retry = AsyncRetrying(
+        stop=stop_after_attempt(3),
+        wait=wait_fixed(2),
+        reraise=True,
+    )
+
+    @property
+    @abstractmethod
+    def model(self) -> type[T]:
+        pass
+
+    def __init__(self, netuid: NetUid, store: Store, client: AbstractBittensorClient) -> None:
+        self._netuid = netuid
+        self._store = store
+        self._client = client
+
+    async def execute(self):
+        try:
+            block = await self._Retry.wraps(self._client.get_latest_block)()
+        except Exception as e:
+            logger.exception(f"Failed to fetch latest block. error: {e}")
+            return
+
+        try:
+            timestamp = await self._Retry.wraps(self._client.get_block_timestamp)(block)
+        except Exception as e:
+            logger.exception(f"Failed to fetch block timestamp. error: {e}")
+            return
+
+        try:
+            object_ = await self._Retry.wraps(self._get_object)(block)
+        except Exception as e:
+            logger.exception(f"Failed to fetch recent object. error: {e}, object: {self.model.__name__}")
+            return
+
+        cache_adapter = RecentCacheAdapter[T](self._store, self.model)
+
+        await cache_adapter.save(self._netuid, timestamp, object_)
+
+        logger.info(f"Updated recent data. netuid: {self._netuid}, object: {self.model.__name__}")
+
+    @abstractmethod
+    async def _get_object(self, block: Block) -> T:
+        pass
+
+    @classmethod
+    async def task(cls, netuids: list[NetUid], store: Store, pool: BittensorClientPool) -> None:
+        async with pool.acquire(wallet=None) as client:
+            for netuid in netuids:
+                updater = cls(netuid, store, client)
+                await updater.execute()
+
+
+class UpdateRecentNeurons(UpdateRecentObject[SubnetNeurons]):
+    @property
+    def model(self) -> type[SubnetNeurons]:
+        return SubnetNeurons
+
+    async def _get_object(self, block: Block) -> SubnetNeurons:
+        return await self._client.get_neurons(self._netuid, block)
