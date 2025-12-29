@@ -56,7 +56,7 @@ class RecentObjectProvider:
             raise RecentObjectMissing(f"Recent object not found. object: {model.__name__}")
 
         cached_at, object_ = cache_entry
-        now = dt.datetime.now(tz=dt.UTC).timestamp()
+        now = dt.datetime.now(dt.UTC).timestamp()
         elapsed_blocks = max(0, int(now - cached_at)) // BLOCK_PROCESSING_TIME
 
         if elapsed_blocks > self._hard_limit:

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 from typing import Generic, TypeVar
 
 from litestar.stores.base import Store
@@ -7,6 +8,8 @@ from pydantic import BaseModel, ValidationError
 
 from pylon_client._internal.common.models import BittensorModel
 from pylon_client._internal.common.types import HotkeyName, NetUid, Timestamp
+
+logger = logging.getLogger(__name__)
 
 T = TypeVar("T", bound=BittensorModel)
 
@@ -80,6 +83,7 @@ class RecentCacheAdapter(Generic[T]):
             entry = _CacheEntry.model_validate_json(data)
             object_ = self._model.model_validate_json(entry.data)
         except ValidationError:
+            logger.warning("Cache entry validation failed. Deleting invalid entry.")
             await self._store.delete(self._key)
             return None
 

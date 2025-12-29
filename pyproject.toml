@@ -86,8 +86,8 @@ extend-immutable-calls = [
     "pylon_client._internal.common.types.Trust",
     "pylon_client._internal.common.types.ValidatorTrust",
     "pylon_client._internal.common.types.Weight",
-    "pylon_client.service.bittensor.cache.recent.types.SoftLimit",
-    "pylon_client.service.bittensor.cache.recent.types.HardLimit",
+    "pylon_client.service.bittensor.recent.types.SoftLimit",
+    "pylon_client.service.bittensor.recent.types.HardLimit",
 ]
 
 [build-system]

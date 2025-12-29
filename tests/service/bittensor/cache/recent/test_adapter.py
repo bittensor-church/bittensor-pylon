@@ -2,8 +2,8 @@ import pytest
 
 from pylon_client._internal.common.models import BittensorModel
 from pylon_client._internal.common.types import HotkeyName, NetUid, Timestamp
-from pylon_client.service.bittensor.cache.recent import RecentCacheAdapter
-from pylon_client.service.bittensor.cache.recent.adapter import CacheKey, _CacheEntry
+from pylon_client.service.bittensor.recent import RecentCacheAdapter
+from pylon_client.service.bittensor.recent.adapter import CacheKey, _CacheEntry
 
 
 class AnObjectModel(BittensorModel):

@@ -1,13 +1,12 @@
 import pytest
 from litestar.stores.base import Store
-from tenacity import AsyncRetrying, stop_after_attempt, wait_none
 
 from pylon_client._internal.common.models import BittensorModel
 from pylon_client._internal.common.types import NetUid, Timestamp
-from pylon_client.service.bittensor.cache.recent import AbstractContext, SubnetContext
-from pylon_client.service.bittensor.cache.recent.adapter import CacheKey, _CacheEntry
 from pylon_client.service.bittensor.client import AbstractBittensorClient
 from pylon_client.service.bittensor.pool import BittensorClientPool
+from pylon_client.service.bittensor.recent import SubnetContext
+from pylon_client.service.bittensor.recent.adapter import CacheKey, _CacheEntry
 from pylon_client.service.tasks import UpdateRecentObject
 
 
@@ -16,9 +15,7 @@ class AnObjectModel(BittensorModel):
     field_2: int
 
 
-class Task(UpdateRecentObject[AnObjectModel, AbstractContext]):
-    _retry = AsyncRetrying(stop=stop_after_attempt(1), wait=wait_none(), reraise=True)
-
+class Task(UpdateRecentObject[AnObjectModel, SubnetContext]):
     def __init__(self, store: Store, pool: BittensorClientPool, object_: AnObjectModel) -> None:
         super().__init__(store, pool)
         self._object = object_
@@ -28,12 +25,12 @@ class Task(UpdateRecentObject[AnObjectModel, AbstractContext]):
         return AnObjectModel
 
     async def _get_object(
-        self, context: AbstractContext, client: AbstractBittensorClient
+        self, context: SubnetContext, client: AbstractBittensorClient
     ) -> tuple[Timestamp, AnObjectModel]:
         return Timestamp(123123123), self._object
 
     @classmethod
-    def contexts(cls) -> list[AbstractContext]:
+    def contexts(cls) -> list[SubnetContext]:
         return []
 
 
@@ -43,11 +40,7 @@ def object_() -> AnObjectModel:
 
 
 @pytest.fixture
-def update_task(
-    mock_recent_objects_store,
-    mock_bt_client_pool,
-    object_,
-) -> UpdateRecentObject[AnObjectModel, AbstractContext]:
+def update_task(mock_recent_objects_store, mock_bt_client_pool, object_) -> Task:
     return Task(mock_recent_objects_store, mock_bt_client_pool, object_)
 
 

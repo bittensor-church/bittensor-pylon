@@ -6,7 +6,7 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 from pylon_client._internal.common.constants import BLOCK_PROCESSING_TIME
 from pylon_client._internal.common.settings import ENV_FILE, Settings
 from pylon_client._internal.common.types import NetUid
-from pylon_client.service.bittensor.cache.recent import HardLimit, SoftLimit
+from pylon_client.service.bittensor.recent import HardLimit, SoftLimit
 
 
 class RecentObjectsSettings(BaseSettings):

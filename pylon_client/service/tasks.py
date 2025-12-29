@@ -9,14 +9,14 @@ from tenacity import AsyncRetrying, stop_after_delay
 
 from pylon_client._internal.common.models import BittensorModel, Block, CommitReveal, SubnetNeurons
 from pylon_client._internal.common.types import CommitmentDataBytes, Hotkey, NetUid, Timestamp, Weight
-from pylon_client.service.bittensor.cache.recent import (
+from pylon_client.service.bittensor.client import AbstractBittensorClient
+from pylon_client.service.bittensor.pool import BittensorClientPool
+from pylon_client.service.bittensor.recent import (
     AbstractContext,
     IdentitySubnetContext,
     RecentCacheAdapter,
     SubnetContext,
 )
-from pylon_client.service.bittensor.client import AbstractBittensorClient
-from pylon_client.service.bittensor.pool import BittensorClientPool
 from pylon_client.service.identities import identities
 from pylon_client.service.metrics import (
     Attr,
@@ -209,12 +209,12 @@ class UpdateRecentObject(ABC, Generic[TModel, TContext]):
     def contexts(cls) -> list[TContext]:
         pass
 
-    async def execute(self, context: TContext):
+    async def execute(self, context: TContext) -> None:
         async with self._pool.acquire(wallet=context.wallet) as client:
             try:
                 timestamp, object_ = await self._get_object(context, client)
             except Exception as e:
-                logger.exception(f"Failed to fetch latest block. error: {e}")
+                logger.exception(f"Failed to fetch recent object. object={self._model.__name__}, error: {e}")
                 raise
 
         cache_key = context.build_key(self._model)
@@ -225,6 +225,10 @@ class UpdateRecentObject(ABC, Generic[TModel, TContext]):
 
 
 class UpdateRecentNeurons(UpdateRecentObject[SubnetNeurons, SubnetContext]):
+    """
+    Handles the update process for recent neurons within a subnet context.
+    """
+
     @property
     def _model(self) -> type[SubnetNeurons]:
         return SubnetNeurons
@@ -241,14 +245,15 @@ class UpdateRecentNeurons(UpdateRecentObject[SubnetNeurons, SubnetContext]):
 
     @classmethod
     def contexts(cls) -> list[SubnetContext]:
-        contexts = []
-        netuids = []
+        contexts: list[SubnetContext] = []
+        netuids: set[NetUid] = set()
 
         # fetch for all identities for identity and open access.
         for identity in identities.values():
             contexts.append(IdentitySubnetContext(identity.netuid, identity.wallet))
-            contexts.append(SubnetContext(identity.netuid))
-            netuids.append(identity.netuid)
+            if identity.netuid not in netuids:
+                contexts.append(SubnetContext(identity.netuid))
+                netuids.add(identity.netuid)
 
         # fetch for extra subnets specified in settings for open access.
         for netuid in recent_objects_settings.netuids:
@@ -258,7 +263,7 @@ class UpdateRecentNeurons(UpdateRecentObject[SubnetNeurons, SubnetContext]):
         return contexts
 
 
-class UpdateTaskExecutor:
+class RecentObjectUpdateTaskExecutor:
     """
     An executor class for executing UpdateRecentObject tasks with configured contexts.
     This class implements batching and retrying strategies for updating recent objects.
@@ -272,19 +277,29 @@ class UpdateTaskExecutor:
         self._timeout = timeout
 
     async def run(self) -> None:
-        tasks = [self.task(s) for s in self._updater.contexts()]
+        contexts = self._updater.contexts()
+        tasks = [self.task(s) for s in contexts]
         try:
             async with asyncio.timeout(self._timeout):
-                await asyncio.gather(*tasks, return_exceptions=True)
+                results = await asyncio.gather(*tasks, return_exceptions=True)
+
+                for context, result in zip(contexts, results):
+                    if isinstance(result, BaseException):
+                        logger.exception(
+                            f"Failed to update recent object. task={self._updater.__class__.__name__},"
+                            f" context: {context}, error: {result}"
+                        )
+
         except TimeoutError:
             logger.exception(
-                f"Timeout while waiting for UpdateRecentObject task to complete. "
+                f"Timeout while waiting for UpdateRecentObject tasks to complete. "
                 f"task={self._updater.__class__.__name__}"
             )
 
     async def task(self, context: AbstractContext) -> None:
         lead_time = 10  # seconds before timeout.
         retry_time = max(self._timeout - lead_time, 0)
+
         retrying = AsyncRetrying(stop=stop_after_delay(retry_time), reraise=True)
 
         await retrying.wraps(self._updater.execute)(context)

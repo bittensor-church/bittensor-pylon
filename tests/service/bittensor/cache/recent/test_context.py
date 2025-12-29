@@ -2,8 +2,8 @@ import pytest
 
 from pylon_client._internal.common.models import BittensorModel
 from pylon_client._internal.common.types import HotkeyName, NetUid
-from pylon_client.service.bittensor.cache.recent import IdentitySubnetContext, SubnetContext
-from pylon_client.service.bittensor.cache.recent.adapter import CacheKey
+from pylon_client.service.bittensor.recent import IdentitySubnetContext, SubnetContext
+from pylon_client.service.bittensor.recent.adapter import CacheKey
 
 
 @pytest.fixture

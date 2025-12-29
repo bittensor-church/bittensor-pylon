@@ -13,9 +13,8 @@ from pylon_client._internal.common.requests import (
 )
 from pylon_client._internal.common.responses import IdentityLoginResponse
 from pylon_client._internal.common.types import BlockNumber, NetUid
-from pylon_client.service.bittensor.cache.recent.exceptions import RecentObjectMissing, RecentObjectStale
-from pylon_client.service.bittensor.cache.recent.provider import RecentObjectProvider
 from pylon_client.service.bittensor.client import AbstractBittensorClient
+from pylon_client.service.bittensor.recent import RecentObjectMissing, RecentObjectProvider, RecentObjectStale
 from pylon_client.service.dependencies import (
     bt_client_identity_dep,
     bt_client_open_access_dep,

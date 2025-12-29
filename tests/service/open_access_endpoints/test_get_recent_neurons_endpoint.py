@@ -6,7 +6,7 @@ from litestar.status_codes import HTTP_200_OK, HTTP_503_SERVICE_UNAVAILABLE
 from pylon_client._internal.common.constants import BLOCK_PROCESSING_TIME
 from pylon_client._internal.common.models import Block, Neuron, SubnetNeurons
 from pylon_client._internal.common.types import NetUid, Timestamp
-from pylon_client.service.bittensor.cache.recent.adapter import CacheKey, _CacheEntry
+from pylon_client.service.bittensor.recent.adapter import CacheKey, _CacheEntry
 from tests.factories import BlockFactory, NeuronFactory
 
 

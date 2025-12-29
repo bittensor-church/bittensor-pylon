@@ -32,6 +32,13 @@ class AbstractContext(ABC):
 
 
 class SubnetContext(AbstractContext):
+    """
+    Represents a context associated with a subnet.
+
+    Use this context when caching data that is meant to be served
+    by open access endpoints.
+    """
+
     def __init__(self, netuid: NetUid):
         super().__init__()
         self.netuid = netuid
@@ -44,6 +51,13 @@ class SubnetContext(AbstractContext):
 
 
 class IdentitySubnetContext(SubnetContext):
+    """
+    Represents a subnet context associated with an identity.
+
+    Use this context when caching data that is meant to be served
+    by identity endpoints.
+    """
+
     def __init__(self, netuid: NetUid, wallet: Wallet):
         self._wallet = wallet
         super().__init__(netuid)
