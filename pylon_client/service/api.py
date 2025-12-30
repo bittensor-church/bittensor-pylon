@@ -7,7 +7,14 @@ from litestar.handlers.http_handlers import decorators as http_decorators
 
 from pylon_client._internal.common.bodies import LoginBody, SetCommitmentBody, SetWeightsBody
 from pylon_client._internal.common.endpoints import Endpoint
-from pylon_client._internal.common.models import Commitment, Hotkey, NeuronCertificate, SubnetCommitments, SubnetNeurons
+from pylon_client._internal.common.models import (
+    Commitment,
+    Hotkey,
+    NeuronCertificate,
+    SubnetCommitments,
+    SubnetNeurons,
+    SubnetValidators,
+)
 from pylon_client._internal.common.requests import (
     GenerateCertificateKeypairRequest,
 )
@@ -91,6 +98,29 @@ class OpenAccessController(Controller):
             ) from e
         except RecentObjectStale as e:
             raise ServiceUnavailableException("Recent neurons data is stale. Cache update may be failing.") from e
+
+    @handler(Endpoint.VALIDATORS)
+    async def get_validators(
+        self, bt_client: AbstractBittensorClient, block_number: BlockNumber, netuid: NetUid
+    ) -> SubnetValidators:
+        """
+        Get validators (neurons with validator_permit=True) for a block, sorted by total stake descending.
+
+        Raises:
+            NotFoundException: If block does not exist in subtensor.
+        """
+        block = await bt_client.get_block(block_number)
+        if block is None:
+            raise NotFoundException(detail=f"Block {block_number} not found.")
+        return await bt_client.get_validators(netuid, block=block)
+
+    @handler(Endpoint.LATEST_VALIDATORS)
+    async def get_latest_validators(self, bt_client: AbstractBittensorClient, netuid: NetUid) -> SubnetValidators:
+        """
+        Get validators (neurons with validator_permit=True) at the latest block, sorted by total stake descending.
+        """
+        block = await bt_client.get_latest_block()
+        return await bt_client.get_validators(netuid, block=block)
 
     @handler(Endpoint.CERTIFICATES)
     async def get_certificates_endpoint(

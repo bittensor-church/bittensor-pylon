@@ -1,6 +1,6 @@
 from pydantic import BaseModel
 
-from pylon_client._internal.common.models import Commitment, SubnetCommitments, SubnetNeurons
+from pylon_client._internal.common.models import Commitment, SubnetCommitments, SubnetNeurons, SubnetValidators
 from pylon_client._internal.common.types import IdentityName, NetUid
 
 
@@ -53,6 +53,14 @@ class SetWeightsResponse(PylonResponse):
 class GetNeuronsResponse(PylonResponse, SubnetNeurons):
     """
     Response class that is returned for the GetNeuronsRequest.
+    """
+
+    pass
+
+
+class GetValidatorsResponse(PylonResponse, SubnetValidators):
+    """
+    Response class that is returned for the GetValidatorsRequest.
     """
 
     pass

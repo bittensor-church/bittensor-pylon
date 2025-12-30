@@ -39,6 +39,7 @@ from pylon_client._internal.common.models import (
     SubnetHyperparams,
     SubnetNeurons,
     SubnetState,
+    SubnetValidators,
 )
 from pylon_client._internal.common.types import (
     ArchiveBlocksCutoff,
@@ -206,6 +207,13 @@ class AbstractBittensorClient(ABC):
     async def set_commitment(self, netuid: NetUid, data: CommitmentDataBytes) -> None:
         """
         Sets commitment data on chain for the wallet's hotkey.
+        """
+
+    @abstractmethod
+    async def get_validators(self, netuid: NetUid, block: Block) -> SubnetValidators:
+        """
+        Fetches validators (neurons with validator_permit=True) at the given block,
+        sorted by total stake in descending order.
         """
 
 
@@ -540,6 +548,21 @@ class TurboBtClient(AbstractBittensorClient):
         # which fails for bytes subclasses like CommitmentDataBytes
         await self._raw_client.subnet(netuid).commitments.set(bytes(data))
 
+    @track_operation(
+        bittensor_operation_duration,
+        labels={
+            "uri": Attr("uri"),
+            "netuid": Param("netuid"),
+            "hotkey": Attr("hotkey"),
+        },
+    )
+    async def get_validators(self, netuid: NetUid, block: Block) -> SubnetValidators:
+        logger.debug(f"Fetching validators from subnet {netuid} at block {block.number}, {self.uri}")
+        subnet_neurons = await self.get_neurons(netuid, block=block)
+        validators = [n for n in subnet_neurons.neurons.values() if n.validator_permit]
+        validators.sort(key=lambda n: n.stakes.total, reverse=True)
+        return SubnetValidators(block=block, validators=validators)
+
 
 SubClient = TypeVar("SubClient", bound=AbstractBittensorClient)
 DelegateReturn = TypeVar("DelegateReturn")
@@ -629,6 +652,9 @@ class BittensorClient(Generic[SubClient], AbstractBittensorClient):
 
     async def set_commitment(self, netuid: NetUid, data: CommitmentDataBytes) -> None:
         return await self._delegate(self.subclient_cls.set_commitment, netuid=netuid, data=data)
+
+    async def get_validators(self, netuid: NetUid, block: Block) -> SubnetValidators:
+        return await self._delegate(self.subclient_cls.get_validators, netuid=netuid, block=block)
 
     async def _delegate(
         self, operation: Callable[..., Awaitable[DelegateReturn]], *args, block: Block | None = None, **kwargs

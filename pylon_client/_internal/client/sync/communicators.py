@@ -13,7 +13,9 @@ from pylon_client._internal.common.requests import (
     GetCommitmentRequest,
     GetCommitmentsRequest,
     GetLatestNeuronsRequest,
+    GetLatestValidatorsRequest,
     GetNeuronsRequest,
+    GetValidatorsRequest,
     IdentityLoginRequest,
     PylonRequest,
     SetCommitmentRequest,
@@ -191,6 +193,18 @@ class HttpCommunicator(AbstractCommunicator[Request, Response]):
         assert self._raw_client is not None
         url = self._build_url(Endpoint.LATEST_NEURONS, request)
         return self._raw_client.build_request(method=Endpoint.LATEST_NEURONS.method, url=url)
+
+    @_translate_request.register
+    def _(self, request: GetValidatorsRequest) -> Request:
+        assert self._raw_client is not None
+        url = self._build_url(Endpoint.VALIDATORS, request)
+        return self._raw_client.build_request(method=Endpoint.VALIDATORS.method, url=url)
+
+    @_translate_request.register
+    def _(self, request: GetLatestValidatorsRequest) -> Request:
+        assert self._raw_client is not None
+        url = self._build_url(Endpoint.LATEST_VALIDATORS, request)
+        return self._raw_client.build_request(method=Endpoint.LATEST_VALIDATORS.method, url=url)
 
     @_translate_request.register
     def _(self, request: IdentityLoginRequest) -> Request:

@@ -9,6 +9,7 @@ from pylon_client._internal.common.responses import (
     GetCommitmentResponse,
     GetCommitmentsResponse,
     GetNeuronsResponse,
+    GetValidatorsResponse,
     IdentityLoginResponse,
     LoginResponse,
     OpenAccessLoginResponse,
@@ -82,6 +83,26 @@ class GetLatestNeuronsRequest(AuthenticatedPylonRequest[GetNeuronsResponse]):
 
     version = ApiVersion.V1
     response_cls = GetNeuronsResponse
+
+
+class GetValidatorsRequest(AuthenticatedPylonRequest[GetValidatorsResponse]):
+    """
+    Class used to fetch the validators by the Pylon client.
+    """
+
+    version = ApiVersion.V1
+    response_cls = GetValidatorsResponse
+
+    block_number: BlockNumber
+
+
+class GetLatestValidatorsRequest(AuthenticatedPylonRequest[GetValidatorsResponse]):
+    """
+    Class used to fetch the latest validators by the Pylon client.
+    """
+
+    version = ApiVersion.V1
+    response_cls = GetValidatorsResponse
 
 
 class GetCommitmentRequest(AuthenticatedPylonRequest[GetCommitmentResponse]):

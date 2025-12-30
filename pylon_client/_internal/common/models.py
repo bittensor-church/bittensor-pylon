@@ -116,6 +116,11 @@ class SubnetNeurons(BittensorModel):
     neurons: dict[Hotkey, Neuron]
 
 
+class SubnetValidators(BittensorModel):
+    block: Block
+    validators: list[Neuron]
+
+
 class SubnetHyperparams(BittensorModel):
     max_weights_limit: MaxWeightsLimit | None = None
     commit_reveal_weights_enabled: CommitReveal | None = None

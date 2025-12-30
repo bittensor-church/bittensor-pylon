@@ -20,6 +20,7 @@ from pylon_client._internal.common.models import (
     SubnetHyperparams,
     SubnetNeurons,
     SubnetState,
+    SubnetValidators,
 )
 from pylon_client._internal.common.types import (
     BittensorNetwork,
@@ -210,6 +211,13 @@ class MockBittensorClient(AbstractBittensorClient):
         """
         self.calls["set_commitment"].append((netuid, data))
         return await self._execute_behavior("set_commitment", netuid, data)
+
+    async def get_validators(self, netuid: NetUid, block: Block) -> SubnetValidators:
+        """
+        Get validators for a subnet.
+        """
+        self.calls["get_validators"].append((netuid, block))
+        return await self._execute_behavior("get_validators", netuid, block)
 
     async def reset_call_tracking(self) -> None:
         """

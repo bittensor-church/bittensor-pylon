@@ -10,7 +10,9 @@ from pylon_client._internal.common.requests import (
     GetCommitmentRequest,
     GetCommitmentsRequest,
     GetLatestNeuronsRequest,
+    GetLatestValidatorsRequest,
     GetNeuronsRequest,
+    GetValidatorsRequest,
     IdentityLoginRequest,
     PylonRequest,
     SetCommitmentRequest,
@@ -20,6 +22,7 @@ from pylon_client._internal.common.responses import (
     GetCommitmentResponse,
     GetCommitmentsResponse,
     GetNeuronsResponse,
+    GetValidatorsResponse,
     IdentityLoginResponse,
     LoginResponse,
     OpenAccessLoginResponse,
@@ -175,6 +178,35 @@ class AbstractAsyncOpenAccessApi(AbstractAsyncApi[LoginResponseT], ABC):
         """
         return await self._send_authenticated_request(partial(self._get_commitment_request, netuid, hotkey))
 
+    async def get_validators(self, netuid: NetUid, block_number: BlockNumber) -> GetValidatorsResponse:
+        """
+        Retrieves validators for a specific subnet at a given block number.
+
+        Validators are neurons with validator_permit=True, sorted by total stake in descending order.
+
+        Args:
+            netuid: The unique identifier of the subnet.
+            block_number: The blockchain block number to query validators at.
+
+        Returns:
+            GetValidatorsResponse: containing the block information and a list of validator Neuron objects.
+        """
+        return await self._send_authenticated_request(partial(self._get_validators_request, netuid, block_number))
+
+    async def get_latest_validators(self, netuid: NetUid) -> GetValidatorsResponse:
+        """
+        Retrieves validators for a specific subnet at the latest available block.
+
+        Validators are neurons with validator_permit=True, sorted by total stake in descending order.
+
+        Args:
+            netuid: The unique identifier of the subnet.
+
+        Returns:
+            GetValidatorsResponse: containing the latest block information and a list of validator Neuron objects.
+        """
+        return await self._send_authenticated_request(partial(self._get_latest_validators_request, netuid))
+
     # Private API
 
     @abstractmethod
@@ -182,6 +214,12 @@ class AbstractAsyncOpenAccessApi(AbstractAsyncApi[LoginResponseT], ABC):
 
     @abstractmethod
     async def _get_latest_neurons_request(self, netuid: NetUid) -> GetLatestNeuronsRequest: ...
+
+    @abstractmethod
+    async def _get_validators_request(self, netuid: NetUid, block_number: BlockNumber) -> GetValidatorsRequest: ...
+
+    @abstractmethod
+    async def _get_latest_validators_request(self, netuid: NetUid) -> GetLatestValidatorsRequest: ...
 
     @abstractmethod
     async def _get_commitments_request(self, netuid: NetUid) -> GetCommitmentsRequest: ...
@@ -331,6 +369,12 @@ class AsyncOpenAccessApi(AbstractAsyncOpenAccessApi[OpenAccessLoginResponse]):
 
     async def _get_commitment_request(self, netuid: NetUid, hotkey: Hotkey) -> GetCommitmentRequest:
         return GetCommitmentRequest(netuid=netuid, hotkey=hotkey)
+
+    async def _get_validators_request(self, netuid: NetUid, block_number: BlockNumber) -> GetValidatorsRequest:
+        return GetValidatorsRequest(netuid=netuid, block_number=block_number)
+
+    async def _get_latest_validators_request(self, netuid: NetUid) -> GetLatestValidatorsRequest:
+        return GetLatestValidatorsRequest(netuid=netuid)
 
 
 class AsyncIdentityApi(AbstractAsyncIdentityApi[IdentityLoginResponse]):
