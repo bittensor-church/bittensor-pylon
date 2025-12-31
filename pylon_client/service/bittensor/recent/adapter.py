@@ -1,7 +1,5 @@
-from __future__ import annotations
-
 import logging
-from typing import Generic, TypeVar
+from typing import Generic, Self, TypeVar
 
 from litestar.stores.base import Store
 from pydantic import BaseModel, ValidationError
@@ -11,17 +9,17 @@ from pylon_client._internal.common.types import HotkeyName, NetUid, Timestamp
 
 logger = logging.getLogger(__name__)
 
-T = TypeVar("T", bound=BittensorModel)
+ModelT = TypeVar("ModelT", bound=BittensorModel)
 
 
-class CacheKey(str, Generic[T]):
+class CacheKey(str, Generic[ModelT]):
     """
     A string subclass to represent a cache key for recent data. A model-class name,
     an optional netuid and an optional hotkey are combined to uniquely identify
     a cache entry.
     """
 
-    def __new__(cls, model: type[T], netuid: NetUid | None, hotkey_name: HotkeyName | None) -> CacheKey[T]:
+    def __new__(cls, model: type[ModelT], netuid: NetUid | None, hotkey_name: HotkeyName | None) -> Self:
         key = f"recent_{model.__name__}_{netuid}_{hotkey_name}"
         return super().__new__(cls, key)  # type: ignore
 
@@ -35,7 +33,7 @@ class _CacheEntry(BaseModel):
     timestamp: Timestamp
 
 
-class RecentCacheAdapter(Generic[T]):
+class RecentCacheAdapter(Generic[ModelT]):
     """
     A generic cache adapter on top of the litestar store. This class:
         - Serializes/deserializes cache entries to/from JSON via pydantic.
@@ -45,9 +43,9 @@ class RecentCacheAdapter(Generic[T]):
 
     def __init__(
         self,
-        key: CacheKey[T],
+        key: CacheKey[ModelT],
         store: Store,
-        model: type[T],
+        model: type[ModelT],
     ) -> None:
         """
         Args:
@@ -60,7 +58,7 @@ class RecentCacheAdapter(Generic[T]):
         self._model = model
         self._store = store
 
-    async def save(self, timestamp: Timestamp, object_: T) -> None:
+    async def save(self, timestamp: Timestamp, object_: ModelT) -> None:
         """
         Saves a cache entry in the wrapped store.
         Args:
@@ -71,7 +69,7 @@ class RecentCacheAdapter(Generic[T]):
         entry = _CacheEntry(data=data, timestamp=timestamp).model_dump_json()
         await self._store.set(self._key, entry)
 
-    async def get(self) -> tuple[Timestamp, T] | None:
+    async def get(self) -> tuple[Timestamp, ModelT] | None:
         """
         Gets a cache entry from the store backend.
         """

@@ -87,7 +87,7 @@ class OpenAccessController(Controller):
         except RecentObjectMissing as e:
             raise ServiceUnavailableException(
                 "Recent neurons data is not available. Cache update may not have finished "
-                "yet or subnet may not have configured for caching recent objects."
+                "yet or subnet may not be configured for caching recent objects."
             ) from e
         except RecentObjectStale as e:
             raise ServiceUnavailableException("Recent neurons data is stale. Cache update may be failing.") from e

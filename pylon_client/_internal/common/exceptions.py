@@ -41,4 +41,4 @@ class PylonMisconfigured(BasePylonException):
 
 
 class PylonCacheException(BasePylonException):
-    """Base class all Pylon cache exception."""
+    """Base class for all Pylon cache exception."""

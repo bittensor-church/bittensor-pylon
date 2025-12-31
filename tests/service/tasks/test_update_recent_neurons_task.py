@@ -2,8 +2,8 @@ import pytest
 
 from pylon_client._internal.common.models import SubnetNeurons
 from pylon_client._internal.common.types import NetUid, Timestamp
+from pylon_client.service.bittensor.recent import SubnetContext
 from pylon_client.service.bittensor.recent.adapter import CacheKey, _CacheEntry
-from pylon_client.service.bittensor.recent.context import SubnetContext
 from pylon_client.service.tasks import UpdateRecentNeurons
 
 

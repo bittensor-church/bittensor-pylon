@@ -43,7 +43,7 @@ async def test_get_recent_neurons_cache_missing(test_client, mock_recent_objects
         assert response.json() == {
             "status_code": HTTP_503_SERVICE_UNAVAILABLE,
             "detail": "Recent neurons data is not available. Cache update may not have finished "
-            "yet or subnet may not have configured for caching recent objects.",
+            "yet or subnet may not be configured for caching recent objects.",
         }
 
     assert mock_recent_objects_store.behave.calls["get"] == [

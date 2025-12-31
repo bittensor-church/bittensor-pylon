@@ -182,11 +182,11 @@ class SetCommitment:
         ) from last_exception
 
 
-TModel = TypeVar("TModel", bound=BittensorModel)
-TContext = TypeVar("TContext", bound=AbstractContext)
+ModelT = TypeVar("ModelT", bound=BittensorModel)
+ContextT = TypeVar("ContextT", bound=AbstractContext)
 
 
-class UpdateRecentObject(ABC, Generic[TModel, TContext]):
+class UpdateRecentObject(ABC, Generic[ModelT, ContextT]):
     """
     An abstract task for implementing tasks for updating recent objects.
     """
@@ -197,19 +197,19 @@ class UpdateRecentObject(ABC, Generic[TModel, TContext]):
 
     @property
     @abstractmethod
-    def _model(self) -> type[TModel]:
+    def _model(self) -> type[ModelT]:
         pass
 
     @abstractmethod
-    async def _get_object(self, context: TContext, client: AbstractBittensorClient) -> tuple[Timestamp, TModel]:
+    async def _get_object(self, context: ContextT, client: AbstractBittensorClient) -> tuple[Timestamp, ModelT]:
         pass
 
     @classmethod
     @abstractmethod
-    def contexts(cls) -> list[TContext]:
+    def contexts(cls) -> list[ContextT]:
         pass
 
-    async def execute(self, context: TContext) -> None:
+    async def execute(self, context: ContextT) -> None:
         async with self._pool.acquire(wallet=context.wallet) as client:
             try:
                 timestamp, object_ = await self._get_object(context, client)
@@ -272,9 +272,15 @@ class RecentObjectUpdateTaskExecutor:
     # for now, the object for all contexts is updated in parallel. later we can implement more
     # sophisticated batching and retrying logic based on timeout.
 
-    def __init__(self, updater: UpdateRecentObject, timeout: int) -> None:
+    def __init__(self, updater: UpdateRecentObject, timeout: int, retrying: AsyncRetrying | None = None) -> None:
+        if retrying is None:
+            lead_time = 10  # seconds before timeout.
+            retry_time = max(timeout - lead_time, 0)
+            retrying = AsyncRetrying(stop=stop_after_delay(retry_time), reraise=True)
+
         self._updater = updater
         self._timeout = timeout
+        self._retrying = retrying
 
     async def run(self) -> None:
         contexts = self._updater.contexts()
@@ -297,9 +303,4 @@ class RecentObjectUpdateTaskExecutor:
             )
 
     async def task(self, context: AbstractContext) -> None:
-        lead_time = 10  # seconds before timeout.
-        retry_time = max(self._timeout - lead_time, 0)
-
-        retrying = AsyncRetrying(stop=stop_after_delay(retry_time), reraise=True)
-
-        await retrying.wraps(self._updater.execute)(context)
+        await self._retrying.wraps(self._updater.execute)(context)

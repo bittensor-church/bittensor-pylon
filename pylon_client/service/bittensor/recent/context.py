@@ -8,7 +8,7 @@ from pylon_client._internal.common.types import HotkeyName, NetUid
 
 from .adapter import CacheKey
 
-T = TypeVar("T", bound=BittensorModel)
+ModelT = TypeVar("ModelT", bound=BittensorModel)
 
 
 class AbstractContext(ABC):
@@ -27,7 +27,7 @@ class AbstractContext(ABC):
         return None
 
     @abstractmethod
-    def build_key(self, model: type[T]) -> CacheKey[T]:
+    def build_key(self, model: type[ModelT]) -> CacheKey[ModelT]:
         pass
 
 
@@ -43,11 +43,14 @@ class SubnetContext(AbstractContext):
         super().__init__()
         self.netuid = netuid
 
-    def build_key(self, model: type[T]) -> CacheKey[T]:
+    def build_key(self, model: type[ModelT]) -> CacheKey[ModelT]:
         return CacheKey(model, self.netuid, None)
 
     def __str__(self) -> str:
         return f"SubnetContext(netuid={self.netuid})"
+
+    def __eq__(self, other: object) -> bool:
+        return isinstance(other, SubnetContext) and other.netuid == self.netuid
 
 
 class IdentitySubnetContext(SubnetContext):
@@ -66,7 +69,7 @@ class IdentitySubnetContext(SubnetContext):
     def wallet(self) -> Wallet | None:
         return self._wallet
 
-    def build_key(self, model: type[T]) -> CacheKey[T]:
+    def build_key(self, model: type[ModelT]) -> CacheKey[ModelT]:
         return CacheKey(model, self.netuid, HotkeyName(self._wallet.hotkey_str))
 
     def __str__(self) -> str:

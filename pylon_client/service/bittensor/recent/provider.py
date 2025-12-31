@@ -15,7 +15,7 @@ from .types import HardLimit, SoftLimit
 logger = logging.getLogger(__name__)
 
 
-T = TypeVar("T", bound=BittensorModel)
+ModelT = TypeVar("ModelT", bound=BittensorModel)
 
 
 class RecentObjectProvider:
@@ -38,7 +38,7 @@ class RecentObjectProvider:
         self._store = store
         self._context = context
 
-    async def get(self, model: type[T]) -> T:
+    async def get(self, model: type[ModelT]) -> ModelT:
         """
         Get a recent object from the cache. It performs freshness checks on the object.
         Based on the freshness checks, it either raises an exception or returns the object.
