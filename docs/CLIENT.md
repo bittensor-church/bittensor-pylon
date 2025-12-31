@@ -1,11 +1,11 @@
 # Pylon Client
 
-Pylon client is a Python library for interacting with Pylon service.
+Pylon client is a Python library for interacting with Pylon.
 All API endpoints are wrapped into easy-to-use Python methods with features like
 authentication, retries, and connection pools built in.
 
 > **Note:** Before using the client, it is recommended to familiarize yourself with
-> the concepts from [Pylon Service documentation](SERVICE.md), such as open access,
+> the concepts from [Pylon documentation](SERVICE.md), such as open access,
 > identity access, and configuration.
 
 ## Installation
@@ -146,8 +146,9 @@ with PylonClient(config) as client:
 The client library uses versioned packages to ensure backward compatibility. All objects
 are exported under versioned modules (e.g., `pylon_client.v1`). If breaking changes need
 to be introduced, they will be exported under a new version (e.g., `v2`, `v3`), while the
-previous version remains unchanged. This ensures that updating to the latest client package
-will not break your existing code.
+previous version remains unchanged. This allows us to deploy seemingly breaking changes without
+bumping up the package major version and therefore not breaking existing clients. The aim of this
+is to support older clients, providing them fixes and improvements, without maintaining separate branches.
 
 Current newest version: `v1` (import from `pylon_client.v1`)
 
@@ -178,7 +179,7 @@ for which the client is configured.
 |--------|-------------|
 | `get_latest_neurons()` | Get neurons at latest block |
 | `get_neurons(block_number)` | Get neurons at specific block |
-| `put_weights(weights)` | Submit weights to subnet |
+| `put_weights(weights)` | Submit weights to subnet (with automatic retries until end of epoch) |
 | `get_commitments()` | Get all commitments for the subnet |
 | `get_commitment(hotkey)` | Get commitment for specific hotkey |
 | `set_commitment(commitment)` | Set commitment on-chain |
@@ -203,9 +204,10 @@ Common tenacity options:
 - `wait` - How long to wait between retries (e.g., `wait_fixed(1)`, `wait_random(0.1, 0.5)`,
   `wait_exponential()`)
 
-> **Note:** It is discouraged to change the `retry` parameter (which exceptions to retry on).
-> The default configuration ensures retries only happen in appropriate circumstances.
-> Modifying this may cause retries on non-retryable errors or skip retries when they are needed.
+> **Note:** It is discouraged to change the `retry` parameter of `tenacity.Retrying` object
+> (which controls which exceptions to retry on). The default configuration ensures retries only
+> happen in appropriate circumstances. Modifying this may cause retries on non-retryable errors
+> or skip retries when they are needed.
 
 See the [tenacity documentation](https://tenacity.readthedocs.io/en/latest/) for the full list
 of available options.

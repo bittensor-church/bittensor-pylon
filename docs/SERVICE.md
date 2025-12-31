@@ -1,18 +1,10 @@
-# Pylon Service
+# Pylon
 
-Pylon service provides an HTTP API that simplifies communication with Bittensor chain.
-It makes subtensor queries and operations on behalf of a neuron.
-The benefits of using Pylon service are:
-
-- **Simplicity** - Complex subtensor operations like setting weights made easy via one API call
-- **Safety** - Your hotkey is visible only to a small, easily verifiable software component
-- **Durability** - Automatic handling of connection pooling, retries, and commit-reveal cycles
-- **Convenience** - Easy to use Python client provided
-- **Flexibility** - Query the HTTP API with any language you like
+This document covers the usage, configuration, deployment, and observability of Pylon.
 
 ## Access Modes
 
-Pylon Service supports two access patterns:
+Pylon supports two access patterns:
 
 ### Open Access
 
@@ -29,7 +21,7 @@ an identity. See the full list at `/schema/swagger` when the service is running.
 ### Identity Access
 
 Identity is a combination of a Bittensor wallet and a subnet.
-Identities are named and defined in the Pylon Service configuration.
+Identities are named and defined in the Pylon configuration.
 Each identity is protected by its own secret token.
 
 When authenticated with an identity token, Pylon uses the wallet defined in the identity
@@ -44,16 +36,16 @@ See the full list at `/schema/swagger` when the service is running.
 ## Configuration
 
 All configuration is done via environment variables with the `PYLON_` prefix.
-Create a `.env` file and pass it to the Docker container using `--env-file .env`.
+We recommend creating a `.env` file and passing it to the Docker container using `--env-file .env`.
 
 ### Core Settings
 
 | Variable | Description | Default |
 |----------|-------------|---------|
-| `PYLON_BITTENSOR_NETWORK` | Bittensor network (e.g., `finney` or `ws://127.0.0.1:9944`) | `finney` |
+| `PYLON_BITTENSOR_NETWORK` | Bittensor network (e.g., `finney` or `ws://mylocalchain:9944`) | `finney` |
 | `PYLON_BITTENSOR_ARCHIVE_NETWORK` | Archive network for historical data | `archive` |
 | `PYLON_BITTENSOR_ARCHIVE_BLOCKS_CUTOFF` | Blocks threshold for switching to archive network | `300` |
-| `PYLON_BITTENSOR_WALLET_PATH` | Path to wallet directory | **required** |
+| `PYLON_BITTENSOR_WALLET_PATH` | Path to wallet directory inside the container | `/root/.bittensor/wallets` |
 
 ### Access Control
 
@@ -78,20 +70,19 @@ For each identity listed in `PYLON_IDENTITIES`, configure these variables
 
 ```bash
 # .env
-PYLON_IDENTITIES=["sn12", "sn89"]
-PYLON_BITTENSOR_WALLET_PATH=~/.bittensor/wallets
+PYLON_IDENTITIES=["sn1", "sn2"]
 
-# Identity: sn12
-PYLON_ID_SN12_WALLET_NAME=sn12_wallet
-PYLON_ID_SN12_HOTKEY_NAME=sn12_hotkey
-PYLON_ID_SN12_NETUID=12
-PYLON_ID_SN12_TOKEN=8GOqUEjyTuYXER790bm8LpSmOIDuPvbr
+# Identity: sn1
+PYLON_ID_SN1_WALLET_NAME=sn1_wallet
+PYLON_ID_SN1_HOTKEY_NAME=sn1_hotkey
+PYLON_ID_SN1_NETUID=1
+PYLON_ID_SN1_TOKEN=8GOqUEjyTuYXER790bm8LpSmOIDuPvbr
 
-# Identity: sn89
-PYLON_ID_SN89_WALLET_NAME=sn89_wallet
-PYLON_ID_SN89_HOTKEY_NAME=sn89_hotkey
-PYLON_ID_SN89_NETUID=89
-PYLON_ID_SN89_TOKEN=IEYAWl9rPQAMTV0hqAKAaQtEYqqKws5z
+# Identity: sn2
+PYLON_ID_SN2_WALLET_NAME=sn2_wallet
+PYLON_ID_SN2_HOTKEY_NAME=sn2_hotkey
+PYLON_ID_SN2_NETUID=2
+PYLON_ID_SN2_TOKEN=IEYAWl9rPQAMTV0hqAKAaQtEYqqKws5z
 ```
 
 ### Retry Settings
@@ -109,11 +100,11 @@ PYLON_ID_SN89_TOKEN=IEYAWl9rPQAMTV0hqAKAaQtEYqqKws5z
 |----------|-------------|---------|
 | `PYLON_METRICS_TOKEN` | Token for `/metrics` endpoint (empty = 403 Forbidden) | `""` |
 | `PYLON_SENTRY_DSN` | Sentry DSN for error tracking | `""` |
-| `PYLON_SENTRY_ENVIRONMENT` | Sentry environment name | `development` |
+| `PYLON_SENTRY_ENVIRONMENT` | Sentry environment name | `production` |
 
 ## Deployment
 
-The recommended way to run Pylon service is via Docker.
+The recommended way to run Pylon is via Docker.
 The official image is available on
 [Docker Hub](https://hub.docker.com/r/backenddevelopersltd/bittensor-pylon).
 Make sure your `.env` file and wallet directory are accessible to the container.
@@ -152,8 +143,9 @@ docker compose up -d
 
 API endpoints are versioned to ensure backward compatibility. If breaking changes need to be
 introduced to an endpoint, a new version of that endpoint will be created while the old version
-remains unchanged. This ensures that updating to the latest Pylon image will not break your
-existing integrations.
+remains unchanged. This allows us to deploy seemingly breaking changes without bumping up the image
+major version and therefore not breaking existing clients. The aim of this is to support older clients,
+providing them fixes and improvements, without maintaining separate branches.
 
 Current newest API version: `v1` (endpoints under `/api/v1/...`)
 

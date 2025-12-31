@@ -18,7 +18,7 @@ class Settings(BaseSettings):
     bittensor_network: BittensorNetwork = BittensorNetwork("finney")
     bittensor_archive_network: BittensorNetwork = BittensorNetwork("archive")
     bittensor_archive_blocks_cutoff: ArchiveBlocksCutoff = ArchiveBlocksCutoff(300)
-    bittensor_wallet_path: str
+    bittensor_wallet_path: str = "/root/.bittensor/wallets"
 
     # Identities and access
     identities: list[IdentityName] = Field(default_factory=list)
@@ -48,7 +48,7 @@ class Settings(BaseSettings):
 
     # sentry
     sentry_dsn: str = ""
-    sentry_environment: str = "development"
+    sentry_environment: str = "production"
 
     # debug
     debug: bool = False

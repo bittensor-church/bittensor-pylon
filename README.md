@@ -1,13 +1,22 @@
 # Pylon
 
-Pylon provides a convenient way to access and manipulate the state of the Bittensor chain.
-It is aimed at validators and miners to make their interaction with the chain and themselves
-easy and robust.
+Pylon is a high-performance HTTP service that provides fast, cached access to the Bittensor blockchain.
+It is designed to be used by validators, miners, and other actors like indexers,
+allowing them to interact with the Bittensor network without direct blockchain calls
+or installing any blockchain-related libraries.
 
-Pylon consists of two distinct parts:
+The benefits of using Pylon are:
 
-- **[Pylon Service](docs/SERVICE.md)** - The core HTTP service providing chain operations via a REST API
-- **[Pylon Client](docs/CLIENT.md)** - A Python library that wraps the service under a user-friendly, pythonic API
+- **Simplicity** - Complex subtensor operations like setting weights made easy via one API call
+- **Safety** - Your hotkey is visible only to a small, easily verifiable software component
+- **Durability** - Automatic handling of connection pooling, retries, and commit-reveal cycles
+- **Convenience** - Easy to use Python client provided
+- **Flexibility** - Query the HTTP API with any language you like
+
+## Components
+
+- **[Pylon](docs/SERVICE.md)** - The HTTP service itself, can be interacted with using any HTTP client
+- **[Pylon Client](docs/CLIENT.md)** - An optional Python library for convenient programmatic access
 
 ## Quick Start
 
@@ -15,16 +24,17 @@ Pylon consists of two distinct parts:
 
     ```bash
     # .env
-    PYLON_BITTENSOR_NETWORK=finney
-    PYLON_BITTENSOR_WALLET_PATH=/root/.bittensor/wallets
     PYLON_OPEN_ACCESS_TOKEN=my_open_access_token
     ```
 
-2. Run the Pylon service:
+2. Run Pylon:
 
     ```bash
-    docker pull backenddevelopersltd/bittensor-pylon:latest
-    docker run -d --env-file .env -p 8000:8000 backenddevelopersltd/bittensor-pylon:latest
+    docker run -d \
+        --env-file .env \
+        -v ~/.bittensor/wallets:/root/.bittensor/wallets \
+        -p 8000:8000 \
+        backenddevelopersltd/bittensor-pylon:latest
     ```
 
 3. Query the Subtensor via Pylon using the Python client:
@@ -53,12 +63,15 @@ Pylon consists of two distinct parts:
     ```
 
 The above basic configuration allows you to perform read operations.
-To perform write operations like setting weights, you need to configure an identity:
+To perform write operations like setting weights, you need to configure an identity.
+
+Since Pylon can support multiple neurons at once (possibly in multiple subnets), identities were introduced.
+Think of identities as user credentials: they have names, passwords (tokens), and are attached to a single
+wallet and netuid. Here's an example showing how to configure a single identity. Notice that `sn1` is an
+arbitrary identity name and appears in several environment variable names (e.g. `PYLON_ID_SN1_WALLET_NAME`):
 
 ```bash
 # .env
-PYLON_BITTENSOR_NETWORK=finney
-PYLON_BITTENSOR_WALLET_PATH=/root/.bittensor/wallets
 PYLON_IDENTITIES=["sn1"]
 PYLON_ID_SN1_WALLET_NAME=my_wallet
 PYLON_ID_SN1_HOTKEY_NAME=my_hotkey
@@ -87,7 +100,7 @@ asyncio.run(main())
 
 ## Documentation
 
-- **[Pylon Service Documentation](docs/SERVICE.md)** - Configuration, deployment, and observability
+- **[Pylon Documentation](docs/SERVICE.md)** - Configuration, deployment, and observability
 - **[Pylon Client Documentation](docs/CLIENT.md)** - Installation, usage, and API reference
 
 ## Development
