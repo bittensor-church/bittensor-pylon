@@ -7,7 +7,7 @@ from pylon_client.service.bittensor.client import AbstractBittensorClient
 from pylon_client.service.bittensor.pool import BittensorClientPool
 from pylon_client.service.bittensor.recent import SubnetContext
 from pylon_client.service.bittensor.recent.adapter import CacheKey, _CacheEntry
-from pylon_client.service.tasks import UpdateRecentObject
+from pylon_client.service.bittensor.recent.tasks import UpdateRecentObject
 
 
 class AnObjectModel(BittensorModel):

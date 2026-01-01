@@ -20,7 +20,7 @@ ModelT = TypeVar("ModelT", bound=BittensorModel)
 
 class RecentObjectProvider:
     """
-    A readonly facade for accessing recent objects from the cache. It performs freshness
+    A readonly layer for accessing fresh recent objects from the cache. It performs freshness
     checks on the objects and raises exceptions if they are stale or missing.
     """
 

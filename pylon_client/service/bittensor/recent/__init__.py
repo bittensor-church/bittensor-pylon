@@ -3,6 +3,8 @@ from .exceptions import RecentObjectMissing, RecentObjectStale
 from .provider import RecentObjectProvider
 from .context import IdentitySubnetContext, AbstractContext, SubnetContext
 from .types import HardLimit, SoftLimit
+from .tasks import UpdateRecentNeurons, RecentObjectUpdateTaskExecutor
+
 
 __all__ = [
     "RecentCacheAdapter",
@@ -14,4 +16,6 @@ __all__ = [
     "IdentitySubnetContext",
     "HardLimit",
     "SoftLimit",
+    "UpdateRecentNeurons",
+    "RecentObjectUpdateTaskExecutor",
 ]

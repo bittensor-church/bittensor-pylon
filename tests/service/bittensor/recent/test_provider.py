@@ -7,13 +7,13 @@ from pylon_client._internal.common.models import BittensorModel
 from pylon_client._internal.common.types import HotkeyName, NetUid, Timestamp
 from pylon_client.service.bittensor.recent import (
     HardLimit,
+    IdentitySubnetContext,
     RecentObjectMissing,
     RecentObjectProvider,
     RecentObjectStale,
     SoftLimit,
 )
 from pylon_client.service.bittensor.recent.adapter import CacheKey, _CacheEntry
-from pylon_client.service.bittensor.recent.context import IdentitySubnetContext
 
 
 class AnObjectModel(BittensorModel):

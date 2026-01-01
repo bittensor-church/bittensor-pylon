@@ -10,17 +10,56 @@ suggesting that there is something wrong with the application startup.
 import datetime as dt
 import logging
 
-from apscheduler.schedulers.asyncio import AsyncIOScheduler
+from apscheduler.schedulers.asyncio import AsyncIOScheduler, BaseScheduler
 from litestar import Litestar
 
+from pylon_client._internal.common.types import NetUid
+from pylon_client.service.bittensor.recent import (
+    AbstractContext,
+    IdentitySubnetContext,
+    RecentObjectUpdateTaskExecutor,
+    SubnetContext,
+    UpdateRecentNeurons,
+)
+from pylon_client.service.identities import identities
 from pylon_client.service.settings import recent_objects_settings
 from pylon_client.service.stores import StoreName
-from pylon_client.service.tasks import RecentObjectUpdateTaskExecutor, UpdateRecentNeurons
 
 logger = logging.getLogger(__name__)
 
 
 _SCHEDULER: AsyncIOScheduler | None = None
+
+
+# this is a simple way to organize the job definition code. When we have more jobs, we can
+# move it to a separate module and think or more sophisticated way to organize them.
+def _add_recent_neurons_job(app: Litestar, scheduler: BaseScheduler):
+    contexts: list[AbstractContext] = []
+    netuids: set[NetUid] = set()
+
+    # fetch for all identities for identity and open access.
+    for identity in identities.values():
+        contexts.append(IdentitySubnetContext(identity.netuid, identity.wallet))
+        if identity.netuid not in netuids:
+            contexts.append(SubnetContext(identity.netuid))
+            netuids.add(identity.netuid)
+
+    # fetch for extra subnets specified in settings for open access.
+    for netuid in recent_objects_settings.netuids:
+        if netuid not in netuids:
+            contexts.append(SubnetContext(netuid))
+
+    timeout = recent_objects_settings.update_interval_seconds
+    updater = UpdateRecentNeurons(app.stores.get(StoreName.RECENT_OBJECTS), app.state.bittensor_client_pool)
+    executor = RecentObjectUpdateTaskExecutor(updater, timeout=timeout, contexts=contexts)
+
+    scheduler.add_job(
+        executor.run,
+        id="update_recent_neurons",
+        trigger="interval",
+        seconds=recent_objects_settings.update_interval_seconds,
+        next_run_time=dt.datetime.now(tz=dt.UTC),  # update immediately
+    )
 
 
 def create_scheduler(app: Litestar) -> AsyncIOScheduler:
@@ -33,15 +72,6 @@ def create_scheduler(app: Litestar) -> AsyncIOScheduler:
     logger.info("Initializing scheduler.")
     _SCHEDULER = AsyncIOScheduler()
 
-    # configure jobs
-    # this part can be designed in a better way out once we have more jobs and clarity.
-    updater = UpdateRecentNeurons(app.stores.get(StoreName.RECENT_OBJECTS), app.state.bittensor_client_pool)
-    executor = RecentObjectUpdateTaskExecutor(updater, timeout=recent_objects_settings.update_interval_seconds)
-    _SCHEDULER.add_job(
-        executor.run,
-        trigger="interval",
-        seconds=recent_objects_settings.update_interval_seconds,
-        next_run_time=dt.datetime.now(tz=dt.UTC),  # update immediately
-    )
+    _add_recent_neurons_job(app, _SCHEDULER)
 
     return _SCHEDULER
