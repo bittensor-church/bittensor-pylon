@@ -85,6 +85,15 @@ class GetLatestNeuronsRequest(AuthenticatedPylonRequest[GetNeuronsResponse]):
     response_cls = GetNeuronsResponse
 
 
+class GetRecentNeuronsRequest(AuthenticatedPylonRequest[GetNeuronsResponse]):
+    """
+    Class used to fetch the cached neurons by the Pylon client.
+    """
+
+    version = ApiVersion.V1
+    response_cls = GetNeuronsResponse
+
+
 class GetValidatorsRequest(AuthenticatedPylonRequest[GetValidatorsResponse]):
     """
     Class used to fetch the validators by the Pylon client.

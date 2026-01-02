@@ -12,6 +12,7 @@ from pylon_client._internal.common.requests import (
     GetLatestNeuronsRequest,
     GetLatestValidatorsRequest,
     GetNeuronsRequest,
+    GetRecentNeuronsRequest,
     GetValidatorsRequest,
     IdentityLoginRequest,
     PylonRequest,
@@ -148,6 +149,30 @@ class AbstractOpenAccessApi(AbstractApi[LoginResponseT], ABC):
         """
         return self._send_authenticated_request(partial(self._get_latest_neurons_request, netuid))
 
+    def get_recent_neurons(self, netuid: NetUid) -> GetNeuronsResponse:
+        """
+        Retrieves recent neurons for a specific subnet.
+
+        This method returns neurons from the Pylon service's cache, which might be behind
+        the latest block. But it guarantees to provide data no older than configured
+        `PYLON_RECENT_OBJECTS_SOFT_LIMIT_BLOCKS` blocks with a fast response time.
+
+        This method doesn't guarantee to always return data and might raise PylonResponseException
+        in the following scenarios:
+        - The Pylon service cache doesn't have fresh enough data.
+        - The requested subnet is not of one of the configured identities and is not configured
+          for caching recent data via `PYLON_RECENT_OBJECTS_NETUIDS` config variable.
+
+
+        Args:
+            netuid: The unique identifier of the subnet.
+
+        Returns:
+            GetNeuronsResponse: containing cached neuron information and a dictionary mapping hotkeys to
+            Neuron objects.
+        """
+        return self._send_authenticated_request(partial(self._get_recent_neurons_request, netuid))
+
     def get_commitments(self, netuid: NetUid) -> GetCommitmentsResponse:
         """
         Retrieves all commitments for a specific subnet at the latest available block.
@@ -211,6 +236,9 @@ class AbstractOpenAccessApi(AbstractApi[LoginResponseT], ABC):
     def _get_latest_neurons_request(self, netuid: NetUid) -> GetLatestNeuronsRequest: ...
 
     @abstractmethod
+    def _get_recent_neurons_request(self, netuid: NetUid) -> GetRecentNeuronsRequest: ...
+
+    @abstractmethod
     def _get_validators_request(self, netuid: NetUid, block_number: BlockNumber) -> GetValidatorsRequest: ...
 
     @abstractmethod
@@ -265,6 +293,24 @@ class AbstractIdentityApi(AbstractApi[LoginResponseT], ABC):
             Neuron objects.
         """
         return self._send_authenticated_request(self._get_latest_neurons_request)
+
+    def get_recent_neurons(self) -> GetNeuronsResponse:
+        """
+        Retrieves recent neurons for the authenticated identity's subnet.
+
+        This method returns neurons from the Pylon service's cache, which might be behind
+        the latest block. But it guarantees to provide data no older than configured
+        `PYLON_RECENT_OBJECTS_SOFT_LIMIT_BLOCKS` blocks with a fast response time.
+
+        This method doesn't guarantee to always return data and might raise PylonResponseException
+        in the following scenarios:
+        - The Pylon service cache doesn't have fresh enough data.
+
+        Returns:
+            GetNeuronsResponse: containing cached neuron information and a dictionary mapping hotkeys to
+            Neuron objects.
+        """
+        return self._send_authenticated_request(self._get_recent_neurons_request)
 
     def put_weights(self, weights: dict[Hotkey, Weight]) -> SetWeightsResponse:
         """
@@ -328,6 +374,9 @@ class AbstractIdentityApi(AbstractApi[LoginResponseT], ABC):
     def _get_latest_neurons_request(self) -> GetLatestNeuronsRequest: ...
 
     @abstractmethod
+    def _get_recent_neurons_request(self) -> GetRecentNeuronsRequest: ...
+
+    @abstractmethod
     def _put_weights_request(self, weights: dict[Hotkey, Weight]) -> SetWeightsRequest: ...
 
     @abstractmethod
@@ -354,6 +403,9 @@ class OpenAccessApi(AbstractOpenAccessApi[OpenAccessLoginResponse]):
 
     def _get_latest_neurons_request(self, netuid: NetUid) -> GetLatestNeuronsRequest:
         return GetLatestNeuronsRequest(netuid=netuid)
+
+    def _get_recent_neurons_request(self, netuid: NetUid) -> GetRecentNeuronsRequest:
+        return GetRecentNeuronsRequest(netuid=netuid)
 
     def _get_commitments_request(self, netuid: NetUid) -> GetCommitmentsRequest:
         return GetCommitmentsRequest(netuid=netuid)
@@ -389,6 +441,13 @@ class IdentityApi(AbstractIdentityApi[IdentityLoginResponse]):
     def _get_latest_neurons_request(self) -> GetLatestNeuronsRequest:
         assert self._login_response, "Attempted api request without authentication."
         return GetLatestNeuronsRequest(
+            netuid=self._login_response.netuid,
+            identity_name=self._login_response.identity_name,
+        )
+
+    def _get_recent_neurons_request(self) -> GetRecentNeuronsRequest:
+        assert self._login_response, "Attempted api request without authentication."
+        return GetRecentNeuronsRequest(
             netuid=self._login_response.netuid,
             identity_name=self._login_response.identity_name,
         )
