@@ -133,3 +133,12 @@ nox -s format                  # Format and lint code
 ```bash
 uvicorn pylon_client.service.main:app --reload --host 127.0.0.1 --port 8000
 ```
+
+### Release
+
+These commands will create and push the appropriate git tags on master to trigger the deployment.
+
+```bash
+nox -s release-client
+nox -s release-service
+```
