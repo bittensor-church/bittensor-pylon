@@ -363,6 +363,31 @@ class AbstractIdentityApi(AbstractApi[LoginResponseT], ABC):
         """
         return self._send_authenticated_request(partial(self._set_commitment_request, commitment))
 
+    def get_validators(self, block_number: BlockNumber) -> GetValidatorsResponse:
+        """
+        Retrieves validators for the authenticated identity's subnet at a given block number.
+
+        Validators are neurons with validator_permit=True, sorted by total stake in descending order.
+
+        Args:
+            block_number: The blockchain block number to query validators at.
+
+        Returns:
+            GetValidatorsResponse: containing the block information and a list of validator Neuron objects.
+        """
+        return self._send_authenticated_request(partial(self._get_validators_request, block_number))
+
+    def get_latest_validators(self) -> GetValidatorsResponse:
+        """
+        Retrieves validators for the authenticated identity's subnet at the latest available block.
+
+        Validators are neurons with validator_permit=True, sorted by total stake in descending order.
+
+        Returns:
+            GetValidatorsResponse: containing the latest block information and a list of validator Neuron objects.
+        """
+        return self._send_authenticated_request(self._get_latest_validators_request)
+
     # Private API
 
     @abstractmethod
@@ -385,6 +410,12 @@ class AbstractIdentityApi(AbstractApi[LoginResponseT], ABC):
 
     @abstractmethod
     def _set_commitment_request(self, commitment: CommitmentDataBytes | CommitmentDataHex) -> SetCommitmentRequest: ...
+
+    @abstractmethod
+    def _get_validators_request(self, block_number: BlockNumber) -> GetValidatorsRequest: ...
+
+    @abstractmethod
+    def _get_latest_validators_request(self) -> GetLatestValidatorsRequest: ...
 
 
 class OpenAccessApi(AbstractOpenAccessApi[OpenAccessLoginResponse]):
@@ -479,4 +510,19 @@ class IdentityApi(AbstractIdentityApi[IdentityLoginResponse]):
             netuid=self._login_response.netuid,
             identity_name=self._login_response.identity_name,
             commitment=cast(CommitmentDataBytes, commitment),
+        )
+
+    def _get_validators_request(self, block_number: BlockNumber) -> GetValidatorsRequest:
+        assert self._login_response, "Attempted api request without authentication."
+        return GetValidatorsRequest(
+            netuid=self._login_response.netuid,
+            identity_name=self._login_response.identity_name,
+            block_number=block_number,
+        )
+
+    def _get_latest_validators_request(self) -> GetLatestValidatorsRequest:
+        assert self._login_response, "Attempted api request without authentication."
+        return GetLatestValidatorsRequest(
+            netuid=self._login_response.netuid,
+            identity_name=self._login_response.identity_name,
         )

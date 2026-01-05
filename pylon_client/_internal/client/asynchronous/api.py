@@ -368,6 +368,31 @@ class AbstractAsyncIdentityApi(AbstractAsyncApi[LoginResponseT], ABC):
         """
         return await self._send_authenticated_request(partial(self._set_commitment_request, commitment))
 
+    async def get_validators(self, block_number: BlockNumber) -> GetValidatorsResponse:
+        """
+        Retrieves validators for the authenticated identity's subnet at a given block number.
+
+        Validators are neurons with validator_permit=True, sorted by total stake in descending order.
+
+        Args:
+            block_number: The blockchain block number to query validators at.
+
+        Returns:
+            GetValidatorsResponse: containing the block information and a list of validator Neuron objects.
+        """
+        return await self._send_authenticated_request(partial(self._get_validators_request, block_number))
+
+    async def get_latest_validators(self) -> GetValidatorsResponse:
+        """
+        Retrieves validators for the authenticated identity's subnet at the latest available block.
+
+        Validators are neurons with validator_permit=True, sorted by total stake in descending order.
+
+        Returns:
+            GetValidatorsResponse: containing the latest block information and a list of validator Neuron objects.
+        """
+        return await self._send_authenticated_request(self._get_latest_validators_request)
+
     # Private API
 
     @abstractmethod
@@ -392,6 +417,12 @@ class AbstractAsyncIdentityApi(AbstractAsyncApi[LoginResponseT], ABC):
     async def _set_commitment_request(
         self, commitment: CommitmentDataBytes | CommitmentDataHex
     ) -> SetCommitmentRequest: ...
+
+    @abstractmethod
+    async def _get_validators_request(self, block_number: BlockNumber) -> GetValidatorsRequest: ...
+
+    @abstractmethod
+    async def _get_latest_validators_request(self) -> GetLatestValidatorsRequest: ...
 
 
 class AsyncOpenAccessApi(AbstractAsyncOpenAccessApi[OpenAccessLoginResponse]):
@@ -490,4 +521,19 @@ class AsyncIdentityApi(AbstractAsyncIdentityApi[IdentityLoginResponse]):
             netuid=self._login_response.netuid,
             identity_name=self._login_response.identity_name,
             commitment=cast(CommitmentDataBytes, commitment),
+        )
+
+    async def _get_validators_request(self, block_number: BlockNumber) -> GetValidatorsRequest:
+        assert self._login_response, "Attempted api request without authentication."
+        return GetValidatorsRequest(
+            netuid=self._login_response.netuid,
+            identity_name=self._login_response.identity_name,
+            block_number=block_number,
+        )
+
+    async def _get_latest_validators_request(self) -> GetLatestValidatorsRequest:
+        assert self._login_response, "Attempted api request without authentication."
+        return GetLatestValidatorsRequest(
+            netuid=self._login_response.netuid,
+            identity_name=self._login_response.identity_name,
         )
