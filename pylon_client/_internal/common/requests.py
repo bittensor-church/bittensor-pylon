@@ -163,6 +163,15 @@ class SetCommitmentRequest(SetCommitmentBody, IdentityPylonRequest[SetCommitment
     response_cls = SetCommitmentResponse
 
 
+class GetOwnCommitmentRequest(IdentityPylonRequest[GetCommitmentResponse]):
+    """
+    Class used to fetch the commitment for the identity's wallet by the Pylon client.
+    """
+
+    version = ApiVersion.V1
+    response_cls = GetCommitmentResponse
+
+
 class GenerateCertificateKeypairRequest(PylonRequest):
     algorithm: CertificateAlgorithm = CertificateAlgorithm.ED25519
 

@@ -191,10 +191,7 @@ class MockBittensorClient(AbstractBittensorClient):
         self.calls["get_subnet_state"].append((netuid, block))
         return await self._execute_behavior("get_subnet_state", netuid, block)
 
-    async def get_commitment(self, netuid: NetUid, block: Block, hotkey: Hotkey) -> Commitment:
-        """
-        Get commitment data for a specific hotkey.
-        """
+    async def get_commitment(self, netuid: NetUid, block: Block, hotkey: Hotkey | None = None) -> Commitment | None:
         self.calls["get_commitment"].append((netuid, block, hotkey))
         return await self._execute_behavior("get_commitment", netuid, block, hotkey)
 

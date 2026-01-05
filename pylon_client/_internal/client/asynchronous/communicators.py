@@ -15,6 +15,7 @@ from pylon_client._internal.common.requests import (
     GetLatestNeuronsRequest,
     GetLatestValidatorsRequest,
     GetNeuronsRequest,
+    GetOwnCommitmentRequest,
     GetRecentNeuronsRequest,
     GetValidatorsRequest,
     IdentityLoginRequest,
@@ -230,6 +231,12 @@ class AsyncHttpCommunicator(AbstractAsyncCommunicator[Request, Response]):
         assert self._raw_client is not None
         url = self._build_url(Endpoint.LATEST_COMMITMENTS_HOTKEY, request)
         return self._raw_client.build_request(method=Endpoint.LATEST_COMMITMENTS_HOTKEY.method, url=url)
+
+    @_translate_request.register
+    async def _(self, request: GetOwnCommitmentRequest) -> Request:
+        assert self._raw_client is not None
+        url = self._build_url(Endpoint.LATEST_COMMITMENTS_SELF, request)
+        return self._raw_client.build_request(method=Endpoint.LATEST_COMMITMENTS_SELF.method, url=url)
 
     @_translate_request.register
     async def _(self, request: SetCommitmentRequest) -> Request:

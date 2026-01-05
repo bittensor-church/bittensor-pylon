@@ -12,6 +12,7 @@ from pylon_client._internal.common.requests import (
     GetLatestNeuronsRequest,
     GetLatestValidatorsRequest,
     GetNeuronsRequest,
+    GetOwnCommitmentRequest,
     GetRecentNeuronsRequest,
     GetValidatorsRequest,
     IdentityLoginRequest,
@@ -348,6 +349,15 @@ class AbstractIdentityApi(AbstractApi[LoginResponseT], ABC):
         """
         return self._send_authenticated_request(partial(self._get_commitment_request, hotkey))
 
+    def get_own_commitment(self) -> GetCommitmentResponse:
+        """
+        Retrieves the commitment for the authenticated identity's own wallet hotkey.
+
+        Returns:
+            GetCommitmentResponse: containing the hotkey and its commitment data.
+        """
+        return self._send_authenticated_request(self._get_own_commitment_request)
+
     def set_commitment(self, commitment: CommitmentDataBytes | CommitmentDataHex) -> SetCommitmentResponse:
         """
         Sets a commitment (model metadata) on-chain for the authenticated identity's wallet hotkey.
@@ -407,6 +417,9 @@ class AbstractIdentityApi(AbstractApi[LoginResponseT], ABC):
 
     @abstractmethod
     def _get_commitment_request(self, hotkey: Hotkey) -> GetCommitmentRequest: ...
+
+    @abstractmethod
+    def _get_own_commitment_request(self) -> GetOwnCommitmentRequest: ...
 
     @abstractmethod
     def _set_commitment_request(self, commitment: CommitmentDataBytes | CommitmentDataHex) -> SetCommitmentRequest: ...
@@ -502,6 +515,13 @@ class IdentityApi(AbstractIdentityApi[IdentityLoginResponse]):
             netuid=self._login_response.netuid,
             identity_name=self._login_response.identity_name,
             hotkey=hotkey,
+        )
+
+    def _get_own_commitment_request(self) -> GetOwnCommitmentRequest:
+        assert self._login_response, "Attempted api request without authentication."
+        return GetOwnCommitmentRequest(
+            netuid=self._login_response.netuid,
+            identity_name=self._login_response.identity_name,
         )
 
     def _set_commitment_request(self, commitment: CommitmentDataBytes | CommitmentDataHex) -> SetCommitmentRequest:

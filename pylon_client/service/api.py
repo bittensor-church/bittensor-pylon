@@ -233,6 +233,20 @@ class IdentityController(OpenAccessController):
 
         return Response(certificate, status_code=status_codes.HTTP_200_OK)
 
+    @handler(Endpoint.LATEST_COMMITMENTS_SELF)
+    async def get_own_commitment_endpoint(self, bt_client: AbstractBittensorClient, netuid: NetUid) -> Commitment:
+        """
+        Get a commitment for the identity's wallet.
+
+        Raises:
+            NotFoundException: If commitment could not be found in the blockchain.
+        """
+        block = await bt_client.get_latest_block()
+        commitment = await bt_client.get_commitment(netuid, block)
+        if commitment is None:
+            raise NotFoundException(detail="Commitment not found.")
+        return commitment
+
     @handler(Endpoint.CERTIFICATES_GENERATE)
     async def generate_certificate_keypair_endpoint(
         self, bt_client: AbstractBittensorClient, data: GenerateCertificateKeypairRequest, netuid: NetUid

@@ -37,6 +37,7 @@ class Endpoint(EndpointMember, Enum):
     COMMITMENTS = (HTTPMethod.POST, "/commitments", "commitments")
     LATEST_COMMITMENTS = (HTTPMethod.GET, "/block/latest/commitments", "latest_commitments")
     LATEST_COMMITMENTS_HOTKEY = (HTTPMethod.GET, "/block/latest/commitments/{hotkey:str}", "latest_commitments_hotkey")
+    LATEST_COMMITMENTS_SELF = (HTTPMethod.GET, "/block/latest/commitments/self", "latest_commitments_self")
 
     def format_url(self, *args, **kwargs) -> str:
         normalized = re.sub(r":.+?}", "}", self.url)
