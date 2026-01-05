@@ -155,14 +155,7 @@ class AbstractOpenAccessApi(AbstractApi[LoginResponseT], ABC):
 
         This method returns neurons from the Pylon service's cache, which might be behind
         the latest block. But it guarantees to provide data no older than configured
-        `PYLON_RECENT_OBJECTS_SOFT_LIMIT_BLOCKS` blocks with a fast response time.
-
-        This method doesn't guarantee to always return data and might raise PylonResponseException
-        in the following scenarios:
-        - The Pylon service cache doesn't have fresh enough data.
-        - The requested subnet is not of one of the configured identities and is not configured
-          for caching recent data via `PYLON_RECENT_OBJECTS_NETUIDS` config variable.
-
+        `PYLON_RECENT_OBJECTS_HARD_LIMIT_BLOCKS` blocks with a fast response time.
 
         Args:
             netuid: The unique identifier of the subnet.
@@ -170,6 +163,12 @@ class AbstractOpenAccessApi(AbstractApi[LoginResponseT], ABC):
         Returns:
             GetNeuronsResponse: containing cached neuron information and a dictionary mapping hotkeys to
             Neuron objects.
+
+        Raises:
+            PylonResponseException:
+                - The Pylon service cache doesn't have fresh enough data.
+                - The requested subnet is not of one of the configured identities or is not configured
+                  for caching recent data via `PYLON_RECENT_OBJECTS_NETUIDS` config variable.
         """
         return self._send_authenticated_request(partial(self._get_recent_neurons_request, netuid))
 
@@ -300,15 +299,14 @@ class AbstractIdentityApi(AbstractApi[LoginResponseT], ABC):
 
         This method returns neurons from the Pylon service's cache, which might be behind
         the latest block. But it guarantees to provide data no older than configured
-        `PYLON_RECENT_OBJECTS_SOFT_LIMIT_BLOCKS` blocks with a fast response time.
-
-        This method doesn't guarantee to always return data and might raise PylonResponseException
-        in the following scenarios:
-        - The Pylon service cache doesn't have fresh enough data.
+        `PYLON_RECENT_OBJECTS_HARD_LIMIT_BLOCKS` blocks with a fast response time.
 
         Returns:
             GetNeuronsResponse: containing cached neuron information and a dictionary mapping hotkeys to
             Neuron objects.
+
+        Raises:
+            PylonResponseException: When the Pylon service cache doesn't have fresh enough data.
         """
         return self._send_authenticated_request(self._get_recent_neurons_request)
 
