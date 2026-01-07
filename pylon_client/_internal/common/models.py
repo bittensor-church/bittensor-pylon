@@ -83,6 +83,10 @@ class AxonInfo(BittensorModel):
     port: Port
     protocol: AxonProtocol
 
+    @property
+    def is_serving(self) -> bool:
+        return self.ip not in (IPv4Address("0.0.0.0"), IPv6Address("::"))
+
 
 class Stakes(BittensorModel):
     alpha: AlphaStake
