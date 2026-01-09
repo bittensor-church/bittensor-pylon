@@ -158,8 +158,23 @@ nox -s format                  # Format and lint code
 ### Local Development Server
 
 ```bash
+# Debug app, verbose logging, auto-reload
+./pylon_service/debug-run.sh
+```
+
+or manually:
+
+```bash
 cd pylon_service
-uvicorn pylon_service.main:app --reload --host 127.0.0.1 --port 8000
+
+# Debug app, verbose logging, auto-reload
+PYLON_DEBUG=true uv run python -m pylon_service.uvicorn_entrypoint
+```
+
+
+
+# Production-like server
+uv run python -m pylon_service.uvicorn_entrypoint
 ```
 
 ### Release

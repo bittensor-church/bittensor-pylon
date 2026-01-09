@@ -90,6 +90,7 @@ class BaseEndpointTest(ABC):
     async def test_request_error(self, route_mock, pylon_client, service_mock):
         self._setup_login_mock(service_mock)
         assert pylon_client.config.retry.stop.max_attempt_number <= 3
+
         route_mock.mock(side_effect=ConnectTimeout("Connection timed out"))
 
         async with pylon_client:

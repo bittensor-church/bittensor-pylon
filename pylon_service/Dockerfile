@@ -8,6 +8,7 @@ RUN apt-get update && apt-get install -y git curl build-essential pkg-config lib
 
 RUN curl https://sh.rustup.rs -sSf | sh -s -- -y --profile minimal
 ENV PATH="/root/.cargo/bin:/app/pylon_service/.venv/bin:${PATH}"
+ENV TZ=UTC
 
 # copy packages (build context should be repository root)
 COPY pylon_commons ./pylon_commons
@@ -18,4 +19,4 @@ COPY --from=ghcr.io/astral-sh/uv:0.5 /uv /uvx /bin/
 RUN cd pylon_service && /bin/uv sync --no-dev
 
 EXPOSE 8000
-CMD ["pylon_service/.venv/bin/python", "-m", "uvicorn", "pylon_service.main:app", "--host", "0.0.0.0", "--port", "8000"]
+CMD ["pylon_service/.venv/bin/python", "-m", "pylon_service.uvicorn_entrypoint"]

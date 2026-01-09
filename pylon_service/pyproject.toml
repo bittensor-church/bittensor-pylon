@@ -22,6 +22,7 @@ dev = [
     "polyfactory>=2.22.2",
     "ruff",
     "pyright",
+    "nox",
 ]
 
 [project.urls]
