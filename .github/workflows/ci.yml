@@ -15,6 +15,11 @@ env:
 jobs:
   lint:
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        package: [pylon_commons, pylon_client, pylon_service]
+    name: lint (${{ matrix.package }})
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -25,10 +30,15 @@ jobs:
           python-version: '3.12'
 
       - name: Run linting checks with nox
-        run: nox -s lint
+        run: cd ${{ matrix.package }} && nox -s lint
 
   test:
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        package: [pylon_commons, pylon_client, pylon_service]
+    name: test (${{ matrix.package }})
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -38,11 +48,51 @@ jobs:
         with:
           python-version: '3.12'
 
-      - name: Create dotenv file
-        run: cp ./pylon_client/service/envs/test_env.template .env
-
       - name: Run unit tests with nox
         env:
           PYLON_DOCKER_IMAGE_NAME: ${{ env.DOCKER_REPO_NAME }}:${{ env.TAG_VERSION }}
-        run: nox -s test
+        run: cd ${{ matrix.package }} && nox -s test
+
+  test-docker-build:
+    runs-on: ubuntu-latest
+    name: test-docker-build
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Test Docker image builds
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: pylon_service/Dockerfile
+          push: false
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  test-client-build:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        build-type: [sdist, wheel, both]
+        include:
+          - build-type: sdist
+            build-args: "--sdist"
+          - build-type: wheel
+            build-args: "--wheel"
+          - build-type: both
+            build-args: ""
+    name: test-client-build (${{ matrix.build-type }})
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup uv
+        uses: astral-sh/setup-uv@v6
+
+      - name: Test ${{ matrix.build-type }} build
+        run: cd pylon_client && uv build ${{ matrix.build-args }}
 

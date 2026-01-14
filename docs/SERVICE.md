@@ -94,6 +94,19 @@ PYLON_ID_SN2_TOKEN=IEYAWl9rPQAMTV0hqAKAaQtEYqqKws5z
 | `PYLON_COMMITMENT_RETRY_ATTEMPTS` | Max retry attempts for commitment submission | `10` |
 | `PYLON_COMMITMENT_RETRY_DELAY_SECONDS` | Delay between commitment retries in seconds | `1` |
 
+### Recent Objects Caching
+
+Pylon can cache neuron data for fast retrieval via the `/block/recent/neurons` endpoint.
+This is useful for clients that need frequent access to neuron data without waiting for
+blockchain queries. By default, data is cached for all subnets configured in identities.
+
+| Variable | Description | Default |
+|----------|-------------|---------|
+| `PYLON_RECENT_OBJECTS_SOFT_LIMIT_BLOCKS` | Soft age limit in blocks; emits warning if data is older | `100` |
+| `PYLON_RECENT_OBJECTS_HARD_LIMIT_BLOCKS` | Hard age limit; returns error if data is older | `150` |
+| `PYLON_RECENT_OBJECTS_REFRESH_LEAD_BLOCKS` | Blocks before soft limit to trigger cache refresh | `10` |
+| `PYLON_RECENT_OBJECTS_NETUIDS` | JSON list of additional subnet UIDs to cache | `[]` |
+
 ### Monitoring
 
 | Variable | Description | Default |

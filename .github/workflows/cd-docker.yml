@@ -24,7 +24,7 @@ jobs:
         uses: ./.github/actions/validate-version
         with:
           tag-prefix: 'service-v'
-          version-file: 'pylon_client/service/__init__.py'
+          version-file: 'pylon_service/pylon_service/__init__.py'
 
   docker-push:
     runs-on: ubuntu-latest
@@ -45,6 +45,7 @@ jobs:
         uses: docker/build-push-action@v5
         with:
           context: .
+          file: pylon_service/Dockerfile
           push: true
           tags: |
             ${{ env.DOCKER_REPO_NAME }}:${{ needs.validate-version.outputs.version }}

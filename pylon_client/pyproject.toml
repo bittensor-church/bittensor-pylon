@@ -1,0 +1,98 @@
+[project]
+name = "bittensor-pylon-client"
+dynamic = ["version"]
+description = "Bittensor Pylon client library"
+requires-python = ">=3.11"
+authors = [{name = "Reef Technologies", email = "opensource@reef.pl"}]
+dependencies = [
+    "pydantic>=2.0",
+    "pydantic-settings>=2.0",
+    "httpx",
+    "tenacity",
+    "docker",
+    "apscheduler",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest",
+    "pytest-asyncio>=1.0.0",
+    "respx>=0.22.0",
+    "polyfactory>=2.22.2",
+    "ruff",
+    "pyright",
+]
+
+[project.urls]
+homepage = "https://github.com/backend-developers-ltd/bittensor-pylon"
+repository = "https://github.com/backend-developers-ltd/bittensor-pylon"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.version]
+path = "pylon_client/__init__.py"
+
+[tool.hatch.build]
+packages = ["pylon_client"]
+
+[tool.uv]
+package = true
+
+[tool.ruff]
+line-length = 120
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "TC005"]
+ignore = [
+    "D100", "D105", "D107", "D200", "D202", "D203", "D205", "D212", "D400", "D401", "D415",
+    "D101", "D102", "D103", "D104",
+    "E501", "B027", "B904", "B905",
+]
+preview = true
+explicit-preview-rules = true
+extend-select = ["DOC501"]
+
+[tool.ruff.lint.per-file-ignores]
+"__init__.py" = ["I", "F401"]
+
+[tool.ruff.lint.flake8-bugbear]
+extend-immutable-calls = [
+    "pylon_client._internal.pylon_commons.types.ArchiveBlocksCutoff",
+    "pylon_client._internal.pylon_commons.types.BittensorNetwork",
+    "pylon_client._internal.pylon_commons.types.BlockHash",
+    "pylon_client._internal.pylon_commons.types.BlockNumber",
+    "pylon_client._internal.pylon_commons.types.Coldkey",
+    "pylon_client._internal.pylon_commons.types.Consensus",
+    "pylon_client._internal.pylon_commons.types.Dividends",
+    "pylon_client._internal.pylon_commons.types.Emission",
+    "pylon_client._internal.pylon_commons.types.ExtrinsicHash",
+    "pylon_client._internal.pylon_commons.types.ExtrinsicIndex",
+    "pylon_client._internal.pylon_commons.types.ExtrinsicLength",
+    "pylon_client._internal.pylon_commons.types.Hotkey",
+    "pylon_client._internal.pylon_commons.types.Incentive",
+    "pylon_client._internal.pylon_commons.types.MaxWeightsLimit",
+    "pylon_client._internal.pylon_commons.types.NetUid",
+    "pylon_client._internal.pylon_commons.types.NeuronUid",
+    "pylon_client._internal.pylon_commons.types.Port",
+    "pylon_client._internal.pylon_commons.types.PrivateKey",
+    "pylon_client._internal.pylon_commons.types.PruningScore",
+    "pylon_client._internal.pylon_commons.types.PublicKey",
+    "pylon_client._internal.pylon_commons.types.Rank",
+    "pylon_client._internal.pylon_commons.types.RevealRound",
+    "pylon_client._internal.pylon_commons.types.Stake",
+    "pylon_client._internal.pylon_commons.types.Tempo",
+    "pylon_client._internal.pylon_commons.types.Timestamp",
+    "pylon_client._internal.pylon_commons.types.Trust",
+    "pylon_client._internal.pylon_commons.types.ValidatorTrust",
+    "pylon_client._internal.pylon_commons.types.Weight",
+]
+
+[tool.pyright]
+pythonVersion = "3.11"
+exclude = ["noxfile.py", ".nox", ".venv"]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "session"

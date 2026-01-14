@@ -105,17 +105,42 @@ asyncio.run(main())
 
 ## Development
 
+### Monorepo Structure
+
+This repository is organized as a monorepo with three packages:
+
+| Package | PyPI Name | Description |
+|---------|-----------|-------------|
+| `pylon_commons` | - | Shared types, models, and utilities (vendored into client at build time) |
+| `pylon_client` | `bittensor-pylon-client` | Python client library for the Pylon API |
+| `pylon_service` | - | REST API service (distributed as Docker image) |
+
+### pylon_commons Vendoring
+
+The `pylon_commons` package is shared between client and service but is not published to PyPI.
+Instead, it is vendored into `pylon_client` via a symlink at `pylon_client/_internal/pylon_commons`.
+
+- **In development**: The symlink points to `pylon_commons`, so changes are reflected immediately
+- **In release**: The symlink contents are copied into the wheel at build time
+
+The client re-exports common objects through `pylon_client.v1`:
+```python
+from pylon_client.v1 import Hotkey, Block, Neuron
+```
+
 ### Setup
 
 ```bash
-# Install dependencies
-uv sync --extra dev
+# Install dependencies for a specific package
+cd pylon_client && uv sync --extra dev
 
 # Create test environment
-cp pylon_client/service/envs/test_env.template .env
+cp pylon_service/envs/test_env.template .env
 ```
 
 ### Running Tests
+
+Tests can be run separately for every project or collectively using root noxfile.
 
 ```bash
 nox -s test                    # Run all tests
@@ -124,6 +149,8 @@ nox -s test -- -k "test_name"  # Run specific test
 
 ### Code Quality
 
+Formatting can be run separately for every project or collectively using root noxfile.
+
 ```bash
 nox -s format                  # Format and lint code
 ```
@@ -131,14 +158,22 @@ nox -s format                  # Format and lint code
 ### Local Development Server
 
 ```bash
-uvicorn pylon_client.service.main:app --reload --host 127.0.0.1 --port 8000
+cd pylon_service
+uvicorn pylon_service.main:app --reload --host 127.0.0.1 --port 8000
 ```
 
 ### Release
 
-These commands will create and push the appropriate git tags on master to trigger the deployment.
+These root-noxfile commands will create and push the appropriate git tags on master to trigger the deployment.
+You may do it on any branch, but the release will always happen from the current state of origin/master.
 
 ```bash
 nox -s release-client
 nox -s release-service
+```
+
+You can also run this command from the project level:
+
+```bash
+nox -s release
 ```
