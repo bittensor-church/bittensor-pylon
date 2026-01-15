@@ -41,8 +41,8 @@ class AbstractPylonClient(Generic[OpenAccessApiT, IdentityApiT, CommunicatorT], 
         self.config = config
         self._open_access_communicator = self._communicator_cls(config)
         self._identity_communicator = self._communicator_cls(config)
-        self.open_access = self._open_access_api_cls(self._open_access_communicator)
-        self.identity = self._identity_api_cls(self._identity_communicator)
+        self.open_access: OpenAccessApiT = self._open_access_api_cls(self._open_access_communicator)
+        self.identity: IdentityApiT = self._identity_api_cls(self._identity_communicator)
         self.is_open = False
 
     def __enter__(self):
