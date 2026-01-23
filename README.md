@@ -147,6 +147,22 @@ nox -s test                    # Run all tests
 nox -s test -- -k "test_name"  # Run specific test
 ```
 
+### Pact Tests
+
+Pact tests verify the contract between the client and service. The client tests generate pact files
+that are then verified by the service tests.
+
+```bash
+# Step 1: Run client pact tests (generates pact files)
+cd pylon_client && nox -s test-pact
+
+# Step 2: Run service pact tests (verifies pact files)
+cd pylon_service && nox -s test-pact
+```
+
+The client pact tests must be run first to generate the pact files in `pylon_client/tests/pact/pacts/`.
+The service pact tests will fail if the pact files do not exist.
+
 ### Code Quality
 
 Formatting can be run separately for every project or collectively using root noxfile.

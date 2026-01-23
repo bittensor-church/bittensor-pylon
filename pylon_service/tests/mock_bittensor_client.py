@@ -102,6 +102,18 @@ class MockBittensorClient(AbstractBittensorClient):
         async with self._behave.mock(**behaviors):
             yield
 
+    def add_behavior(self, method_name: str, behavior: Behavior) -> None:
+        self._behave.add_behavior(method_name, behavior)
+
+    def reset(self) -> None:
+        self._behave.reset()
+
+    async def reset_call_tracking(self) -> None:
+        """
+        Reset all call tracking.
+        """
+        self.calls.clear()
+
     async def _execute_behavior(self, method_name: str, *args, **kwargs) -> Any:
         return await self._behave.execute(method_name, *args, **kwargs)
 
@@ -233,9 +245,3 @@ class MockBittensorClient(AbstractBittensorClient):
         """
         self.calls["get_extrinsic"].append((block, extrinsic_index))
         return await self._execute_behavior("get_extrinsic", block, extrinsic_index)
-
-    async def reset_call_tracking(self) -> None:
-        """
-        Reset all call tracking.
-        """
-        self.calls.clear()

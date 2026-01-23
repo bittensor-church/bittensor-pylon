@@ -27,6 +27,12 @@ def test(session):
         _run_nox_in_package(session, package, "test")
 
 
+@nox.session(name="test-pact", python=False)
+def test_pact(session):
+    _run_nox_in_package(session, "pylon_client", "test-pact")
+    _run_nox_in_package(session, "pylon_service", "test-pact")
+
+
 @nox.session(name="format", python=False)
 def format(session):
     for package in PACKAGES:

@@ -32,13 +32,13 @@ jobs:
       - name: Run linting checks with nox
         run: cd ${{ matrix.package }} && nox -s lint
 
-  test:
+  unit-tests:
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
         package: [pylon_commons, pylon_client, pylon_service]
-    name: test (${{ matrix.package }})
+    name: unit-tests (${{ matrix.package }})
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -95,4 +95,51 @@ jobs:
 
       - name: Test ${{ matrix.build-type }} build
         run: cd pylon_client && uv build ${{ matrix.build-args }}
+
+  pact-tests-client:
+    runs-on: ubuntu-latest
+    name: pact-tests-client
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup python env
+        uses: ./.github/actions/setup-python-env
+        with:
+          python-version: '3.12'
+
+      - name: Run client pact tests
+        run: cd pylon_client && nox -s test-pact
+
+      - name: Upload pact files
+        uses: actions/upload-artifact@v4
+        with:
+          name: pact-files
+          path: pylon_client/tests/pact/pacts/
+          retention-days: 1
+
+  pact-tests-service:
+    runs-on: ubuntu-latest
+    name: pact-tests-service
+    needs: [pact-tests-client]
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup python env
+        uses: ./.github/actions/setup-python-env
+        with:
+          python-version: '3.12'
+
+      - name: Download pact files
+        uses: actions/download-artifact@v4
+        with:
+          name: pact-files
+          path: pact-files/
+
+      - name: Run service pact verification
+        env:
+          PACT_FILES_DIR: ${{ github.workspace }}/pact-files
+        run: cd pylon_service && nox -s test-pact
+
 

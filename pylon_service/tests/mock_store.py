@@ -36,3 +36,6 @@ class MockStore(Store):
     async def expires_in(self, key: str) -> int | None:
         self.behave.track("expires_in", key)
         return await self.behave.execute("expires_in", key)
+
+    def reset(self) -> None:
+        self.behave.reset()

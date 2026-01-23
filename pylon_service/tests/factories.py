@@ -3,7 +3,11 @@ from typing import Any, Generic, cast
 
 from polyfactory.factories.pydantic_factory import ModelFactory, T
 from pylon_commons.currency import Currency, Token
-from pylon_commons.models import Block, Neuron
+from pylon_commons.models import (
+    Block,
+    Extrinsic,
+    Neuron,
+)
 
 
 class PylonModelFactory(Generic[T], ModelFactory[T]):
@@ -27,3 +31,8 @@ class BlockFactory(PylonModelFactory[Block]):
 
 class NeuronFactory(PylonModelFactory[Neuron]):
     __check_model__ = True
+
+
+class ExtrinsicFactory(PylonModelFactory[Extrinsic]):
+    __check_model__ = True
+    __allow_none_optionals__ = False

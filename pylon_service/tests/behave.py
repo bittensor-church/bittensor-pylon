@@ -130,6 +130,19 @@ class Behave:
         else:
             self.calls[method_name].append(args)
 
+    def add_behavior(self, method_name: str, behavior: Behavior) -> None:
+        """
+        Add a behavior to the queue for a method.
+
+        Use this for state handlers that need to configure behaviors
+        outside of the mock() context manager.
+
+        Args:
+            method_name: Name of the method to configure
+            behavior: The behavior to add (callable, value, or exception)
+        """
+        self._behaviors[method_name].append(behavior)
+
     def reset(self) -> None:
         """
         Reset all call tracking and behaviors.

@@ -191,6 +191,18 @@ class SubnetCommitments(BittensorModel):
     commitments: dict[Hotkey, CommitmentDataHex]
 
 
+class ExtrinsicCallArg(BittensorModel):
+    """
+    Represents a single argument in an extrinsic call.
+    """
+
+    model_config = ConfigDict(extra="allow")
+
+    name: str
+    type: str
+    value: Any
+
+
 class ExtrinsicCall(BittensorModel):
     """
     Represents the call data within an extrinsic.
@@ -200,7 +212,7 @@ class ExtrinsicCall(BittensorModel):
 
     call_module: str
     call_function: str
-    call_args: list[dict[str, Any]]
+    call_args: list[ExtrinsicCallArg]
 
 
 class Extrinsic(BittensorModel):

@@ -14,7 +14,13 @@ nox.options.reuse_existing_virtualenvs = True
 @nox.session(name="test", python=PYTHON_VERSION)
 def test(session):
     session.run("uv", "sync", "--active", "--extra", "dev")
-    session.run("pytest", "-s", "-vv", "tests/", *session.posargs)
+    session.run("pytest", "-s", "-vv", "tests/unit/", *session.posargs)
+
+
+@nox.session(name="test-pact", python=PYTHON_VERSION)
+def test_pact(session):
+    session.run("uv", "sync", "--active", "--extra", "dev")
+    session.run("pytest", "-s", "-vv", "tests/pact/", *session.posargs)
 
 
 @nox.session(name="format", python=PYTHON_VERSION)

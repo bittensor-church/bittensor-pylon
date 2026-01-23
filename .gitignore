@@ -13,3 +13,4 @@ build/
 .junie/
 docker-compose.yaml
 _ignore_*
+pylon_client/tests/pact/pacts/*

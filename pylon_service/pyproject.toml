@@ -20,6 +20,7 @@ dev = [
     "pytest",
     "pytest-asyncio>=1.0.0",
     "polyfactory>=2.22.2",
+    "pact-python>=2.0.0",
     "ruff",
     "pyright",
     "nox",
