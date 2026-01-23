@@ -26,7 +26,8 @@ class BaseEndpointTest(ABC):
     - test_not_opened: Verifies PylonClosed exception is thrown when client is used without opening it.
     - test_no_credentials: Verifies PylonMisconfigured when credentials are missing in the config.
     - test_retries: Verifies retry mechanism works (2 failures, then success).
-    - test_success: Verifies successful response parsing and validation.
+
+    Note: The happy-path tests are covered by Pact contract tests.
 
     Required class attributes to override:
     - endpoint_name: The Endpoint enum value for the route (e.g., Endpoint.NEURONS)
@@ -42,6 +43,7 @@ class BaseEndpointTest(ABC):
 
     Required fixtures to implement:
     - success_response: Fixture that returns the object expected when the endpoint is successfully called.
+        (Used by test_retries to mock a successful response after retry failures.)
     """
 
     endpoint: Endpoint
@@ -117,19 +119,6 @@ class BaseEndpointTest(ABC):
         )
         with pylon_client:
             self.make_endpoint_call(pylon_client)
-
-    def test_success(self, pylon_client, service_mock, route_mock, success_response):
-        """
-        Test endpoint returns correct response on success.
-        """
-        self._setup_login_mock(service_mock)
-
-        route_mock.mock(return_value=Response(status_code=codes.OK, json=success_response.model_dump(mode="json")))
-
-        with pylon_client:
-            response = self.make_endpoint_call(pylon_client)
-
-        assert response == success_response
 
 
 class IdentityEndpointTest(BaseEndpointTest, ABC):

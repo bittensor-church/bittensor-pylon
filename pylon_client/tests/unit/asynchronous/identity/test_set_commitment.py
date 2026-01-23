@@ -24,11 +24,6 @@ class TestAsyncIdentitySetCommitment(IdentityEndpointTest):
         return SetCommitmentResponse()
 
     @pytest.mark.asyncio
-    async def test_success(self, pylon_client, service_mock, route_mock, success_response):
-        await super().test_success(pylon_client, service_mock, route_mock, success_response)
-        assert json.loads(route_mock.calls.last.request.content) == {"commitment": "0xaabbccdd"}
-
-    @pytest.mark.asyncio
     async def test_success_with_hex_string(self, pylon_client, service_mock, route_mock, success_response):
         self._setup_login_mock(service_mock)
         route_mock.mock(return_value=Response(status_code=codes.OK, json=success_response.model_dump(mode="json")))
