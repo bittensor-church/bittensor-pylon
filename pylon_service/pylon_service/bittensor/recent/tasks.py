@@ -1,7 +1,6 @@
 import asyncio
 import logging
 from abc import ABC, abstractmethod
-from typing import TypeVar
 
 from litestar.stores.base import Store
 from pylon_commons.models import BittensorModel, SubnetNeurons
@@ -15,9 +14,6 @@ from .adapter import RecentCacheAdapter
 from .context import AbstractContext, SubnetContext
 
 logger = logging.getLogger(__name__)
-
-ModelT = TypeVar("ModelT", bound=BittensorModel)
-ContextT = TypeVar("ContextT", bound=AbstractContext)
 
 
 class UpdateRecentObject[ModelT: BittensorModel, ContextT: AbstractContext](ABC):

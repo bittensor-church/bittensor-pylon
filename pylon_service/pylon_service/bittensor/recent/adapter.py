@@ -1,5 +1,5 @@
 import logging
-from typing import Self, TypeVar
+from typing import Self
 
 from litestar.stores.base import Store
 from pydantic import BaseModel, ValidationError
@@ -7,8 +7,6 @@ from pylon_commons.models import BittensorModel
 from pylon_commons.types import HotkeyName, NetUid, Timestamp
 
 logger = logging.getLogger(__name__)
-
-ModelT = TypeVar("ModelT", bound=BittensorModel)
 
 
 class CacheKey[ModelT: BittensorModel](str):

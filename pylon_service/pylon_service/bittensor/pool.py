@@ -3,7 +3,7 @@ import logging
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 from enum import StrEnum
-from typing import Self, TypeVar
+from typing import Self
 
 from bittensor_wallet import Wallet
 from pydantic import BaseModel, ConfigDict
@@ -36,9 +36,6 @@ class WalletKey(BaseModel):
             hotkey_name=HotkeyName(wallet.hotkey_str),
             path=wallet.path,
         )
-
-
-BTClient = TypeVar("BTClient", bound=AbstractBittensorClient)
 
 
 class BittensorClientPool[BTClient: AbstractBittensorClient]:

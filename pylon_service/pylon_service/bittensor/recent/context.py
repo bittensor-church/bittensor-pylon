@@ -1,13 +1,10 @@
 from abc import ABC, abstractmethod
-from typing import TypeVar
 
 from bittensor_wallet import Wallet
 from pylon_commons.models import BittensorModel
 from pylon_commons.types import HotkeyName, NetUid
 
 from .adapter import CacheKey
-
-ModelT = TypeVar("ModelT", bound=BittensorModel)
 
 
 class AbstractContext(ABC):
@@ -26,7 +23,7 @@ class AbstractContext(ABC):
         return None
 
     @abstractmethod
-    def build_key(self, model: type[ModelT]) -> CacheKey[ModelT]:
+    def build_key[ModelT: BittensorModel](self, model: type[ModelT]) -> CacheKey[ModelT]:
         pass
 
 
@@ -42,7 +39,7 @@ class SubnetContext(AbstractContext):
         super().__init__()
         self.netuid = netuid
 
-    def build_key(self, model: type[ModelT]) -> CacheKey[ModelT]:
+    def build_key[ModelT: BittensorModel](self, model: type[ModelT]) -> CacheKey[ModelT]:
         return CacheKey(model, self.netuid, None)
 
     def __str__(self) -> str:
@@ -68,7 +65,7 @@ class IdentitySubnetContext(SubnetContext):
     def wallet(self) -> Wallet | None:
         return self._wallet
 
-    def build_key(self, model: type[ModelT]) -> CacheKey[ModelT]:
+    def build_key[ModelT: BittensorModel](self, model: type[ModelT]) -> CacheKey[ModelT]:
         return CacheKey(model, self.netuid, HotkeyName(self._wallet.hotkey_str))
 
     def __str__(self) -> str:

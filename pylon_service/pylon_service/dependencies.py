@@ -1,5 +1,4 @@
 from collections.abc import AsyncGenerator
-from typing import TypeVar
 
 from litestar import Request
 from litestar.datastructures import State
@@ -17,8 +16,6 @@ from pylon_service.bittensor.recent import (
 from pylon_service.identities import Identity, identities
 from pylon_service.settings import recent_objects_settings
 from pylon_service.stores import StoreName
-
-BtClient = TypeVar("BtClient", bound=AbstractBittensorClient)
 
 
 async def bt_client_pool_dep(state: State) -> BittensorClientPool:

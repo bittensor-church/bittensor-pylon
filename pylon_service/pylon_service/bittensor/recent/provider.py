@@ -1,6 +1,5 @@
 import datetime as dt
 import logging
-from typing import TypeVar
 
 from litestar.stores.base import Store
 from pylon_commons.constants import BLOCK_PROCESSING_TIME
@@ -12,9 +11,6 @@ from .exceptions import RecentObjectMissing, RecentObjectStale
 from .types import HardLimit, SoftLimit
 
 logger = logging.getLogger(__name__)
-
-
-ModelT = TypeVar("ModelT", bound=BittensorModel)
 
 
 class RecentObjectProvider:
@@ -37,7 +33,7 @@ class RecentObjectProvider:
         self._store = store
         self._context = context
 
-    async def get(self, model: type[ModelT]) -> ModelT:
+    async def get[ModelT: BittensorModel](self, model: type[ModelT]) -> ModelT:
         """
         Get a recent object from the cache. It performs freshness checks on the object.
         Based on the freshness checks, it either raises an exception or returns the object.

@@ -7,7 +7,7 @@ from abc import ABC, abstractmethod
 from collections.abc import Awaitable, Callable
 from contextlib import asynccontextmanager
 from time import perf_counter
-from typing import Any, TypeVar, cast
+from typing import Any, cast
 
 from prometheus_client import Counter, Histogram
 from prometheus_client.metrics import MetricWrapperBase
@@ -19,7 +19,6 @@ class UseMethodName:
     """Sentinel type indicating the decorator should use the function name."""
 
 
-AsyncCallableT = TypeVar("AsyncCallableT", bound=Callable[..., Awaitable[Any]])
 USE_METHOD_NAME = UseMethodName()
 
 
@@ -207,7 +206,7 @@ def track_operation(
         inject_context: Parameter name to inject MetricsContext into. If None, no injection.
     """
 
-    def decorator(func: AsyncCallableT) -> AsyncCallableT:
+    def decorator[AsyncCallableT: Callable[..., Awaitable[Any]]](func: AsyncCallableT) -> AsyncCallableT:
         @functools.wraps(func)
         async def wrapper(*args, **kwargs):
             # We bind the original call to inspect parameters/attributes for label extraction.
