@@ -3,11 +3,11 @@ import inspect
 from collections import defaultdict
 from collections.abc import Callable
 from contextlib import asynccontextmanager
-from typing import Any, TypeAlias
+from typing import Any
 
-Behavior: TypeAlias = Callable | Exception | Any
-MethodName: TypeAlias = str
-Call: TypeAlias = tuple
+type Behavior = Callable | Exception | Any
+type MethodName = str
+type Call = tuple
 
 
 class Behave:

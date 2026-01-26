@@ -1,5 +1,5 @@
 import logging
-from typing import Generic, Self, TypeVar
+from typing import Self, TypeVar
 
 from litestar.stores.base import Store
 from pydantic import BaseModel, ValidationError
@@ -11,7 +11,7 @@ logger = logging.getLogger(__name__)
 ModelT = TypeVar("ModelT", bound=BittensorModel)
 
 
-class CacheKey(str, Generic[ModelT]):
+class CacheKey[ModelT: BittensorModel](str):
     """
     A string subclass to represent a cache key for recent data. A model-class name,
     an optional netuid and an optional hotkey are combined to uniquely identify
@@ -32,7 +32,7 @@ class _CacheEntry(BaseModel):
     timestamp: Timestamp
 
 
-class RecentCacheAdapter(Generic[ModelT]):
+class RecentCacheAdapter[ModelT: BittensorModel]:
     """
     A generic cache adapter on top of the litestar store. This class:
         - Serializes/deserializes cache entries to/from JSON via pydantic.

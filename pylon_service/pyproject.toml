@@ -2,7 +2,7 @@
 name = "bittensor-pylon-service"
 dynamic = ["version"]
 description = "Bittensor Pylon REST API service"
-requires-python = ">=3.11"
+requires-python = ">=3.13"
 authors = [{name = "Reef Technologies", email = "opensource@reef.pl"}]
 dependencies = [
     "bittensor-pylon-commons",
@@ -98,7 +98,7 @@ extend-immutable-calls = [
 ]
 
 [tool.pyright]
-pythonVersion = "3.11"
+pythonVersion = "3.13"
 exclude = ["noxfile.py", ".nox", ".venv"]
 
 [tool.pytest.ini_options]

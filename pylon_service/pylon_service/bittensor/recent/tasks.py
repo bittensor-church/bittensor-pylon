@@ -1,7 +1,7 @@
 import asyncio
 import logging
 from abc import ABC, abstractmethod
-from typing import Generic, TypeVar
+from typing import TypeVar
 
 from litestar.stores.base import Store
 from pylon_commons.models import BittensorModel, SubnetNeurons
@@ -20,7 +20,7 @@ ModelT = TypeVar("ModelT", bound=BittensorModel)
 ContextT = TypeVar("ContextT", bound=AbstractContext)
 
 
-class UpdateRecentObject(ABC, Generic[ModelT, ContextT]):
+class UpdateRecentObject[ModelT: BittensorModel, ContextT: AbstractContext](ABC):
     """
     An abstract task for implementing tasks for updating recent objects.
     """

@@ -18,7 +18,13 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        package: [pylon_commons, pylon_client, pylon_service]
+        include:
+          - package: pylon_commons
+            python-version: '3.12'
+          - package: pylon_client
+            python-version: '3.12'
+          - package: pylon_service
+            python-version: '3.13'
     name: lint (${{ matrix.package }})
     steps:
       - name: Checkout code
@@ -27,7 +33,7 @@ jobs:
       - name: Setup python env
         uses: ./.github/actions/setup-python-env
         with:
-          python-version: '3.12'
+          python-version: ${{ matrix.python-version }}
 
       - name: Run linting checks with nox
         run: cd ${{ matrix.package }} && nox -s lint
@@ -37,7 +43,13 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        package: [pylon_commons, pylon_client, pylon_service]
+        include:
+          - package: pylon_commons
+            python-version: '3.12'
+          - package: pylon_client
+            python-version: '3.12'
+          - package: pylon_service
+            python-version: '3.13'
     name: unit-tests (${{ matrix.package }})
     steps:
       - name: Checkout code
@@ -46,7 +58,7 @@ jobs:
       - name: Setup python env
         uses: ./.github/actions/setup-python-env
         with:
-          python-version: '3.12'
+          python-version: ${{ matrix.python-version }}
 
       - name: Run unit tests with nox
         env:
@@ -129,7 +141,7 @@ jobs:
       - name: Setup python env
         uses: ./.github/actions/setup-python-env
         with:
-          python-version: '3.12'
+          python-version: '3.13'
 
       - name: Download pact files
         uses: actions/download-artifact@v4

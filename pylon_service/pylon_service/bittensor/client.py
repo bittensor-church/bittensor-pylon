@@ -4,7 +4,7 @@ import logging
 from abc import ABC, abstractmethod
 from collections.abc import Awaitable, Callable
 from enum import StrEnum
-from typing import Any, Generic, TypeVar
+from typing import Any
 
 from bittensor_wallet import Wallet
 from pylon_commons.constants import LATEST_BLOCK_MARK
@@ -680,16 +680,12 @@ class TurboBtClient(AbstractBittensorClient):
         )
 
 
-SubClient = TypeVar("SubClient", bound=AbstractBittensorClient)
-DelegateReturn = TypeVar("DelegateReturn")
-
-
 class FallbackReason(StrEnum):
     STALE_BLOCK = "stale_block"
     UNKNOWN_BLOCK = "unknown_block"
 
 
-class BittensorClient(Generic[SubClient], AbstractBittensorClient):
+class BittensorClient[SubClient: AbstractBittensorClient](AbstractBittensorClient):
     """
     Bittensor client with archive node fallback support.
 
@@ -778,7 +774,7 @@ class BittensorClient(Generic[SubClient], AbstractBittensorClient):
     async def get_extrinsic(self, block: Block, extrinsic_index: ExtrinsicIndex) -> Extrinsic | None:
         return await self._delegate(self.subclient_cls.get_extrinsic, block=block, extrinsic_index=extrinsic_index)
 
-    async def _delegate(
+    async def _delegate[DelegateReturn](
         self, operation: Callable[..., Awaitable[DelegateReturn]], *args, block: Block | None = None, **kwargs
     ) -> DelegateReturn:
         """

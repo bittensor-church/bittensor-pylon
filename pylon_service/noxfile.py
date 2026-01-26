@@ -5,7 +5,7 @@ from pathlib import Path
 
 import nox
 
-PYTHON_VERSION = "3.12"
+PYTHON_VERSION = "3.13"
 nox.options.default_venv_backend = "uv"
 nox.options.stop_on_first_error = True
 nox.options.reuse_existing_virtualenvs = True

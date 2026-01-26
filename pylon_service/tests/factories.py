@@ -1,7 +1,8 @@
 from collections.abc import Callable
-from typing import Any, Generic, cast
+from typing import Any, cast
 
-from polyfactory.factories.pydantic_factory import ModelFactory, T
+from polyfactory.factories.pydantic_factory import ModelFactory
+from pydantic import BaseModel
 from pylon_commons.currency import Currency, Token
 from pylon_commons.models import (
     Block,
@@ -10,7 +11,7 @@ from pylon_commons.models import (
 )
 
 
-class PylonModelFactory(Generic[T], ModelFactory[T]):
+class PylonModelFactory[T: BaseModel](ModelFactory[T]):
     __is_base_factory__ = True
 
     @classmethod
