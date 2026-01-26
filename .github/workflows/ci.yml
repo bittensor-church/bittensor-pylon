@@ -18,11 +18,9 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
+        package: [pylon_commons, pylon_client]
+        python-version: ['3.11']
         include:
-          - package: pylon_commons
-            python-version: '3.12'
-          - package: pylon_client
-            python-version: '3.12'
           - package: pylon_service
             python-version: '3.13'
     name: lint (${{ matrix.package }})
@@ -43,14 +41,13 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
+        package: [pylon_commons, pylon_client]
+        python-version: ['3.11', '3.12', '3.13', '3.14']
         include:
-          - package: pylon_commons
-            python-version: '3.12'
-          - package: pylon_client
-            python-version: '3.12'
           - package: pylon_service
             python-version: '3.13'
-    name: unit-tests (${{ matrix.package }})
+            nox-session: test
+    name: unit-tests (${{ matrix.package }}, py${{ matrix.python-version }})
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -63,7 +60,7 @@ jobs:
       - name: Run unit tests with nox
         env:
           PYLON_DOCKER_IMAGE_NAME: ${{ env.DOCKER_REPO_NAME }}:${{ env.TAG_VERSION }}
-        run: cd ${{ matrix.package }} && nox -s test
+        run: cd ${{ matrix.package }} && nox -s ${{ matrix.nox-session || format('test-{0}', matrix.python-version) }}
 
   test-docker-build:
     runs-on: ubuntu-latest
@@ -118,7 +115,7 @@ jobs:
       - name: Setup python env
         uses: ./.github/actions/setup-python-env
         with:
-          python-version: '3.12'
+          python-version: '3.14'
 
       - name: Run client pact tests
         run: cd pylon_client && nox -s test-pact

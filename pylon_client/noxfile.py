@@ -5,25 +5,27 @@ from pathlib import Path
 
 import nox
 
-PYTHON_VERSION = "3.12"
+PYTHON_VERSIONS = ["3.11", "3.12", "3.13", "3.14"]
+LINT_PYTHON_VERSION = "3.11"
+PACT_PYTHON_VERSION = "3.14"
 nox.options.default_venv_backend = "uv"
 nox.options.stop_on_first_error = True
 nox.options.reuse_existing_virtualenvs = True
 
 
-@nox.session(name="test", python=PYTHON_VERSION)
+@nox.session(name="test", python=PYTHON_VERSIONS)
 def test(session):
     session.run("uv", "sync", "--active", "--extra", "dev")
     session.run("pytest", "-s", "-vv", "tests/unit/", *session.posargs)
 
 
-@nox.session(name="test-pact", python=PYTHON_VERSION)
+@nox.session(name="test-pact", python=PACT_PYTHON_VERSION)
 def test_pact(session):
     session.run("uv", "sync", "--active", "--extra", "dev")
     session.run("pytest", "-s", "-vv", "tests/pact/", *session.posargs)
 
 
-@nox.session(name="format", python=PYTHON_VERSION)
+@nox.session(name="format", python=LINT_PYTHON_VERSION)
 def format(session):
     session.run("uv", "sync", "--active", "--extra", "dev")
     session.run("ruff", "format", ".")
@@ -31,7 +33,7 @@ def format(session):
     session.run("pyright")
 
 
-@nox.session(name="lint", python=PYTHON_VERSION)
+@nox.session(name="lint", python=LINT_PYTHON_VERSION)
 def lint(session):
     session.run("uv", "sync", "--active", "--extra", "dev")
     session.run("ruff", "format", "--check", "--diff", ".")
