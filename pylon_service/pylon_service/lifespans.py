@@ -12,7 +12,7 @@ logger = logging.getLogger(__name__)
 
 
 @asynccontextmanager
-async def bittensor_client_pool(app: Litestar) -> AsyncGenerator[None, None]:
+async def bittensor_client_pool(app: Litestar) -> AsyncGenerator[None]:
     """
     Lifespan for litestar app that creates an instance of BittensorClientPool so that endpoints may reuse
     client instances.
@@ -28,7 +28,7 @@ async def bittensor_client_pool(app: Litestar) -> AsyncGenerator[None, None]:
 
 
 @asynccontextmanager
-async def scheduler_lifespan(app: Litestar) -> AsyncGenerator[None, None]:
+async def scheduler_lifespan(app: Litestar) -> AsyncGenerator[None]:
     """
     Lifespan for APScheduler's scheduler.
     """
