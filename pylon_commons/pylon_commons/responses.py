@@ -1,6 +1,7 @@
 from pydantic import BaseModel
 
 from .models import (
+    Block,
     Commitment,
     Extrinsic,
     SubnetCommitments,
@@ -85,7 +86,7 @@ class GetCommitmentResponse(PylonResponse, Commitment):
     Response class that is returned for the GetCommitmentRequest.
     """
 
-    pass
+    block: Block
 
 
 class GetCommitmentsResponse(PylonResponse, SubnetCommitments):

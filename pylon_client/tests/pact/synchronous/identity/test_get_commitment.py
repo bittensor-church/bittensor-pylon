@@ -2,9 +2,9 @@ from httpx import codes
 from pact import Pact
 
 from pylon_client._internal.pylon_commons.responses import GetCommitmentResponse
-from pylon_client._internal.pylon_commons.types import CommitmentDataHex, Hotkey
+from pylon_client._internal.pylon_commons.types import BlockNumber, CommitmentDataHex, Hotkey
 from tests.pact.builders import build_block
-from tests.pact.constants import COMMITMENT_HEX, HOTKEY_1, IDENTITY_NAME, NETUID
+from tests.pact.constants import BLOCK_NUMBER, COMMITMENT_HEX, HOTKEY_1, IDENTITY_NAME, NETUID
 
 
 def test_get_commitment_success(pact: Pact, get_commitment_response_matcher: dict, pylon_client_factory):
@@ -23,6 +23,7 @@ def test_get_commitment_success(pact: Pact, get_commitment_response_matcher: dic
 
     assert response == GetCommitmentResponse(
         block=build_block(),
+        commitment_block_number=BlockNumber(BLOCK_NUMBER),
         hotkey=Hotkey(HOTKEY_1),
         commitment=CommitmentDataHex(COMMITMENT_HEX),
     )

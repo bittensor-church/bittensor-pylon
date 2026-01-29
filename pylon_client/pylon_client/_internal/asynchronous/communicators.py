@@ -6,7 +6,7 @@ from typing import Generic, TypeVar
 from httpx import AsyncClient, HTTPStatusError, Request, RequestError, Response
 
 from pylon_client._internal.asynchronous.config import AsyncConfig
-from pylon_client._internal.pylon_commons.endpoints import Endpoint
+from pylon_client._internal.pylon_commons.endpoints import Endpoint, EndpointV1
 from pylon_client._internal.pylon_commons.exceptions import (
     PylonClosed,
     PylonForbidden,
@@ -171,12 +171,11 @@ class AsyncHttpCommunicator(AbstractAsyncCommunicator[Request, Response]):
     def _build_url(self, endpoint: Endpoint, request: PylonRequest) -> str:
         if isinstance(request, AuthenticatedPylonRequest):
             return endpoint.absolute_url(
-                request.version,
                 netuid_=request.netuid,
                 identity_name_=request.identity_name,
                 **request.model_dump(exclude={"netuid", "identity_name"}),
             )
-        return endpoint.absolute_url(request.version, **request.model_dump())
+        return endpoint.absolute_url(**request.model_dump())
 
     @singledispatchmethod
     async def _translate_request(self, request: PylonRequest) -> Request:  # type: ignore
@@ -185,9 +184,9 @@ class AsyncHttpCommunicator(AbstractAsyncCommunicator[Request, Response]):
     @_translate_request.register
     async def _(self, request: SetWeightsRequest) -> Request:
         assert self._raw_client is not None
-        url = self._build_url(Endpoint.SUBNET_WEIGHTS, request)
+        url = self._build_url(EndpointV1.SUBNET_WEIGHTS, request)
         return self._raw_client.build_request(
-            method=Endpoint.SUBNET_WEIGHTS.method,
+            method=EndpointV1.SUBNET_WEIGHTS.method,
             url=url,
             json=request.model_dump(include={"weights"}),
         )
@@ -195,63 +194,65 @@ class AsyncHttpCommunicator(AbstractAsyncCommunicator[Request, Response]):
     @_translate_request.register
     async def _(self, request: GetNeuronsRequest) -> Request:
         assert self._raw_client is not None
-        url = self._build_url(Endpoint.NEURONS, request)
-        return self._raw_client.build_request(method=Endpoint.NEURONS.method, url=url)
+        url = self._build_url(EndpointV1.NEURONS, request)
+        return self._raw_client.build_request(method=EndpointV1.NEURONS.method, url=url)
 
     @_translate_request.register
     async def _(self, request: GetLatestNeuronsRequest) -> Request:
         assert self._raw_client is not None
-        url = self._build_url(Endpoint.LATEST_NEURONS, request)
-        return self._raw_client.build_request(method=Endpoint.LATEST_NEURONS.method, url=url)
+        url = self._build_url(EndpointV1.LATEST_NEURONS, request)
+        return self._raw_client.build_request(method=EndpointV1.LATEST_NEURONS.method, url=url)
 
     @_translate_request.register
     async def _(self, request: GetRecentNeuronsRequest) -> Request:
         assert self._raw_client is not None
-        url = self._build_url(Endpoint.RECENT_NEURONS, request)
-        return self._raw_client.build_request(method=Endpoint.RECENT_NEURONS.method, url=url)
+        url = self._build_url(EndpointV1.RECENT_NEURONS, request)
+        return self._raw_client.build_request(method=EndpointV1.RECENT_NEURONS.method, url=url)
 
     @_translate_request.register
     async def _(self, request: GetValidatorsRequest) -> Request:
         assert self._raw_client is not None
-        url = self._build_url(Endpoint.VALIDATORS, request)
-        return self._raw_client.build_request(method=Endpoint.VALIDATORS.method, url=url)
+        url = self._build_url(EndpointV1.VALIDATORS, request)
+        return self._raw_client.build_request(method=EndpointV1.VALIDATORS.method, url=url)
 
     @_translate_request.register
     async def _(self, request: GetLatestValidatorsRequest) -> Request:
         assert self._raw_client is not None
-        url = self._build_url(Endpoint.LATEST_VALIDATORS, request)
-        return self._raw_client.build_request(method=Endpoint.LATEST_VALIDATORS.method, url=url)
+        url = self._build_url(EndpointV1.LATEST_VALIDATORS, request)
+        return self._raw_client.build_request(method=EndpointV1.LATEST_VALIDATORS.method, url=url)
 
     @_translate_request.register
     async def _(self, request: IdentityLoginRequest) -> Request:
         assert self._raw_client is not None
-        url = self._build_url(Endpoint.IDENTITY_LOGIN, request)
-        return self._raw_client.build_request(method=Endpoint.IDENTITY_LOGIN.method, url=url, json=request.model_dump())
+        url = self._build_url(EndpointV1.IDENTITY_LOGIN, request)
+        return self._raw_client.build_request(
+            method=EndpointV1.IDENTITY_LOGIN.method, url=url, json=request.model_dump()
+        )
 
     @_translate_request.register
     async def _(self, request: GetCommitmentsRequest) -> Request:
         assert self._raw_client is not None
-        url = self._build_url(Endpoint.LATEST_COMMITMENTS, request)
-        return self._raw_client.build_request(method=Endpoint.LATEST_COMMITMENTS.method, url=url)
+        url = self._build_url(EndpointV1.LATEST_COMMITMENTS, request)
+        return self._raw_client.build_request(method=EndpointV1.LATEST_COMMITMENTS.method, url=url)
 
     @_translate_request.register
     async def _(self, request: GetCommitmentRequest) -> Request:
         assert self._raw_client is not None
-        url = self._build_url(Endpoint.LATEST_COMMITMENTS_HOTKEY, request)
-        return self._raw_client.build_request(method=Endpoint.LATEST_COMMITMENTS_HOTKEY.method, url=url)
+        url = self._build_url(EndpointV1.LATEST_COMMITMENTS_HOTKEY, request)
+        return self._raw_client.build_request(method=EndpointV1.LATEST_COMMITMENTS_HOTKEY.method, url=url)
 
     @_translate_request.register
     async def _(self, request: GetOwnCommitmentRequest) -> Request:
         assert self._raw_client is not None
-        url = self._build_url(Endpoint.LATEST_COMMITMENTS_SELF, request)
-        return self._raw_client.build_request(method=Endpoint.LATEST_COMMITMENTS_SELF.method, url=url)
+        url = self._build_url(EndpointV1.LATEST_COMMITMENTS_SELF, request)
+        return self._raw_client.build_request(method=EndpointV1.LATEST_COMMITMENTS_SELF.method, url=url)
 
     @_translate_request.register
     async def _(self, request: SetCommitmentRequest) -> Request:
         assert self._raw_client is not None
-        url = self._build_url(Endpoint.COMMITMENTS, request)
+        url = self._build_url(EndpointV1.COMMITMENTS, request)
         return self._raw_client.build_request(
-            method=Endpoint.COMMITMENTS.method,
+            method=EndpointV1.COMMITMENTS.method,
             url=url,
             json=request.model_dump(include={"commitment"}),
         )
@@ -259,8 +260,8 @@ class AsyncHttpCommunicator(AbstractAsyncCommunicator[Request, Response]):
     @_translate_request.register
     async def _(self, request: GetExtrinsicRequest) -> Request:
         assert self._raw_client is not None
-        url = self._build_url(Endpoint.EXTRINSIC, request)
-        return self._raw_client.build_request(method=Endpoint.EXTRINSIC.method, url=url)
+        url = self._build_url(EndpointV1.EXTRINSIC, request)
+        return self._raw_client.build_request(method=EndpointV1.EXTRINSIC.method, url=url)
 
     async def _translate_response(
         self, pylon_request: PylonRequest[PylonResponseT], response: Response

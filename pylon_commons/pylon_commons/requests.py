@@ -2,7 +2,6 @@ import typing
 
 from pydantic import BaseModel, field_validator
 
-from .apiver import ApiVersion
 from .bodies import LoginBody, SetCommitmentBody, SetWeightsBody
 from .models import CertificateAlgorithm
 from .responses import (
@@ -34,7 +33,6 @@ class PylonRequest(BaseModel, typing.Generic[PylonResponseT]):
     the pylon client after performing a request.
     """
 
-    version: typing.ClassVar[ApiVersion]
     response_cls: typing.ClassVar[type[PylonResponseT]]  # type: ignore[reportGeneralTypeIssues]
 
 
@@ -42,12 +40,10 @@ class PylonRequest(BaseModel, typing.Generic[PylonResponseT]):
 
 
 class OpenAccessLoginRequest(LoginBody, PylonRequest[OpenAccessLoginResponse]):
-    version = ApiVersion.V1
     response_cls = OpenAccessLoginResponse
 
 
 class IdentityLoginRequest(LoginBody, PylonRequest[IdentityLoginResponse]):
-    version = ApiVersion.V1
     response_cls = IdentityLoginResponse
 
     identity_name: IdentityName
@@ -71,7 +67,6 @@ class GetNeuronsRequest(AuthenticatedPylonRequest[GetNeuronsResponse]):
     Class used to fetch the neurons by the Pylon client.
     """
 
-    version = ApiVersion.V1
     response_cls = GetNeuronsResponse
 
     block_number: BlockNumber
@@ -82,7 +77,6 @@ class GetLatestNeuronsRequest(AuthenticatedPylonRequest[GetNeuronsResponse]):
     Class used to fetch the latest neurons by the Pylon client.
     """
 
-    version = ApiVersion.V1
     response_cls = GetNeuronsResponse
 
 
@@ -91,7 +85,6 @@ class GetRecentNeuronsRequest(AuthenticatedPylonRequest[GetNeuronsResponse]):
     Class used to fetch the cached neurons by the Pylon client.
     """
 
-    version = ApiVersion.V1
     response_cls = GetNeuronsResponse
 
 
@@ -100,7 +93,6 @@ class GetValidatorsRequest(AuthenticatedPylonRequest[GetValidatorsResponse]):
     Class used to fetch the validators by the Pylon client.
     """
 
-    version = ApiVersion.V1
     response_cls = GetValidatorsResponse
 
     block_number: BlockNumber
@@ -111,7 +103,6 @@ class GetLatestValidatorsRequest(AuthenticatedPylonRequest[GetValidatorsResponse
     Class used to fetch the latest validators by the Pylon client.
     """
 
-    version = ApiVersion.V1
     response_cls = GetValidatorsResponse
 
 
@@ -120,7 +111,6 @@ class GetCommitmentRequest(AuthenticatedPylonRequest[GetCommitmentResponse]):
     Class used to fetch a commitment for a specific hotkey by the Pylon client.
     """
 
-    version = ApiVersion.V1
     response_cls = GetCommitmentResponse
 
     hotkey: Hotkey
@@ -131,7 +121,6 @@ class GetCommitmentsRequest(AuthenticatedPylonRequest[GetCommitmentsResponse]):
     Class used to fetch all commitments for the subnet by the Pylon client.
     """
 
-    version = ApiVersion.V1
     response_cls = GetCommitmentsResponse
 
 
@@ -142,7 +131,6 @@ class GetExtrinsicRequest(PylonRequest[GetExtrinsicResponse]):
     This request does not require subnet context as extrinsics are block-level data.
     """
 
-    version = ApiVersion.V1
     response_cls = GetExtrinsicResponse
 
     block_number: BlockNumber
@@ -165,7 +153,6 @@ class SetWeightsRequest(SetWeightsBody, IdentityPylonRequest[SetWeightsResponse]
     Class used to perform setting weights by the Pylon client.
     """
 
-    version = ApiVersion.V1
     response_cls = SetWeightsResponse
 
 
@@ -174,7 +161,6 @@ class SetCommitmentRequest(SetCommitmentBody, IdentityPylonRequest[SetCommitment
     Class used to set a commitment (model metadata) on chain by the Pylon client.
     """
 
-    version = ApiVersion.V1
     response_cls = SetCommitmentResponse
 
 
@@ -183,7 +169,6 @@ class GetOwnCommitmentRequest(IdentityPylonRequest[GetCommitmentResponse]):
     Class used to fetch the commitment for the identity's wallet by the Pylon client.
     """
 
-    version = ApiVersion.V1
     response_cls = GetCommitmentResponse
 
 

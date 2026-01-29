@@ -6,8 +6,7 @@ import pytest
 from httpx import Response, codes
 
 from pylon_client._internal.asynchronous.client import AsyncPylonClient
-from pylon_client._internal.pylon_commons.apiver import ApiVersion
-from pylon_client._internal.pylon_commons.endpoints import Endpoint
+from pylon_client._internal.pylon_commons.endpoints import EndpointV1
 from pylon_client._internal.pylon_commons.exceptions import (
     PylonForbidden,
     PylonNotFound,
@@ -22,7 +21,7 @@ def neurons_url():
     """
     URL for the neurons endpoint used in error handling tests.
     """
-    return Endpoint.NEURONS.absolute_url(ApiVersion.V1, netuid_=NetUid(1), block_number=1000)
+    return EndpointV1.NEURONS.absolute_url(netuid_=NetUid(1), block_number=1000)
 
 
 @pytest.mark.asyncio

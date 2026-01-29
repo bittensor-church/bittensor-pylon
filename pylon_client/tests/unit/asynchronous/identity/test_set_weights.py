@@ -3,7 +3,7 @@ from http import HTTPMethod
 import pytest
 from pydantic import ValidationError
 
-from pylon_client._internal.pylon_commons.endpoints import Endpoint
+from pylon_client._internal.pylon_commons.endpoints import EndpointV1
 from pylon_client._internal.pylon_commons.requests import SetWeightsRequest
 from pylon_client._internal.pylon_commons.responses import SetWeightsResponse
 from pylon_client._internal.pylon_commons.types import Hotkey, IdentityName, NetUid, Weight
@@ -11,7 +11,7 @@ from tests.unit.asynchronous.base_test import IdentityEndpointTest
 
 
 class TestIdentitySetWeights(IdentityEndpointTest):
-    endpoint = Endpoint.SUBNET_WEIGHTS
+    endpoint = EndpointV1.SUBNET_WEIGHTS
     route_params = {"identity_name": "sn1", "netuid": 1}
     http_method = HTTPMethod.PUT
 

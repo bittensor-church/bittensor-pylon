@@ -4,7 +4,7 @@ import pytest
 from httpx import Response, codes
 from pydantic import ValidationError
 
-from pylon_client._internal.pylon_commons.endpoints import Endpoint
+from pylon_client._internal.pylon_commons.endpoints import EndpointV1
 from pylon_client._internal.pylon_commons.models import Block
 from pylon_client._internal.pylon_commons.requests import GetNeuronsRequest
 from pylon_client._internal.pylon_commons.responses import GetNeuronsResponse
@@ -14,7 +14,7 @@ from tests.unit.synchronous.base_test import OpenAccessEndpointTest
 
 
 class TestSyncOpenAccessGetNeurons(OpenAccessEndpointTest):
-    endpoint = Endpoint.NEURONS
+    endpoint = EndpointV1.NEURONS
     route_params = {"netuid": 1, "block_number": 1000}
     http_method = HTTPMethod.GET
 

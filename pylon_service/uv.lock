@@ -133,7 +133,7 @@ requires-dist = [
     { name = "ruff", marker = "extra == 'dev'" },
     { name = "sentry-sdk", extras = ["litestar"] },
     { name = "tenacity" },
-    { name = "turbobt", specifier = ">=0.3.0" },
+    { name = "turbobt", specifier = ">=1.0.0" },
     { name = "uvicorn", specifier = ">=0.35.0" },
 ]
 provides-extras = ["dev"]
@@ -1272,7 +1272,7 @@ wheels = [
 
 [[package]]
 name = "turbobt"
-version = "0.3.1"
+version = "1.0.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "bittensor-drand" },
@@ -1283,9 +1283,9 @@ dependencies = [
     { name = "websockets" },
     { name = "xxhash" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/09/84/8492ceea1d76b804bb97a93fdc41eb6f5c0fcdbd34a00ccd93ab2a4d3a26/turbobt-0.3.1.tar.gz", hash = "sha256:cee1589bc8eec614f43c566e3a129edc603485762fa9bb3988615b2500359705", size = 136555, upload-time = "2025-12-18T06:02:15.199Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/51/9b/8442677fbc79fdf4a5ef9637b87705d3743dda433712b050402819152eea/turbobt-1.0.0.tar.gz", hash = "sha256:82cc1cc567b7da9b705bd752b54bbb4518cb788ef687f7966504ca23302ba8c9", size = 136699, upload-time = "2026-01-28T12:47:30.396Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/d8/37/bdd14fdde1fe59be925a07c2e4305b44144d02e45ebdd6e6a1f913b129d8/turbobt-0.3.1-py3-none-any.whl", hash = "sha256:7b5d96cd9df163c34425cef1e493865d1c96bba99d7ad931e4ec880b330df2bf", size = 43685, upload-time = "2025-12-18T06:02:13.498Z" },
+    { url = "https://files.pythonhosted.org/packages/f4/84/0142e92d8b8096c9fdcf15455000300b54099ec89da041e40fd47977b645/turbobt-1.0.0-py3-none-any.whl", hash = "sha256:018dceb1019500d8a9e0aa112c16d645a7b5127785dbf4d11a6d40527f596177", size = 43813, upload-time = "2026-01-28T12:47:28.89Z" },
 ]
 
 [[package]]

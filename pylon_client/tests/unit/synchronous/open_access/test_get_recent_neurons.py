@@ -3,7 +3,7 @@ from http import HTTPMethod
 import pytest
 from httpx import Response, codes
 
-from pylon_client._internal.pylon_commons.endpoints import Endpoint
+from pylon_client._internal.pylon_commons.endpoints import EndpointV1
 from pylon_client._internal.pylon_commons.exceptions import PylonResponseException
 from pylon_client._internal.pylon_commons.models import Block
 from pylon_client._internal.pylon_commons.responses import GetNeuronsResponse
@@ -13,7 +13,7 @@ from tests.unit.synchronous.base_test import OpenAccessEndpointTest
 
 
 class TestSyncOpenAccessGetRecentNeurons(OpenAccessEndpointTest):
-    endpoint = Endpoint.RECENT_NEURONS
+    endpoint = EndpointV1.RECENT_NEURONS
     route_params = {"netuid": 1}
     http_method = HTTPMethod.GET
 
