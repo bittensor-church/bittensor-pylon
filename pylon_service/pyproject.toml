@@ -6,7 +6,7 @@ requires-python = ">=3.13"
 authors = [{name = "Reef Technologies", email = "opensource@reef.pl"}]
 dependencies = [
     "bittensor-pylon-commons",
-    "turbobt>=0.3.0",
+    "turbobt>=1.0.0",
     "litestar[standard,prometheus]",
     "bittensor_wallet",
     "sentry-sdk[litestar]",

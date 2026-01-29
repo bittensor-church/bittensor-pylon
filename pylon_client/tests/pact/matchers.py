@@ -74,6 +74,7 @@ def validators_response_matcher(hotkey_1: str, hotkey_2: str) -> dict:
 def commitment_response_matcher(hotkey: str) -> dict:
     return {
         "block": block_matcher(),
+        "commitment_block_number": match.int(BLOCK_NUMBER),
         "hotkey": match.str(hotkey),
         "commitment": match.str(COMMITMENT_HEX),
     }

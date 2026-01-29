@@ -10,7 +10,7 @@ from pylon_service.logging import litestar_logging_config
 from pylon_service.middleware.request_id import RequestIdMiddleware
 from pylon_service.middleware.request_timeout import RequestTimeoutMiddleware
 from pylon_service.prometheus_controller import AuthenticatedPrometheusController
-from pylon_service.routers import v1_router
+from pylon_service.routers import v1_router, v2_router
 from pylon_service.schema import PylonSchemaPlugin
 from pylon_service.sentry_config import init_sentry
 from pylon_service.settings import response_cache_config, settings
@@ -29,6 +29,7 @@ def create_app() -> Litestar:
     return Litestar(
         route_handlers=[
             v1_router,
+            v2_router,
             AuthenticatedPrometheusController,
         ],
         openapi_config=OpenAPIConfig(

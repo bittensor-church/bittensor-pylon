@@ -2,8 +2,7 @@ import pytest
 from httpx import ConnectError, Response, codes
 from tenacity import stop_after_attempt
 
-from pylon_client._internal.pylon_commons.apiver import ApiVersion
-from pylon_client._internal.pylon_commons.endpoints import Endpoint
+from pylon_client._internal.pylon_commons.endpoints import EndpointV1
 from pylon_client._internal.pylon_commons.exceptions import PylonRequestException
 from pylon_client._internal.pylon_commons.responses import SetWeightsResponse
 from pylon_client._internal.pylon_commons.types import Hotkey, IdentityName, NetUid, PylonAuthToken, Weight
@@ -22,10 +21,8 @@ def test_sync_config_retries_success(service_mock, test_url, attempts):
     """
     Test that client retries the specified number of times before succeeding.
     """
-    login_url = Endpoint.IDENTITY_LOGIN.absolute_url(ApiVersion.V1, identity_name="sn1")
-    weights_url = Endpoint.SUBNET_WEIGHTS.absolute_url(
-        ApiVersion.V1, identity_name_=IdentityName("sn1"), netuid_=NetUid(1)
-    )
+    login_url = EndpointV1.IDENTITY_LOGIN.absolute_url(identity_name="sn1")
+    weights_url = EndpointV1.SUBNET_WEIGHTS.absolute_url(identity_name_=IdentityName("sn1"), netuid_=NetUid(1))
 
     login_response_json = {"netuid": 1, "identity_name": "sn1"}
     service_mock.post(login_url).mock(return_value=Response(status_code=codes.OK, json=login_response_json))
@@ -59,10 +56,8 @@ def test_sync_config_retries_error(service_mock, test_url):
     """
     Test that client raises PylonRequestException after all retries exhausted.
     """
-    login_url = Endpoint.IDENTITY_LOGIN.absolute_url(ApiVersion.V1, identity_name="sn1")
-    weights_url = Endpoint.SUBNET_WEIGHTS.absolute_url(
-        ApiVersion.V1, identity_name_=IdentityName("sn1"), netuid_=NetUid(1)
-    )
+    login_url = EndpointV1.IDENTITY_LOGIN.absolute_url(identity_name="sn1")
+    weights_url = EndpointV1.SUBNET_WEIGHTS.absolute_url(identity_name_=IdentityName("sn1"), netuid_=NetUid(1))
 
     login_response_json = {"netuid": 1, "identity_name": "sn1"}
     service_mock.post(login_url).mock(return_value=Response(status_code=codes.OK, json=login_response_json))

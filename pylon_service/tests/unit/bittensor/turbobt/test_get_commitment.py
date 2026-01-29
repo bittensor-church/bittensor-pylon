@@ -10,20 +10,22 @@ def test_block():
 
 @pytest.fixture
 def subnet_spec(subnet_spec):
-    commitment_bytes = bytes.fromhex("deadbeef")
-    subnet_spec.commitments.get.return_value = commitment_bytes
+    subnet_spec.commitments.get.return_value = {
+        "data": bytes.fromhex("deadbeef"),
+        "block": 950,
+    }
     return subnet_spec
 
 
 @pytest.mark.asyncio
 async def test_turbobt_client_get_commitment(turbobt_client, subnet_spec, test_block):
     """
-    Test that get_commitment returns commitment data for a specific hotkey.
+    Test that get_commitment returns commitment data with commitment_block_number for a specific hotkey.
     """
     hotkey = Hotkey("test_hotkey")
     result = await turbobt_client.get_commitment(netuid=1, block=test_block, hotkey=hotkey)
     assert result == Commitment(
-        block=test_block,
+        commitment_block_number=BlockNumber(950),
         hotkey=hotkey,
         commitment=CommitmentDataHex("0xdeadbeef"),
     )

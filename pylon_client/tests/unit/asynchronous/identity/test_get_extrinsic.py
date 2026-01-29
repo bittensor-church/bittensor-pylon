@@ -3,7 +3,7 @@ from http import HTTPMethod
 import pytest
 from httpx import Response, codes
 
-from pylon_client._internal.pylon_commons.endpoints import Endpoint
+from pylon_client._internal.pylon_commons.endpoints import EndpointV1
 from pylon_client._internal.pylon_commons.models import ExtrinsicCall, ExtrinsicCallArg
 from pylon_client._internal.pylon_commons.responses import GetExtrinsicResponse
 from pylon_client._internal.pylon_commons.types import BlockNumber, ExtrinsicHash, ExtrinsicIndex, ExtrinsicLength
@@ -11,7 +11,7 @@ from tests.unit.asynchronous.base_test import IdentityEndpointTest
 
 
 class TestIdentityGetExtrinsic(IdentityEndpointTest):
-    endpoint = Endpoint.EXTRINSIC
+    endpoint = EndpointV1.EXTRINSIC
     route_params = {"block_number": 1000, "extrinsic_index": 0}
     http_method = HTTPMethod.GET
 

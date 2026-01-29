@@ -5,8 +5,7 @@ import pytest
 from httpx import ConnectError, Response, codes
 
 from pylon_client._internal.asynchronous.client import AsyncPylonClient
-from pylon_client._internal.pylon_commons.apiver import ApiVersion
-from pylon_client._internal.pylon_commons.endpoints import Endpoint
+from pylon_client._internal.pylon_commons.endpoints import Endpoint, EndpointV1
 from pylon_client._internal.pylon_commons.exceptions import (
     PylonClosed,
     PylonMisconfigured,
@@ -32,7 +31,7 @@ class BaseEndpointTest(ABC):
     Other tests like data validation or special cases should be implemented by hand.
 
     Required class attributes to override:
-    - endpoint_name: The Endpoint enum value for the route (e.g., Endpoint.NEURONS)
+    - endpoint_name: The Endpoint enum value for the route (e.g., EndpointV1.NEURONS)
     - route_params: Dict of parameters for route_reverse (e.g., {"netuid": 1, "block_number": 1000})
     - client_fixture_name: Name of the client fixture to use (e.g., "identity_client")
     - no_credentials_error_message: Expected error message when credentials missing
@@ -75,7 +74,7 @@ class BaseEndpointTest(ABC):
         params = self.route_params.copy()
         netuid = params.pop("netuid", None)
         identity_name = params.pop("identity_name", None)
-        return self.endpoint.absolute_url(ApiVersion.V1, netuid_=netuid, identity_name_=identity_name, **params)
+        return self.endpoint.absolute_url(netuid_=netuid, identity_name_=identity_name, **params)
 
     @pytest.fixture
     def route_mock(self, service_mock, endpoint_url):
@@ -156,7 +155,7 @@ class IdentityEndpointTest(BaseEndpointTest, ABC):
 
     Example:
         class TestIdentityGetNeurons(IdentityEndpointTest):
-            endpoint_name = Endpoint.NEURONS
+            endpoint_name = EndpointV1.NEURONS
             route_params = {"identity_name": "sn1", "netuid": 1, "block_number": 1000}
 
             async def make_endpoint_call(self, client):
@@ -175,7 +174,7 @@ class IdentityEndpointTest(BaseEndpointTest, ABC):
     no_credentials_error_message = "Can not use identity api - no identity name or token provided in config."
 
     def _setup_login_mock(self, service_mock):
-        login_url = Endpoint.IDENTITY_LOGIN.absolute_url(ApiVersion.V1, identity_name="sn1")
+        login_url = EndpointV1.IDENTITY_LOGIN.absolute_url(identity_name="sn1")
         service_mock.post(login_url).mock(
             return_value=Response(status_code=codes.OK, json={"netuid": 1, "identity_name": "sn1"})
         )
@@ -183,7 +182,7 @@ class IdentityEndpointTest(BaseEndpointTest, ABC):
     @pytest.mark.asyncio
     async def test_login_request_error(self, pylon_client, service_mock):
         assert pylon_client.config.retry.stop.max_attempt_number <= 3
-        login_url = Endpoint.IDENTITY_LOGIN.absolute_url(ApiVersion.V1, identity_name="sn1")
+        login_url = EndpointV1.IDENTITY_LOGIN.absolute_url(identity_name="sn1")
         service_mock.post(login_url).mock(side_effect=ConnectError("Connection failed"))
 
         async with pylon_client:
@@ -192,7 +191,7 @@ class IdentityEndpointTest(BaseEndpointTest, ABC):
 
     @pytest.mark.asyncio
     async def test_login_response_error(self, pylon_client, service_mock):
-        login_url = Endpoint.IDENTITY_LOGIN.absolute_url(ApiVersion.V1, identity_name="sn1")
+        login_url = EndpointV1.IDENTITY_LOGIN.absolute_url(identity_name="sn1")
         service_mock.post(login_url).mock(return_value=Response(status_code=codes.INTERNAL_SERVER_ERROR))
 
         async with pylon_client:
@@ -220,7 +219,7 @@ class OpenAccessEndpointTest(BaseEndpointTest, ABC):
 
     Example:
         class TestOpenAccessGetNeurons(OpenAccessEndpointTest):
-            endpoint_name = Endpoint.NEURONS
+            endpoint_name = EndpointV1.NEURONS
             route_params = {"netuid": 1, "block_number": 1000}
 
             async def make_endpoint_call(self, client):

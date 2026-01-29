@@ -2,7 +2,7 @@ from http import HTTPMethod
 
 import pytest
 
-from pylon_client._internal.pylon_commons.endpoints import Endpoint
+from pylon_client._internal.pylon_commons.endpoints import EndpointV1
 from pylon_client._internal.pylon_commons.models import Block
 from pylon_client._internal.pylon_commons.responses import GetNeuronsResponse
 from pylon_client._internal.pylon_commons.types import BlockHash, BlockNumber
@@ -11,7 +11,7 @@ from tests.unit.synchronous.base_test import IdentityEndpointTest
 
 
 class TestSyncIdentityGetLatestNeurons(IdentityEndpointTest):
-    endpoint = Endpoint.LATEST_NEURONS
+    endpoint = EndpointV1.LATEST_NEURONS
     route_params = {"identity_name": "sn1", "netuid": 1}
     http_method = HTTPMethod.GET
 
