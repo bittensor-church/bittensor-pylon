@@ -6,6 +6,7 @@ from tests.pact.constants import HOTKEY_1, HOTKEY_2
 from tests.pact.matchers import (
     commitment_response_matcher,
     commitments_response_matcher,
+    commitments_response_unstable_matcher,
     extrinsic_response_matcher,
     neurons_response_matcher,
     set_commitment_response_matcher,
@@ -40,6 +41,11 @@ def get_commitment_response_matcher() -> dict:
 @pytest.fixture
 def get_commitments_response_matcher() -> dict:
     return commitments_response_matcher(HOTKEY_1, HOTKEY_2)
+
+
+@pytest.fixture
+def get_commitments_response_unstable_matcher() -> dict:
+    return commitments_response_unstable_matcher(HOTKEY_1, HOTKEY_2)
 
 
 @pytest.fixture

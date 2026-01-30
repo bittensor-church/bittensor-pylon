@@ -17,7 +17,7 @@ class Endpoint(EndpointMember, Enum):
     """
     Base class for versioned endpoint enums.
 
-    Subclasses must define a `version` class variable and their endpoint members.
+    Subclasses must define a `_version` class variable and their endpoint members.
     """
 
     _version: ApiVersion

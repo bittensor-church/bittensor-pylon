@@ -6,6 +6,8 @@ from typing import Generic, TypeVar
 from httpx import AsyncClient, HTTPStatusError, Request, RequestError, Response
 
 from pylon_client._internal.asynchronous.config import AsyncConfig
+from pylon_client._internal.pylon_commons._unstable.endpoints import Endpoint as EndpointUnstable
+from pylon_client._internal.pylon_commons._unstable.requests import GetCommitmentsRequestUnstable
 from pylon_client._internal.pylon_commons.endpoints import Endpoint, EndpointV1
 from pylon_client._internal.pylon_commons.exceptions import (
     PylonClosed,
@@ -234,6 +236,12 @@ class AsyncHttpCommunicator(AbstractAsyncCommunicator[Request, Response]):
         assert self._raw_client is not None
         url = self._build_url(EndpointV1.LATEST_COMMITMENTS, request)
         return self._raw_client.build_request(method=EndpointV1.LATEST_COMMITMENTS.method, url=url)
+
+    @_translate_request.register
+    async def _(self, request: GetCommitmentsRequestUnstable) -> Request:
+        assert self._raw_client is not None
+        url = self._build_url(EndpointUnstable.LATEST_COMMITMENTS, request)
+        return self._raw_client.build_request(method=EndpointUnstable.LATEST_COMMITMENTS.method, url=url)
 
     @_translate_request.register
     async def _(self, request: GetCommitmentRequest) -> Request:

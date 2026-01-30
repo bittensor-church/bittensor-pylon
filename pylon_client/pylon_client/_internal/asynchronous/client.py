@@ -2,6 +2,7 @@ import logging
 from abc import ABC
 from typing import Generic, TypeVar
 
+from pylon_client._internal._unstable.asynchronous import AsyncUnstableNamespace
 from pylon_client._internal.asynchronous.api import (
     AbstractAsyncIdentityApi,
     AbstractAsyncOpenAccessApi,
@@ -43,6 +44,7 @@ class AbstractAsyncPylonClient(Generic[OpenAccessApiT, IdentityApiT, Communicato
         self._identity_communicator = self._communicator_cls(config)
         self.open_access: OpenAccessApiT = self._open_access_api_cls(self._open_access_communicator)
         self.identity: IdentityApiT = self._identity_api_cls(self._identity_communicator)
+        self.unstable = AsyncUnstableNamespace(self.open_access, self.identity)  # type: ignore[arg-type]
         self.is_open = False
 
     async def __aenter__(self):

@@ -1,5 +1,5 @@
-from pylon_commons.models import BittensorModel, Block, Commitment
-from pylon_commons.types import Hotkey
+from ..models import BittensorModel, Block, Commitment
+from ..types import Hotkey
 
 
 class SubnetCommitments(BittensorModel):

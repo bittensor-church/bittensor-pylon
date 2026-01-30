@@ -1,8 +1,8 @@
 from enum import nonmember, unique
 from http import HTTPMethod
 
-from pylon_commons.apiver import ApiVersion
-from pylon_commons.endpoints import Endpoint as BaseEndpoint
+from ..apiver import ApiVersion
+from ..endpoints import Endpoint as BaseEndpoint
 
 
 @unique

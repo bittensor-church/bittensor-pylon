@@ -23,8 +23,9 @@ def _run_nox_in_package(session: nox.Session, package: str, nox_session: str) ->
 
 @nox.session(name="test", python=False)
 def test(session):
-    for package in PACKAGES:
-        _run_nox_in_package(session, package, "test")
+    _run_nox_in_package(session, "pylon_commons", "test-3.14")
+    _run_nox_in_package(session, "pylon_client", "test-3.14")
+    _run_nox_in_package(session, "pylon_service", "test")
 
 
 @nox.session(name="test-pact", python=False)

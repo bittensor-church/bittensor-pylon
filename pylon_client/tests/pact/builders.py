@@ -5,6 +5,7 @@ from pylon_client._internal.pylon_commons.models import (
     AxonInfo,
     AxonProtocol,
     Block,
+    Commitment,
     Extrinsic,
     ExtrinsicCall,
     ExtrinsicCallArg,
@@ -16,6 +17,7 @@ from pylon_client._internal.pylon_commons.types import (
     BlockHash,
     BlockNumber,
     Coldkey,
+    CommitmentDataHex,
     Consensus,
     Dividends,
     Emission,
@@ -37,7 +39,7 @@ from pylon_client._internal.pylon_commons.types import (
     ValidatorPermit,
     ValidatorTrust,
 )
-from tests.pact.constants import BLOCK_HASH, BLOCK_NUMBER, COLDKEY, EXTRINSIC_HASH, EXTRINSIC_INDEX
+from tests.pact.constants import BLOCK_HASH, BLOCK_NUMBER, COLDKEY, COMMITMENT_HEX, EXTRINSIC_HASH, EXTRINSIC_INDEX
 
 
 def build_block() -> Block:
@@ -88,4 +90,12 @@ def build_extrinsic() -> Extrinsic:
                 )
             ],
         ),
+    )
+
+
+def build_commitment(hotkey: str) -> Commitment:
+    return Commitment(
+        commitment_block_number=BlockNumber(BLOCK_NUMBER),
+        hotkey=Hotkey(hotkey),
+        commitment=CommitmentDataHex(COMMITMENT_HEX),
     )
