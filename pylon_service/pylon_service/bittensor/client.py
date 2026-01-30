@@ -7,6 +7,7 @@ from enum import StrEnum
 from typing import Any
 
 from bittensor_wallet import Wallet
+from pylon_commons._unstable.models import SubnetCommitments
 from pylon_commons.constants import LATEST_BLOCK_MARK
 from pylon_commons.currency import Currency, Token
 from pylon_commons.models import (
@@ -22,7 +23,6 @@ from pylon_commons.models import (
     NeuronCertificate,
     NeuronCertificateKeypair,
     Stakes,
-    SubnetCommitmentsV2,
     SubnetHyperparams,
     SubnetNeurons,
     SubnetState,
@@ -206,7 +206,7 @@ class AbstractBittensorClient(ABC):
         """
 
     @abstractmethod
-    async def get_commitments(self, netuid: NetUid, block: Block) -> SubnetCommitmentsV2:
+    async def get_commitments(self, netuid: NetUid, block: Block) -> SubnetCommitments:
         """
         Fetches all commitments for a subnet.
         """
@@ -587,7 +587,7 @@ class TurboBtClient(AbstractBittensorClient):
             "hotkey": Attr("hotkey"),
         },
     )
-    async def get_commitments(self, netuid: NetUid, block: Block) -> SubnetCommitmentsV2:
+    async def get_commitments(self, netuid: NetUid, block: Block) -> SubnetCommitments:
         assert self._raw_client is not None, (
             "The client is not open, please use the client as a context manager or call the open() method."
         )
@@ -601,7 +601,7 @@ class TurboBtClient(AbstractBittensorClient):
                 hotkey=hotkey,
                 commitment=CommitmentDataBytes(result["data"]).hex(),
             )
-        return SubnetCommitmentsV2(block=block, commitments=commitments)
+        return SubnetCommitments(block=block, commitments=commitments)
 
     @track_operation(
         bittensor_operation_duration,
@@ -768,7 +768,7 @@ class BittensorClient[SubClient: AbstractBittensorClient](AbstractBittensorClien
     async def get_commitment(self, netuid: NetUid, block: Block, hotkey: Hotkey | None = None) -> Commitment | None:
         return await self._delegate(self.subclient_cls.get_commitment, netuid=netuid, block=block, hotkey=hotkey)
 
-    async def get_commitments(self, netuid: NetUid, block: Block) -> SubnetCommitmentsV2:
+    async def get_commitments(self, netuid: NetUid, block: Block) -> SubnetCommitments:
         return await self._delegate(self.subclient_cls.get_commitments, netuid=netuid, block=block)
 
     async def set_commitment(self, netuid: NetUid, data: CommitmentDataBytes) -> None:

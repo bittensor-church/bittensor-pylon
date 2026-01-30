@@ -5,13 +5,12 @@ from litestar.di import Provide
 from litestar.exceptions import NotFoundException, ServiceUnavailableException
 from litestar.handlers.http_handlers import decorators as http_decorators
 from pylon_commons.bodies import LoginBody, SetCommitmentBody, SetWeightsBody
-from pylon_commons.endpoints import Endpoint, EndpointV1, EndpointV2
+from pylon_commons.endpoints import Endpoint, EndpointV1
 from pylon_commons.models import (
     Extrinsic,
     Hotkey,
     NeuronCertificate,
     SubnetCommitments,
-    SubnetCommitmentsV2,
     SubnetNeurons,
     SubnetValidators,
 )
@@ -294,34 +293,3 @@ class IdentityController(OpenAccessController):
             raise BadGatewayException(detail="Could not generate certificate pair.")
 
         return Response(certificate_keypair, status_code=status_codes.HTTP_201_CREATED)
-
-
-class OpenAccessControllerV2(Controller):
-    """
-    V2 API controller for open access endpoints with breaking changes from V1.
-    """
-
-    path = "/subnet/{netuid:int}/"
-    dependencies = {
-        "bt_client": Provide(bt_client_open_access_dep),
-    }
-
-    @handler(EndpointV2.LATEST_COMMITMENTS)
-    async def get_commitments_endpoint(self, bt_client: AbstractBittensorClient, netuid: NetUid) -> SubnetCommitmentsV2:
-        """
-        Get all commitments for the subnet (v2 format with commitment_block_number).
-        """
-        block = await bt_client.get_latest_block()
-        return await bt_client.get_commitments(netuid, block)
-
-
-class IdentityControllerV2(OpenAccessControllerV2):
-    """
-    V2 API controller for identity endpoints with breaking changes from V1.
-    """
-
-    path = "/identity/{identity_name:str}/subnet/{netuid:int}"
-    dependencies = {
-        "identity": Provide(identity_dep),
-        "bt_client": Provide(bt_client_identity_dep),
-    }

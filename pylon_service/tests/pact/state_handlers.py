@@ -3,7 +3,8 @@ from abc import ABC, abstractmethod
 from typing import TYPE_CHECKING, Any, ClassVar, Literal
 from unittest.mock import AsyncMock
 
-from pylon_commons.models import Commitment, SubnetCommitmentsV2, SubnetNeurons, SubnetValidators
+from pylon_commons._unstable.models import SubnetCommitments
+from pylon_commons.models import Commitment, SubnetNeurons, SubnetValidators
 from pylon_commons.types import BlockNumber, CommitmentDataHex, Hotkey, Timestamp
 
 from pylon_service.bittensor.recent.adapter import _CacheEntry
@@ -172,7 +173,7 @@ class CommitmentsExistHandler(StateHandler):
             )
             for i in range(parameters.get("commitment_count", 1))
         }
-        subnet_commitments = SubnetCommitmentsV2(block=block, commitments=commitments)
+        subnet_commitments = SubnetCommitments(block=block, commitments=commitments)
 
         client = self._get_client(parameters)
         client.add_behavior("get_latest_block", block)

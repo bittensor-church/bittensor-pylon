@@ -1,5 +1,6 @@
 import pytest
-from pylon_commons.models import Block, Commitment, SubnetCommitmentsV2
+from pylon_commons._unstable.models import SubnetCommitments
+from pylon_commons.models import Block, Commitment
 from pylon_commons.types import BlockHash, BlockNumber, CommitmentDataHex, Hotkey
 
 
@@ -23,7 +24,7 @@ async def test_turbobt_client_get_commitments(turbobt_client, subnet_spec, test_
     Test that get_commitments returns all commitments for a subnet.
     """
     result = await turbobt_client.get_commitments(netuid=1, block=test_block)
-    assert result == SubnetCommitmentsV2(
+    assert result == SubnetCommitments(
         block=test_block,
         commitments={
             Hotkey("hotkey1"): Commitment(
@@ -48,7 +49,7 @@ async def test_turbobt_client_get_commitments_empty(turbobt_client, subnet_spec,
     """
     subnet_spec.commitments.fetch.return_value = {}
     result = await turbobt_client.get_commitments(netuid=1, block=test_block)
-    assert result == SubnetCommitmentsV2(
+    assert result == SubnetCommitments(
         block=test_block,
         commitments={},
     )

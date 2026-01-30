@@ -9,6 +9,7 @@ without requiring actual blockchain interactions.
 from contextlib import asynccontextmanager
 from typing import Any
 
+from pylon_commons._unstable.models import SubnetCommitments
 from pylon_commons.models import (
     Block,
     CertificateAlgorithm,
@@ -17,7 +18,6 @@ from pylon_commons.models import (
     Neuron,
     NeuronCertificate,
     NeuronCertificateKeypair,
-    SubnetCommitmentsV2,
     SubnetHyperparams,
     SubnetNeurons,
     SubnetState,
@@ -211,7 +211,7 @@ class MockBittensorClient(AbstractBittensorClient):
         self.calls["get_commitment"].append((netuid, block, hotkey))
         return await self._execute_behavior("get_commitment", netuid, block, hotkey)
 
-    async def get_commitments(self, netuid: NetUid, block: Block) -> SubnetCommitmentsV2:
+    async def get_commitments(self, netuid: NetUid, block: Block) -> SubnetCommitments:
         """
         Get all commitments for a subnet.
         """

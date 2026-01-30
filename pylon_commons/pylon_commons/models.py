@@ -191,11 +191,6 @@ class SubnetCommitments(BittensorModel):
     commitments: dict[Hotkey, CommitmentDataHex]
 
 
-class SubnetCommitmentsV2(BittensorModel):
-    block: Block
-    commitments: dict[Hotkey, Commitment]
-
-
 class ExtrinsicCallArg(BittensorModel):
     """
     Represents a single argument in an extrinsic call.

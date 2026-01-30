@@ -34,9 +34,11 @@ class Endpoint(EndpointMember, Enum):
 
     @classmethod
     def version(cls, version: ApiVersion):
+        from pylon_commons._unstable.endpoints import Endpoint as EndpointUnstable
+
         return {
             ApiVersion.V1: EndpointV1,
-            ApiVersion.V2: EndpointV2,
+            ApiVersion.UNSTABLE: EndpointUnstable,
         }[version]
 
 
@@ -68,16 +70,3 @@ class EndpointV1(Endpoint):
     LATEST_COMMITMENTS_HOTKEY = (HTTPMethod.GET, "/block/latest/commitments/{hotkey:str}", "latest_commitments_hotkey")
     LATEST_COMMITMENTS_SELF = (HTTPMethod.GET, "/block/latest/commitments/self", "latest_commitments_self")
     EXTRINSIC = (HTTPMethod.GET, "/block/{block_number:int}/extrinsic/{extrinsic_index:int}", "extrinsic")
-
-
-@unique
-class EndpointV2(Endpoint):
-    """
-    V2 API endpoint path definitions.
-
-    Contains only endpoints that have breaking changes from V1.
-    """
-
-    _version = nonmember(ApiVersion.V2)  # type: ignore[reportAssignmentType]
-
-    LATEST_COMMITMENTS = (HTTPMethod.GET, "/block/latest/commitments", "latest_commitments_v2")
