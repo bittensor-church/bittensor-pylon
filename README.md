@@ -195,16 +195,25 @@ uv run python -m pylon_service.uvicorn_entrypoint
 
 ### Release
 
-These root-noxfile commands will create and push the appropriate git tags on master to trigger the deployment.
-You may do it on any branch, but the release will always happen from the current state of origin/master.
+Version is determined from git tags using `hatch-vcs` - there are no version files in the code.
+
+Release commands create and push git tags on `origin/master` to trigger deployment:
 
 ```bash
+# Release client to PyPI (creates client-v1.7.0 tag)
+nox -s release-client -- 1.7.0
+
+# Release service to Docker Hub (creates service-v1.2.0 tag)
+nox -s release-service -- 1.2.0
+
+# Or omit version to be prompted:
 nox -s release-client
 nox -s release-service
 ```
 
-You can also run this command from the project level:
+You can also run from the package directory:
 
 ```bash
-nox -s release
+cd pylon_client && nox -s release -- 1.7.0
+cd pylon_service && nox -s release -- 1.2.0
 ```

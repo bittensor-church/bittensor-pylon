@@ -29,11 +29,14 @@ homepage = "https://github.com/backend-developers-ltd/bittensor-pylon"
 repository = "https://github.com/backend-developers-ltd/bittensor-pylon"
 
 [build-system]
-requires = ["hatchling"]
+requires = ["hatchling", "hatch-vcs"]
 build-backend = "hatchling.build"
 
 [tool.hatch.version]
-path = "pylon_client/__init__.py"
+source = "vcs"
+tag-pattern = "^client-v(?P<version>.*)$"
+fallback-version = "0.0.0"
+raw-options.root = ".."
 
 [tool.hatch.build]
 packages = ["pylon_client"]

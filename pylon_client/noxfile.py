@@ -1,8 +1,5 @@
 from __future__ import annotations
 
-import ast
-from pathlib import Path
-
 import nox
 
 PYTHON_VERSIONS = ["3.11", "3.12", "3.13", "3.14"]
@@ -41,22 +38,17 @@ def lint(session):
     session.run("pyright")
 
 
-def _get_version(session: nox.Session, file_path: Path) -> str:
-    content = session.run("git", "show", f"origin/master:{file_path}", external=True, silent=True)
-    if not isinstance(content, str):
-        raise ValueError(f"Could not read {file_path} from origin/master")
-    for line in content.splitlines():
-        if line.startswith("__version__"):
-            return ast.literal_eval(line.split("=", 1)[1].strip())
-    raise ValueError(f"Could not find __version__ in {file_path}")
-
-
 @nox.session(name="release", python=False, default=False)
 def release(session):
-    session.run("git", "fetch", "origin", external=True)
-    version = _get_version(session, Path("pylon_client/pylon_client/__init__.py"))
+    if session.posargs:
+        version = session.posargs[0]
+    else:
+        version = input("Enter version to release: ")
+        if not version:
+            session.error("Version required")
     tag_name = f"client-v{version}"
     tag_message = f"Pylon client {version} release"
+    session.run("git", "fetch", "origin", external=True)
     session.log(f"Tag: {tag_name}")
     session.log(f"Message: {tag_message}")
     answer = input("Create and push this tag? [y/N] ")

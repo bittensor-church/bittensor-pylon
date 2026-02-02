@@ -98,6 +98,8 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+        with:
+          fetch-tags: true
 
       - name: Setup uv
         uses: astral-sh/setup-uv@v6

@@ -388,54 +388,44 @@ The service endpoints are tested using `MockBittensorClient` (`pylon_service/tes
 
 ### Release Process
 
-The project has two independent products with separate release workflows:
+The project has two independent products with separate release workflows. Version is determined from git tags using `hatch-vcs` - there are no version files in the code.
 
 #### Client Release (PyPI)
 
 The client library is published to PyPI when a `client-v*` tag is pushed:
 
 ```bash
-# 1. Update version in pylon_client/pylon_client/__init__.py
-#    __version__ = "1.6.0"
+# From repository root, run release with version:
+nox -s release-client -- 1.7.0
 
-# 2. Commit and push
-git commit -am "chore: bump client version to 1.6.0"
-git push origin master
-
-# 3. Create and push tag
-git tag client-v1.6.0
-git push origin client-v1.6.0
-
-# 4. CI runs, then CD publishes to PyPI
+# Or be prompted for version:
+nox -s release-client
 ```
+
+This creates and pushes a `client-v1.7.0` tag, triggering the CD workflow to publish to PyPI.
 
 #### Service Release (Docker Hub)
 
 The service is published to Docker Hub when a `service-v*` tag is pushed:
 
 ```bash
-# 1. Update version in pylon_service/pylon_service/__init__.py
-#    __version__ = "0.4.0"
+# From repository root, run release with version:
+nox -s release-service -- 1.2.0
 
-# 2. Commit and push
-git commit -am "chore: bump service version to 0.4.0"
-git push origin master
-
-# 3. Create and push tag
-git tag service-v0.4.0
-git push origin service-v0.4.0
-
-# 4. CI runs, then CD publishes to Docker Hub
+# Or be prompted for version:
+nox -s release-service
 ```
 
-#### Version Files
+This creates and pushes a `service-v1.2.0` tag, triggering the CD workflow to publish to Docker Hub.
 
-| Product | Version File | Tag Pattern |
-|---------|--------------|-------------|
-| Client (PyPI) | `pylon_client/pylon_client/__init__.py` | `client-v<semver>` |
-| Service (Docker) | `pylon_service/pylon_service/__init__.py` | `service-v<semver>` |
+#### Version Management
 
-**Important**: The CD workflow validates that the tag version matches the version in the code. If they don't match, the build will fail.
+| Product | Tag Pattern | Published To |
+|---------|-------------|--------------|
+| Client | `client-v<semver>` | PyPI (`bittensor-pylon-client`) |
+| Service | `service-v<semver>` | Docker Hub (`backenddevelopersltd/bittensor-pylon`) |
+
+**How it works**: Version is extracted from git tags at build time using `hatch-vcs`. Local builds without matching tags use fallback version `0.0.0`.
 
 ## Common Gotchas and Important Notes
 
