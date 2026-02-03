@@ -5,7 +5,12 @@ import pytest
 from litestar.types import HTTPRequestEvent, Message
 
 from pylon_service.logging import PylonLogFilter
-from pylon_service.request_id import RequestIdMiddleware, current_request_id, reset_request_id, set_request_id
+from pylon_service.middleware.request_id import (
+    RequestIdMiddleware,
+    current_request_id,
+    reset_request_id,
+    set_request_id,
+)
 from tests.helpers import wait_until
 
 

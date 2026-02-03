@@ -10,6 +10,7 @@ from pylon_client._internal.pylon_commons.endpoints import Endpoint
 from pylon_client._internal.pylon_commons.exceptions import (
     PylonBadGateway,
     PylonForbidden,
+    PylonGatewayTimeout,
     PylonNotFound,
     PylonResponseException,
     PylonUnauthorized,
@@ -59,6 +60,12 @@ def neurons_url():
             r"Bad gateway \(HTTP 502\)",
             id="bad_gateway_502",
         ),
+        pytest.param(
+            codes.GATEWAY_TIMEOUT,
+            PylonGatewayTimeout,
+            r"Gateway timeout \(HTTP 504\)",
+            id="gateway_timeout_504",
+        ),
     ],
 )
 def test_status_code_raises_correct_exception(
@@ -87,6 +94,7 @@ def test_status_code_raises_correct_exception(
         pytest.param(codes.NOT_FOUND, PylonNotFound, id="not_found_404"),
         pytest.param(codes.INTERNAL_SERVER_ERROR, PylonResponseException, id="internal_server_error_500"),
         pytest.param(codes.BAD_GATEWAY, PylonBadGateway, id="bad_gateway_502"),
+        pytest.param(codes.GATEWAY_TIMEOUT, PylonGatewayTimeout, id="gateway_timeout_504"),
     ],
 )
 def test_extracts_detail_from_json_response(

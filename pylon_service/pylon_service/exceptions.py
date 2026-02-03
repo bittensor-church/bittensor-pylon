@@ -4,3 +4,7 @@ from litestar.exceptions import InternalServerException
 
 class BadGatewayException(InternalServerException):
     status_code = status_codes.HTTP_502_BAD_GATEWAY
+
+
+class GatewayTimeoutException(InternalServerException):
+    status_code = status_codes.HTTP_504_GATEWAY_TIMEOUT

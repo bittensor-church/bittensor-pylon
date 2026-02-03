@@ -2,7 +2,7 @@ from abc import ABC, abstractmethod
 from http import HTTPMethod
 
 import pytest
-from httpx import ConnectTimeout, Response, codes
+from httpx import ConnectError, Response, codes
 
 from pylon_client._internal.asynchronous.client import AsyncPylonClient
 from pylon_client._internal.pylon_commons.apiver import ApiVersion
@@ -93,7 +93,7 @@ class BaseEndpointTest(ABC):
         self._setup_login_mock(service_mock)
         assert pylon_client.config.retry.stop.max_attempt_number <= 3
 
-        route_mock.mock(side_effect=ConnectTimeout("Connection timed out"))
+        route_mock.mock(side_effect=ConnectError("Connection failed"))
 
         async with pylon_client:
             with pytest.raises(PylonRequestException, match="An error occurred while making a request to Pylon API."):
@@ -125,8 +125,8 @@ class BaseEndpointTest(ABC):
         self._setup_login_mock(service_mock)
         route_mock.mock(
             side_effect=[
-                ConnectTimeout("Connection timed out"),
-                ConnectTimeout("Connection timed out"),
+                ConnectError("Connection failed"),
+                ConnectError("Connection failed"),
                 Response(status_code=codes.OK, json=success_response.model_dump(mode="json")),
             ]
         )
@@ -184,7 +184,7 @@ class IdentityEndpointTest(BaseEndpointTest, ABC):
     async def test_login_request_error(self, pylon_client, service_mock):
         assert pylon_client.config.retry.stop.max_attempt_number <= 3
         login_url = Endpoint.IDENTITY_LOGIN.absolute_url(ApiVersion.V1, identity_name="sn1")
-        service_mock.post(login_url).mock(side_effect=ConnectTimeout("Connection timed out"))
+        service_mock.post(login_url).mock(side_effect=ConnectError("Connection failed"))
 
         async with pylon_client:
             with pytest.raises(PylonRequestException, match="An error occurred while making a request to Pylon API."):

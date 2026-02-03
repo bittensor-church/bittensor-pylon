@@ -6,6 +6,7 @@ from pact import Pact
 
 from pylon_client._internal.asynchronous.client import AsyncPylonClient
 from pylon_client._internal.asynchronous.config import AsyncConfig
+from pylon_client._internal.pylon_commons.timeout import PylonTimeout
 from pylon_client._internal.pylon_commons.types import PylonAuthToken
 
 
@@ -36,8 +37,7 @@ def remove_old_pact(pacts_dir: Path, consumer_name: str, provider_name: str):
 def pylon_client_factory():
     def _create_client(address: str) -> AsyncPylonClient:
         config = AsyncConfig(
-            address=address,
-            open_access_token=PylonAuthToken("test_token"),
+            address=address, open_access_token=PylonAuthToken("test_token"), timeout=PylonTimeout(read=0.5)
         )
         return AsyncPylonClient(config)
 

@@ -28,6 +28,7 @@ and authentication credentials.
 | `identity_name` | Identity name for authenticated operations | No* |
 | `identity_token` | Token for the specified identity | No* |
 | `retry` | Retry configuration (see [Retries](#retries) section) | No |
+| `timeout` | Timeout configuration (see [Timeouts](#timeouts) section) | No |
 
 *`identity_name` and `identity_token` must both be provided together or not at all.
 
@@ -248,6 +249,38 @@ config = AsyncConfig(
 )
 ```
 
+## Timeouts
+
+The client enforces timeouts on all requests. The default timeout configuration is:
+
+| Parameter | Description | Default |
+|-----------|-------------|---------|
+| `connect` | Timeout for establishing a connection | `5.0s` |
+| `read` | Timeout for receiving a response | `60.0s` |
+| `write` | Timeout for sending the request body | `5.0s` |
+| `pool` | Timeout for acquiring a connection from the pool | `5.0s` |
+
+The `read` timeout is the most relevant for API calls -- it controls how long the client
+waits for the server to respond. When a request times out, a `PylonTimeoutException` is raised.
+
+The client automatically sends an `X-Pylon-Timeout` header derived from the `read` timeout
+(reduced by a small buffer) so that the server can abort processing before the client times out,
+returning a `504 Gateway Timeout` response instead.
+
+### Custom Timeout Configuration
+
+```python
+from pylon_client.v1 import AsyncConfig, PylonTimeout
+
+config = AsyncConfig(
+    address="http://localhost:8000",
+    open_access_token="token",
+    timeout=PylonTimeout(read=120.0),
+)
+```
+
+You only need to specify the fields you want to override; the rest will use defaults.
+
 ## Exception Handling
 
 Pylon client may throw the following exceptions:
@@ -255,9 +288,11 @@ Pylon client may throw the following exceptions:
 ```
 BasePylonException
 ├── PylonRequestException      # Network/connection errors
+│   └── PylonTimeoutException  # Request timed out before receiving a response
 ├── PylonResponseException     # Server response errors
 │   ├── PylonUnauthorized      # Trying to access the server with no credentials passed.
-│   └── PylonForbidden         # Trying to access the resource with no permissions.
+│   ├── PylonForbidden         # Trying to access the resource with no permissions.
+│   └── PylonGatewayTimeout    # Server returned 504 (took too long to process the request)
 ├── PylonClosed                # Trying to use closed client instance.
 └── PylonMisconfigured         # Invalid client configuration
 ```

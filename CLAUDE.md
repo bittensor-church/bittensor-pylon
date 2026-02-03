@@ -32,10 +32,12 @@ pylon_commons (no dependencies on other packages)
 - Run python command: `uv run python`
 
 ### Testing
-- Run all unit tests (from root): `nox -s test`
 - Run all pact tests: `nox -s test-pact`
 - Run tests for a specific package: `cd pylon_service && nox -s test`
 - Run specific test: `cd pylon_service && nox -s test -- -k "test_name"`
+
+IMPORTANT: In pylon_client and pylon_commons, run `nox -s test-3.14`, as running only `test` will run tests on multiple
+python versions and take much time.
 
 ### Code Quality
 - Format and lint all packages: `nox -s format`

@@ -1,5 +1,5 @@
 import pytest
-from httpx import ConnectTimeout, Response, codes
+from httpx import ConnectError, Response, codes
 from tenacity import stop_after_attempt
 
 from pylon_client._internal.pylon_commons.apiver import ApiVersion
@@ -32,7 +32,7 @@ def test_sync_config_retries_success(service_mock, test_url, attempts):
     route = service_mock.put(weights_url)
     route.mock(
         side_effect=[
-            *(ConnectTimeout("Connection timed out") for i in range(attempts - 1)),
+            *(ConnectError("Connection failed") for i in range(attempts - 1)),
             Response(
                 status_code=codes.OK,
                 json={
@@ -67,7 +67,7 @@ def test_sync_config_retries_error(service_mock, test_url):
     login_response_json = {"netuid": 1, "identity_name": "sn1"}
     service_mock.post(login_url).mock(return_value=Response(status_code=codes.OK, json=login_response_json))
     route = service_mock.put(weights_url)
-    route.mock(side_effect=ConnectTimeout("Connection timed out"))
+    route.mock(side_effect=ConnectError("Connection failed"))
     with PylonClient(
         Config(
             address=test_url,

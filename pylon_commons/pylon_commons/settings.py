@@ -50,6 +50,10 @@ class Settings(BaseSettings):
     sentry_dsn: str = ""
     sentry_environment: str = "production"
 
+    # request timeouts
+    default_request_timeout_seconds: float = 60.0
+    max_request_timeout_seconds: float = 300.0
+
     # debug
     debug: bool = False
 

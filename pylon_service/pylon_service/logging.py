@@ -5,7 +5,7 @@ import logging
 
 from litestar.logging import LoggingConfig
 
-from pylon_service.request_id import current_request_id
+from pylon_service.middleware.request_id import current_request_id
 
 
 def _get_current_coroutine_name() -> str:

@@ -3,16 +3,19 @@ from abc import ABC, abstractmethod
 from functools import singledispatchmethod
 from typing import Generic, TypeVar
 
-from httpx import Client, HTTPStatusError, Request, RequestError, Response
+from httpx import Client, HTTPStatusError, Request, RequestError, Response, TimeoutException
+from httpx import Timeout as HttpxTimeout
 
 from pylon_client._internal.pylon_commons.endpoints import Endpoint
 from pylon_client._internal.pylon_commons.exceptions import (
     PylonBadGateway,
     PylonClosed,
     PylonForbidden,
+    PylonGatewayTimeout,
     PylonNotFound,
     PylonRequestException,
     PylonResponseException,
+    PylonTimeoutException,
     PylonUnauthorized,
 )
 from pylon_client._internal.pylon_commons.requests import (
@@ -161,7 +164,17 @@ class HttpCommunicator(AbstractCommunicator[Request, Response]):
 
     def _open(self) -> None:
         logger.debug(f"Opening communicator for the server {self.config.address}")
-        self._raw_client = Client(base_url=self.config.address)
+        timeout = self.config.timeout
+        self._raw_client = Client(
+            base_url=self.config.address,
+            timeout=HttpxTimeout(
+                connect=timeout.connect,
+                read=timeout.read,
+                write=timeout.write,
+                pool=timeout.pool,
+            ),
+            headers=timeout.get_header(),
+        )
 
     def _close(self) -> None:
         logger.debug(f"Closing communicator for the server {self.config.address}")
@@ -273,6 +286,8 @@ class HttpCommunicator(AbstractCommunicator[Request, Response]):
         try:
             logger.debug(f"Performing request to {request.url}")
             response = self._raw_client.send(request)
+        except TimeoutException as e:
+            return self._handle_timeout_error(e)
         except RequestError as e:
             return self._handle_request_error(e)
         try:
@@ -280,6 +295,9 @@ class HttpCommunicator(AbstractCommunicator[Request, Response]):
         except HTTPStatusError as e:
             return self._handle_status_error(e)
         return response
+
+    def _handle_timeout_error(self, exc: TimeoutException) -> Response:
+        raise PylonTimeoutException(f"Request to Pylon API timed out after {self.config.timeout.read}s.") from exc
 
     def _handle_request_error(self, exc: RequestError) -> Response:
         raise PylonRequestException("An error occurred while making a request to Pylon API.") from exc
@@ -295,6 +313,8 @@ class HttpCommunicator(AbstractCommunicator[Request, Response]):
             raise PylonNotFound(detail=detail) from exc
         if status_code == 502:
             raise PylonBadGateway(detail=detail) from exc
+        if status_code == 504:
+            raise PylonGatewayTimeout(detail=detail) from exc
         raise PylonResponseException("Invalid response from Pylon API", status_code=status_code, detail=detail) from exc
 
     @staticmethod

@@ -4,6 +4,7 @@ from pathlib import Path
 import pytest
 from pact import Pact
 
+from pylon_client._internal.pylon_commons.timeout import PylonTimeout
 from pylon_client._internal.pylon_commons.types import PylonAuthToken
 from pylon_client._internal.sync.client import PylonClient
 from pylon_client._internal.sync.config import Config
@@ -35,10 +36,7 @@ def remove_old_pact(pacts_dir: Path, consumer_name: str, provider_name: str):
 @pytest.fixture
 def pylon_client_factory():
     def _create_client(address: str) -> PylonClient:
-        config = Config(
-            address=address,
-            open_access_token=PylonAuthToken("test_token"),
-        )
+        config = Config(address=address, open_access_token=PylonAuthToken("test_token"), timeout=PylonTimeout(read=0.5))
         return PylonClient(config)
 
     return _create_client

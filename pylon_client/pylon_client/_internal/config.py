@@ -3,6 +3,7 @@ from typing import Generic, TypeVar
 from pydantic import BaseModel, ConfigDict, model_validator
 from tenacity import AsyncRetrying, Retrying
 
+from pylon_client._internal.pylon_commons.timeout import PylonTimeout
 from pylon_client._internal.pylon_commons.types import IdentityName, PylonAuthToken
 
 RetryT = TypeVar("RetryT", bound=AsyncRetrying | Retrying)
@@ -18,6 +19,7 @@ class BaseConfig(BaseModel, Generic[RetryT]):
         identity_token: Token to use for authentication into chosen identity.
         open_access_token: Token to use for authentication into open access api.
         retry: Configuration of retrying in case of a failed request.
+        timeout: Timeout configuration for requests.
     """
 
     model_config = ConfigDict(arbitrary_types_allowed=True)
@@ -27,6 +29,7 @@ class BaseConfig(BaseModel, Generic[RetryT]):
     identity_token: PylonAuthToken | None = None
     open_access_token: PylonAuthToken | None = None
     retry: RetryT
+    timeout: PylonTimeout = PylonTimeout()
 
     def model_post_init(self, context) -> None:
         self.retry.reraise = True

@@ -85,6 +85,25 @@ PYLON_ID_SN2_NETUID=2
 PYLON_ID_SN2_TOKEN=IEYAWl9rPQAMTV0hqAKAaQtEYqqKws5z
 ```
 
+### Request Timeouts
+
+Pylon enforces per-request timeouts via the `X-Pylon-Timeout` header. This header tells the
+server how long (in seconds) the client is willing to wait for a response.
+
+| Variable | Description | Default |
+|----------|-------------|---------|
+| `PYLON_DEFAULT_REQUEST_TIMEOUT_SECONDS` | Timeout used when no `X-Pylon-Timeout` header is present | `60` |
+| `PYLON_MAX_REQUEST_TIMEOUT_SECONDS` | Upper bound for any timeout; client-requested values are capped at this | `300` |
+
+**How it works:**
+
+1. If a request includes the `X-Pylon-Timeout` header, the server uses the provided value (capped at `max_request_timeout_seconds`).
+2. If the header is missing, `default_request_timeout_seconds` is used.
+3. If the header value is not a valid positive number, the server responds with `400 Bad Request`.
+4. If the request takes longer than the effective timeout, the server responds with `504 Gateway Timeout`.
+
+The Pylon client sets this header automatically based on its timeout configuration (see [client docs](CLIENT.md#timeouts)).
+
 ### Retry Settings
 
 | Variable | Description | Default |

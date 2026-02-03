@@ -13,6 +13,12 @@ class PylonRequestException(BasePylonException):
     """
 
 
+class PylonTimeoutException(PylonRequestException):
+    """
+    Error raised when a request to Pylon times out before receiving a response.
+    """
+
+
 class PylonResponseException(BasePylonException):
     """
     Error raised when Pylon returns an error response (4xx/5xx status code).
@@ -66,6 +72,15 @@ class PylonBadGateway(PylonResponseException):
 
     default_message: ClassVar[str] = "Bad gateway"
     default_status_code: ClassVar[int | None] = 502
+
+
+class PylonGatewayTimeout(PylonResponseException):
+    """
+    Error raised when Pylon returns a 504 Gateway Timeout response.
+    """
+
+    default_message: ClassVar[str] = "Gateway timeout"
+    default_status_code: ClassVar[int | None] = 504
 
 
 class PylonClosed(BasePylonException):

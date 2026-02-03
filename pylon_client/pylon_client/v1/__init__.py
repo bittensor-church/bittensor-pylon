@@ -6,7 +6,9 @@ from pylon_client._internal.pylon_commons.exceptions import (
     BasePylonException,
     PylonRequestException,
     PylonResponseException,
+    PylonTimeoutException,
     PylonForbidden,
+    PylonGatewayTimeout,
     PylonUnauthorized,
     PylonMisconfigured,
     PylonClosed,
@@ -79,4 +81,5 @@ from pylon_client._internal.pylon_commons.types import (
     PylonAuthToken,
     IdentityName,
 )
+from pylon_client._internal.pylon_commons.timeout import PylonTimeout
 from pylon_client._internal.docker_manager import PylonDockerManager

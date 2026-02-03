@@ -1,3 +1,4 @@
+import asyncio
 import time
 from abc import ABC, abstractmethod
 from typing import TYPE_CHECKING, Any, ClassVar, Literal
@@ -255,3 +256,16 @@ class CommitmentCanBeSetHandler(StateHandler):
         client = self._get_client(parameters)
         client.add_behavior("get_latest_block", block)
         client.add_behavior("set_commitment", None)
+
+
+class BittensorHangs(StateHandler):
+    name = "bittensor hangs"
+
+    def setup(self, parameters: dict[str, Any]) -> None:
+        seconds = parameters["seconds"]
+
+        async def hang(*_args, **_kwargs):
+            await asyncio.sleep(seconds)
+
+        client = self._get_client(parameters)
+        client.add_behavior(parameters["method"], hang)
