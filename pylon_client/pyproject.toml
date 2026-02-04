@@ -37,6 +37,7 @@ source = "vcs"
 tag-pattern = "^client-v(?P<version>.*)$"
 fallback-version = "0.0.0"
 raw-options.root = ".."
+raw-options.git_describe_command = ["git", "describe", "--dirty", "--tags", "--long", "--match", "client-v*"]
 
 [tool.hatch.build]
 packages = ["pylon_client"]

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 import logging
 from abc import ABC, abstractmethod
 from collections.abc import Awaitable, Callable
@@ -264,12 +265,12 @@ class TurboBtClient(AbstractBittensorClient):
         assert self._raw_client is None, "The client is already open."
         logger.info(f"Opening the TurboBtClient for {self.uri}")
         self._raw_client = Bittensor(wallet=self.wallet, uri=self.uri)
-        await self._raw_client.__aenter__()
+        await asyncio.shield(self._raw_client.__aenter__())
 
     async def close(self) -> None:
         assert self._raw_client is not None, "The client is already closed."
         logger.info(f"Closing the TurboBtClient for {self.uri}")
-        await self._raw_client.__aexit__(None, None, None)
+        await asyncio.shield(self._raw_client.__aexit__(None, None, None))
         self._raw_client = None
 
     def _resolve_hotkey(self, hotkey: Hotkey | None) -> Hotkey:
@@ -291,7 +292,7 @@ class TurboBtClient(AbstractBittensorClient):
             "The client is not open, please use the client as a context manager or call the open() method."
         )
         logger.debug(f"Fetching the block with number {number} from {self.uri}")
-        block_obj = await self._raw_client.block(number).get()
+        block_obj = await asyncio.shield(self._raw_client.block(number).get())
         if block_obj is None or block_obj.number is None:
             return None
         return Block(
@@ -316,8 +317,8 @@ class TurboBtClient(AbstractBittensorClient):
         assert self._raw_client is not None, (
             "The client is not open, please use the client as a context manager or call the open() method."
         )
-        turbobt_block: TurboBtBlock = await self._raw_client.block(block.number).get()
-        timestamp = await turbobt_block.get_timestamp()
+        turbobt_block: TurboBtBlock = await asyncio.shield(self._raw_client.block(block.number).get())
+        timestamp = await asyncio.shield(turbobt_block.get_timestamp())
         return Timestamp(int(timestamp.timestamp()))
 
     @staticmethod
@@ -359,7 +360,7 @@ class TurboBtClient(AbstractBittensorClient):
             "The client is not open, please use the client as a context manager or call the open() method."
         )
         logger.debug(f"Fetching neurons from subnet {netuid} at block {block.number}, {self.uri}")
-        neurons = await self._raw_client.subnet(netuid).list_neurons(block_hash=block.hash)
+        neurons = await asyncio.shield(self._raw_client.subnet(netuid).list_neurons(block_hash=block.hash))
         # We need stakes fetched from subnet's state.
         state = await self.get_subnet_state(netuid, block)
         stakes = state.hotkeys_stakes
@@ -399,7 +400,7 @@ class TurboBtClient(AbstractBittensorClient):
             "The client is not open, please use the client as a context manager or call the open() method."
         )
         logger.debug(f"Fetching hyperparams from subnet {netuid} at block {block.number}, {self.uri}")
-        params = await self._raw_client.subnet(netuid).get_hyperparameters(block_hash=block.hash)
+        params = await asyncio.shield(self._raw_client.subnet(netuid).get_hyperparameters(block_hash=block.hash))
         if not params:
             return None
         return await self._translate_hyperparams(params)
@@ -424,7 +425,9 @@ class TurboBtClient(AbstractBittensorClient):
             "The client is not open, please use the client as a context manager or call the open() method."
         )
         logger.debug(f"Fetching certificates from subnet {netuid} at block {block.number}, {self.uri}")
-        certificates = await self._raw_client.subnet(netuid).neurons.get_certificates(block_hash=block.hash)
+        certificates = await asyncio.shield(
+            self._raw_client.subnet(netuid).neurons.get_certificates(block_hash=block.hash)
+        )
         if not certificates:
             return {}
         return {
@@ -450,7 +453,9 @@ class TurboBtClient(AbstractBittensorClient):
         logger.debug(
             f"Fetching certificate of {hotkey} hotkey from subnet {netuid} at block {block.number}, {self.uri}"
         )
-        certificate = await self._raw_client.subnet(netuid).neuron(hotkey=hotkey).get_certificate(block_hash=block.hash)
+        certificate = await asyncio.shield(
+            self._raw_client.subnet(netuid).neuron(hotkey=hotkey).get_certificate(block_hash=block.hash)
+        )
         if certificate:
             certificate = await self._translate_certificate(certificate)
         return certificate
@@ -478,8 +483,10 @@ class TurboBtClient(AbstractBittensorClient):
             "The client is not open, please use the client as a context manager or call the open() method."
         )
         logger.debug(f"Generating certificate on subnet {netuid} at {self.uri}")
-        keypair = await self._raw_client.subnet(netuid).neurons.generate_certificate_keypair(
-            algorithm=TurboBtCertificateAlgorithm(algorithm)
+        keypair = await asyncio.shield(
+            self._raw_client.subnet(netuid).neurons.generate_certificate_keypair(
+                algorithm=TurboBtCertificateAlgorithm(algorithm)
+            )
         )
         if keypair:
             keypair = await self._translate_certificate_keypair(keypair)
@@ -498,7 +505,7 @@ class TurboBtClient(AbstractBittensorClient):
             "The client is not open, please use the client as a context manager or call the open() method."
         )
         logger.debug(f"Fetching subnet {netuid} state at block {block.number}, {self.uri}")
-        state = await self._raw_client.subnet(netuid).get_state(block.hash)
+        state = await asyncio.shield(self._raw_client.subnet(netuid).get_state(block.hash))
         return SubnetState(**state)  # type: ignore
 
     async def _translate_weights(self, netuid: NetUid, weights: dict[Hotkey, Weight]) -> dict[int, float]:
@@ -509,7 +516,7 @@ class TurboBtClient(AbstractBittensorClient):
         missing = []
         latest_block = await self.get_latest_block()
         # We don't use self.get_neurons to avoid unnecessary call for subnet state, translation etc.
-        neurons = await self._raw_client.subnet(netuid).list_neurons(block_hash=latest_block.hash)
+        neurons = await asyncio.shield(self._raw_client.subnet(netuid).list_neurons(block_hash=latest_block.hash))
         hotkey_to_uid = {n.hotkey: n.uid for n in neurons}
         for hotkey, weight in weights.items():
             if hotkey in hotkey_to_uid:
@@ -536,9 +543,8 @@ class TurboBtClient(AbstractBittensorClient):
             "The client is not open, please use the client as a context manager or call the open() method."
         )
         logger.debug(f"Commiting weights on subnet {netuid} at {self.uri}")
-        reveal_round = await self._raw_client.subnet(netuid).weights.commit(
-            await self._translate_weights(netuid, weights)
-        )
+        translated_weights = await self._translate_weights(netuid, weights)
+        reveal_round = await asyncio.shield(self._raw_client.subnet(netuid).weights.commit(translated_weights))
         return RevealRound(reveal_round)
 
     @track_operation(
@@ -554,7 +560,8 @@ class TurboBtClient(AbstractBittensorClient):
             "The client is not open, please use the client as a context manager or call the open() method."
         )
         logger.debug(f"Setting weights on subnet {netuid} at {self.uri}")
-        await self._raw_client.subnet(netuid).weights.set(await self._translate_weights(netuid, weights))
+        translated_weights = await self._translate_weights(netuid, weights)
+        await asyncio.shield(self._raw_client.subnet(netuid).weights.set(translated_weights))
 
     @track_operation(
         bittensor_operation_duration,
@@ -570,7 +577,9 @@ class TurboBtClient(AbstractBittensorClient):
         )
         hotkey = self._resolve_hotkey(hotkey)
         logger.debug(f"Fetching commitment for {hotkey} from subnet {netuid} at block {block.number}, {self.uri}")
-        commitment = await self._raw_client.subnet(netuid).commitments.get(hotkey, block_hash=block.hash)
+        commitment = await asyncio.shield(
+            self._raw_client.subnet(netuid).commitments.get(hotkey, block_hash=block.hash)
+        )
         if commitment is None:
             return None
         return Commitment(block=block, hotkey=hotkey, commitment=CommitmentDataBytes(commitment).hex())
@@ -588,7 +597,7 @@ class TurboBtClient(AbstractBittensorClient):
             "The client is not open, please use the client as a context manager or call the open() method."
         )
         logger.debug(f"Fetching all commitments from subnet {netuid} at block {block.number}, {self.uri}")
-        commitments = await self._raw_client.subnet(netuid).commitments.fetch(block_hash=block.hash)
+        commitments = await asyncio.shield(self._raw_client.subnet(netuid).commitments.fetch(block_hash=block.hash))
         return SubnetCommitments(
             block=block,
             commitments={Hotkey(hotkey): CommitmentDataBytes(data).hex() for hotkey, data in commitments.items()},
@@ -609,7 +618,7 @@ class TurboBtClient(AbstractBittensorClient):
         logger.debug(f"Setting commitment on subnet {netuid} at {self.uri}")
         # Convert to plain bytes because scalecodec uses `type(value) is bytes` check
         # which fails for bytes subclasses like CommitmentDataBytes
-        await self._raw_client.subnet(netuid).commitments.set(bytes(data))
+        await asyncio.shield(self._raw_client.subnet(netuid).commitments.set(bytes(data)))
 
     @track_operation(
         bittensor_operation_duration,
@@ -631,7 +640,7 @@ class TurboBtClient(AbstractBittensorClient):
             "The client is not open, please use the client as a context manager or call the open() method."
         )
         logger.debug(f"Fetching signed block {block.number} at {self.uri}")
-        return await self._raw_client.subtensor.chain.getBlock(block.hash)
+        return await asyncio.shield(self._raw_client.subtensor.chain.getBlock(block.hash))
 
     async def get_extrinsic(self, block: Block, extrinsic_index: ExtrinsicIndex) -> Extrinsic | None:
         assert self._raw_client is not None, (

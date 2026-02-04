@@ -39,6 +39,7 @@ source = "vcs"
 tag-pattern = "^service-v(?P<version>.*)$"
 fallback-version = "0.0.0"
 raw-options.root = ".."
+raw-options.git_describe_command = ["git", "describe", "--dirty", "--tags", "--long", "--match", "service-v*"]
 
 [tool.hatch.build.targets.wheel]
 packages = ["pylon_service"]

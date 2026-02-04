@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 import functools
 import inspect
 import logging
@@ -118,8 +119,8 @@ bittensor_operation_duration = Histogram(
 
     Labels:
         operation: Name of the operation (e.g., get_block, get_neurons, commit_weights).
-        status: Operation outcome ("success" or "error").
-              Set automatically by _track_operation_context based on exception presence.
+        status: Operation outcome ("success", "error", or "cancelled").
+              Set automatically by _track_operation_context.
         uri: Bittensor network URI.
         netuid: Subnet identifier.
         hotkey: Wallet hotkey (ss58) performing the operation.
@@ -148,8 +149,8 @@ apply_weights_job_duration = Histogram(
 
     Labels:
         operation: Name of the operation (``run_job``).
-        status: Operation outcome ("success" or "error").
-              Set automatically by _track_operation_context based on exception presence.
+        status: Operation outcome ("success", "error", or "cancelled").
+              Set automatically by _track_operation_context.
         netuid: Subnet identifier for multi-net deployments.
         hotkey: Wallet hotkey (ss58) used by the client submitting weights.
     """,
@@ -163,8 +164,8 @@ apply_weights_attempt_duration = Histogram(
 
     Labels:
         operation: Name of the inner coroutine (``_apply_weights``).
-        status: Outcome of the attempt ("success" or "error").
-              Set automatically by _track_operation_context based on exception presence.
+        status: Outcome of the attempt ("success", "error", or "cancelled").
+              Set automatically by _track_operation_context.
         netuid: Subnet identifier.
         hotkey: Wallet hotkey (ss58) used by the client submitting weights.
     """,
@@ -189,7 +190,7 @@ def track_operation(
     3. Allows dynamic label setting during execution via the context
     4. Records duration histogram with all labels when operation completes
 
-    The histogram automatically includes a "status" label ("success" or "error") to track
+    The histogram automatically includes a "status" label ("success", "error", or "cancelled") to track
     operation outcomes.
 
     Args:
@@ -305,14 +306,20 @@ def _prepare_metric_labels(
 async def _track_operation_context(operation: str, context: MetricsContext, duration_metric: Histogram):
     """Track operation duration with histogram using the provided metrics context.
 
-    Records duration with status label ("success" or "error"). Error count can be
+    Records duration with status label ("success", "error", or "cancelled"). Error count can be
     derived from histogram bucket counts with status="error".
+
+    Raises:
+        asyncio.CancelledError: Re-raised with status="cancelled" when the operation is cancelled.
     """
     start_time = perf_counter()
     status = "success"
 
     try:
         yield
+    except asyncio.CancelledError:
+        status = "cancelled"
+        raise
     except Exception:
         status = "error"
         raise

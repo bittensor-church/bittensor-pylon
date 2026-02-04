@@ -466,3 +466,4 @@ This creates and pushes a `service-v1.2.0` tag, triggering the CD workflow to pu
   - Connection pooling for Bittensor clients
   - Two-tier API access (open access vs identity access)
 - **Testing**: Use `nox -s test` to run all tests with proper environment configuration
+- When calling any coroutine from turbobt library, ALWAYS wrap it in asyncio.shield().

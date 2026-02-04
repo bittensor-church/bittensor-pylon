@@ -211,6 +211,8 @@ Labels: `operation`, `status`, `uri`, `netuid`, `hotkey`, `reason`.
 
 Labels: `operation`, `status`, `netuid`, `hotkey`.
 
+The `status` label has three possible values: `success`, `error`, or `cancelled`.
+
 *Python Runtime Metrics:*
 Standard Python process metrics are also exposed: memory usage, CPU time,
 garbage collection stats, and file descriptors.
