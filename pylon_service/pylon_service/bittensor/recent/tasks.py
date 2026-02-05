@@ -5,7 +5,7 @@ from abc import ABC, abstractmethod
 from litestar.stores.base import Store
 from pylon_commons.models import BittensorModel, SubnetNeurons
 from pylon_commons.types import Timestamp
-from tenacity import AsyncRetrying, stop_after_delay
+from tenacity import AsyncRetrying, stop_before_delay, wait_exponential
 
 from pylon_service.bittensor.client import AbstractBittensorClient
 from pylon_service.bittensor.pool import BittensorClientPool
@@ -88,7 +88,11 @@ class RecentObjectUpdateTaskExecutor:
         if retrying is None:
             lead_time = 10  # seconds before timeout.
             retry_time = max(timeout - lead_time, 0)
-            retrying = AsyncRetrying(stop=stop_after_delay(retry_time), reraise=True)
+            retrying = AsyncRetrying(
+                wait=wait_exponential(multiplier=10, min=10, max=120),
+                stop=stop_before_delay(retry_time),
+                reraise=True,
+            )
 
         self._updater = updater
         self._contexts = contexts
