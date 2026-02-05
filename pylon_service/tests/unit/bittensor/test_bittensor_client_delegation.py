@@ -40,6 +40,7 @@ from pylon_commons.types import (
 from turbobt.substrate.exceptions import UnknownBlock
 
 from pylon_service.bittensor.client import BittensorClient
+from pylon_service.bittensor.exceptions import ArchiveFallbackException
 from tests.mock_bittensor_client import MockBittensorClient
 
 
@@ -240,3 +241,59 @@ async def test_delegation_without_block_uses_main_client(bittensor_client, main_
     assert result == latest_block
     assert main_client.calls["get_latest_block"] == [()]
     assert archive_client.calls["get_latest_block"] == []
+
+
+@pytest.mark.asyncio
+async def test_delegation_unknown_block_on_both_nodes_raises_archive_fallback(
+    bittensor_client, main_client, archive_client
+):
+    recent_block = Block(number=BlockNumber(450), hash=BlockHash("0xrecent"))
+    latest_block = Block(number=BlockNumber(500), hash=BlockHash("0xlatest"))
+
+    async with bittensor_client:
+        async with (
+            main_client.mock_behavior(
+                get_latest_block=[latest_block],
+                get_neurons_list=[UnknownBlock()],
+            ),
+            archive_client.mock_behavior(
+                get_neurons_list=[UnknownBlock()],
+            ),
+        ):
+            with pytest.raises(
+                ArchiveFallbackException,
+                match=r"^Block 450 data is unavailable on both main and archive nodes\.$",
+            ):
+                await bittensor_client.get_neurons_list(netuid=NetUid(1), block=recent_block)
+
+    assert main_client.calls["get_neurons_list"] == [(1, recent_block)]
+    assert archive_client.calls["get_neurons_list"] == [(1, recent_block)]
+
+
+@pytest.mark.asyncio
+async def test_delegation_stale_block_unknown_on_archive_raises_archive_fallback(
+    bittensor_client, main_client, archive_client
+):
+    stale_block = Block(number=BlockNumber(100), hash=BlockHash("0xstale"))
+    latest_block = Block(number=BlockNumber(500), hash=BlockHash("0xlatest"))
+
+    async with bittensor_client:
+        async with (
+            main_client.mock_behavior(
+                get_latest_block=[latest_block],
+            ),
+            archive_client.mock_behavior(
+                get_neurons_list=[UnknownBlock()],
+            ),
+        ):
+            with pytest.raises(
+                ArchiveFallbackException,
+                match=(
+                    r"^Block 100 data is unavailable on the archive node\. "
+                    r"Archive was used because the block exceeded archive block cutoff \(300 blocks\)\.$"
+                ),
+            ):
+                await bittensor_client.get_neurons_list(netuid=NetUid(1), block=stale_block)
+
+    assert main_client.calls["get_neurons_list"] == []
+    assert archive_client.calls["get_neurons_list"] == [(1, stale_block)]

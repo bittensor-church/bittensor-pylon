@@ -7,6 +7,7 @@ from httpx import Client, HTTPStatusError, Request, RequestError, Response
 
 from pylon_client._internal.pylon_commons.endpoints import Endpoint
 from pylon_client._internal.pylon_commons.exceptions import (
+    PylonBadGateway,
     PylonClosed,
     PylonForbidden,
     PylonNotFound,
@@ -292,6 +293,8 @@ class HttpCommunicator(AbstractCommunicator[Request, Response]):
             raise PylonForbidden(detail=detail) from exc
         if status_code == 404:
             raise PylonNotFound(detail=detail) from exc
+        if status_code == 502:
+            raise PylonBadGateway(detail=detail) from exc
         raise PylonResponseException("Invalid response from Pylon API", status_code=status_code, detail=detail) from exc
 
     @staticmethod

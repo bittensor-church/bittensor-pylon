@@ -4,6 +4,8 @@ from litestar.openapi.config import OpenAPIConfig
 from litestar.plugins.prometheus import PrometheusConfig
 
 from pylon_service import dependencies, lifespans
+from pylon_service.bittensor.exceptions import ArchiveFallbackException
+from pylon_service.exception_handlers import archive_fallback_handler
 from pylon_service.logging import litestar_logging_config
 from pylon_service.prometheus_controller import AuthenticatedPrometheusController
 from pylon_service.request_id import RequestIdMiddleware
@@ -37,6 +39,7 @@ def create_app() -> Litestar:
         lifespan=[lifespans.bittensor_client_pool, lifespans.scheduler_lifespan],
         dependencies={"bt_client_pool": Provide(dependencies.bt_client_pool_dep, use_cache=True)},
         plugins=[PylonSchemaPlugin()],
+        exception_handlers={ArchiveFallbackException: archive_fallback_handler},
         stores=stores,
         debug=settings.debug,
         logging_config=litestar_logging_config(),

@@ -4,6 +4,10 @@ from pathlib import Path
 import pytest
 from pact import Pact
 
+from pylon_client._internal.asynchronous.client import AsyncPylonClient
+from pylon_client._internal.asynchronous.config import AsyncConfig
+from pylon_client._internal.pylon_commons.types import PylonAuthToken
+
 
 @pytest.fixture(scope="session")
 def consumer_name() -> str:
@@ -26,3 +30,15 @@ def pact(pacts_dir: Path, consumer_name: str, provider_name: str) -> Generator[P
 def remove_old_pact(pacts_dir: Path, consumer_name: str, provider_name: str):
     pact_file = pacts_dir / f"{consumer_name}-{provider_name}.json"
     pact_file.unlink(missing_ok=True)
+
+
+@pytest.fixture
+def pylon_client_factory():
+    def _create_client(address: str) -> AsyncPylonClient:
+        config = AsyncConfig(
+            address=address,
+            open_access_token=PylonAuthToken("test_token"),
+        )
+        return AsyncPylonClient(config)
+
+    return _create_client

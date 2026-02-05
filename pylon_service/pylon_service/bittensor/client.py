@@ -77,6 +77,7 @@ from turbobt.substrate.exceptions import UnknownBlock
 from turbobt.substrate.pallets.chain import Extrinsic as TurboBtExtrinsic
 from turbobt.substrate.pallets.chain import SignedBlock
 
+from pylon_service.bittensor.exceptions import ArchiveFallbackException
 from pylon_service.metrics import (
     Attr,
     Param,
@@ -293,7 +294,7 @@ class TurboBtClient(AbstractBittensorClient):
         )
         logger.debug(f"Fetching the block with number {number} from {self.uri}")
         block_obj = await asyncio.shield(self._raw_client.block(number).get())
-        if block_obj is None or block_obj.number is None:
+        if block_obj is None or block_obj.number is None or block_obj.hash is None:
             return None
         return Block(
             number=BlockNumber(block_obj.number),
@@ -792,6 +793,9 @@ class BittensorClient[SubClient: AbstractBittensorClient](AbstractBittensorClien
         Operations that does not need a block are executed by the main client.
         Archive client is used when the block is stale (older than archive_blocks_cutoff blocks).
         Operations on the main client are retried if UnknownBlock exception is raised.
+
+        Raises:
+            ArchiveFallbackException: When block data is unavailable on both main and archive nodes.
         """
         operation_name = operation.__name__
 
@@ -799,23 +803,41 @@ class BittensorClient[SubClient: AbstractBittensorClient](AbstractBittensorClien
             kwargs["block"] = block
             latest_block = await self._main_client.get_latest_block()
             if latest_block.number - block.number > self._archive_blocks_cutoff:
-                logger.debug(f"Block is stale, falling back to the archive client: {self._archive_client.uri}")
+                logger.debug(
+                    f"Block {block.number} is stale, falling back to the archive client: {self._archive_client.uri}"
+                )
                 bittensor_fallback_total.labels(
                     reason=FallbackReason.STALE_BLOCK,
                     operation=operation_name,
                     hotkey=self.hotkey,
                 ).inc()
-                return await operation(self._archive_client, *args, **kwargs)
+                try:
+                    return await operation(self._archive_client, *args, **kwargs)
+                except UnknownBlock as e:
+                    raise ArchiveFallbackException(
+                        detail=(
+                            f"Block {block.number} data is unavailable on the archive node. "
+                            "Archive was used because the block exceeded archive block cutoff "
+                            f"({self._archive_blocks_cutoff} blocks)."
+                        )
+                    ) from e
 
         try:
             return await operation(self._main_client, *args, **kwargs)
         except UnknownBlock:
+            assert block, "UnknownBlock exception raised by operation that does not use a block!"
             logger.warning(
-                f"Block unknown for the main client, falling back to the archive client: {self._archive_client.uri}"
+                f"Block {block.number} unknown for the main client, "
+                f"falling back to the archive client: {self._archive_client.uri}"
             )
             bittensor_fallback_total.labels(
                 reason=FallbackReason.UNKNOWN_BLOCK,
                 operation=operation_name,
                 hotkey=self.hotkey,
             ).inc()
-            return await operation(self._archive_client, *args, **kwargs)
+            try:
+                return await operation(self._archive_client, *args, **kwargs)
+            except UnknownBlock as e:
+                raise ArchiveFallbackException(
+                    detail=f"Block {block.number} data is unavailable on both main and archive nodes."
+                ) from e

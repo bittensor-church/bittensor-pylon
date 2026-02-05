@@ -59,6 +59,15 @@ class PylonNotFound(PylonResponseException):
     default_status_code: ClassVar[int | None] = 404
 
 
+class PylonBadGateway(PylonResponseException):
+    """
+    Error raised when Pylon received an invalid response from the upstream Bittensor node.
+    """
+
+    default_message: ClassVar[str] = "Bad gateway"
+    default_status_code: ClassVar[int | None] = 502
+
+
 class PylonClosed(BasePylonException):
     """
     Error raised when attempting to use a client that has not been opened.

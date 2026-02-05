@@ -9,6 +9,7 @@ from pylon_client._internal.asynchronous.client import AsyncPylonClient
 from pylon_client._internal.pylon_commons.apiver import ApiVersion
 from pylon_client._internal.pylon_commons.endpoints import Endpoint
 from pylon_client._internal.pylon_commons.exceptions import (
+    PylonBadGateway,
     PylonForbidden,
     PylonNotFound,
     PylonResponseException,
@@ -55,8 +56,8 @@ def neurons_url():
         ),
         pytest.param(
             codes.BAD_GATEWAY,
-            PylonResponseException,
-            r"Invalid response from Pylon API \(HTTP 502\)",
+            PylonBadGateway,
+            r"Bad gateway \(HTTP 502\)",
             id="bad_gateway_502",
         ),
     ],
@@ -87,6 +88,7 @@ async def test_status_code_raises_correct_exception(
         pytest.param(codes.FORBIDDEN, PylonForbidden, id="forbidden_403"),
         pytest.param(codes.NOT_FOUND, PylonNotFound, id="not_found_404"),
         pytest.param(codes.INTERNAL_SERVER_ERROR, PylonResponseException, id="internal_server_error_500"),
+        pytest.param(codes.BAD_GATEWAY, PylonBadGateway, id="bad_gateway_502"),
     ],
 )
 async def test_extracts_detail_from_json_response(

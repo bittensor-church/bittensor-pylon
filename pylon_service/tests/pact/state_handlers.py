@@ -6,6 +6,7 @@ from unittest.mock import AsyncMock
 from pylon_commons.models import Commitment, SubnetCommitments, SubnetNeurons, SubnetValidators
 from pylon_commons.types import CommitmentDataHex, Hotkey, Timestamp
 
+from pylon_service.bittensor.exceptions import ArchiveFallbackException
 from pylon_service.bittensor.recent.adapter import _CacheEntry
 from pylon_service.stores import StoreName
 from tests.factories import BlockFactory, ExtrinsicFactory, NeuronFactory
@@ -228,6 +229,22 @@ class WeightsCanBeSetHandler(StateHandler):
 
     def setup(self, parameters: dict[str, Any]) -> None:
         self.monkeypatch.setattr("pylon_service.api.ApplyWeights.schedule", AsyncMock())
+
+
+class BlockDataUnavailableHandler(StateHandler):
+    name = "block data unavailable"
+
+    def setup(self, parameters: dict[str, Any]) -> None:
+        block = BlockFactory.build(number=parameters["block_number"])
+
+        client = self._get_client(parameters)
+        client.add_behavior("get_block", block)
+        client.add_behavior(
+            "get_neurons",
+            ArchiveFallbackException(
+                detail=f"Block {parameters['block_number']} data is unavailable on both main and archive nodes."
+            ),
+        )
 
 
 class CommitmentCanBeSetHandler(StateHandler):
