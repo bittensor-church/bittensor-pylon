@@ -3,7 +3,7 @@ Tests for HTTP error handling in the sync communicator.
 """
 
 import pytest
-from httpx import Response, codes
+from httpx import ConnectTimeout, PoolTimeout, ReadTimeout, Response, TimeoutException, WriteTimeout, codes
 
 from pylon_client._internal.pylon_commons.apiver import ApiVersion
 from pylon_client._internal.pylon_commons.endpoints import Endpoint
@@ -14,6 +14,7 @@ from pylon_client._internal.pylon_commons.exceptions import (
     PylonResponseException,
     PylonTimeoutException,
     PylonUnauthorized,
+    TimeoutReason,
 )
 from pylon_client._internal.pylon_commons.types import BlockNumber, NetUid
 from pylon_client._internal.sync.client import PylonClient
@@ -152,3 +153,67 @@ def test_handles_non_json_response(
             sync_open_access_client.open_access.get_neurons(netuid=NetUid(1), block_number=BlockNumber(1000))
 
     assert exc_info.value.detail is None
+
+
+@pytest.mark.parametrize(
+    "httpx_exception,expected_reason,expected_timeout_seconds,expected_message",
+    [
+        pytest.param(
+            ConnectTimeout("connect timeout"),
+            TimeoutReason.CONNECT,
+            5.0,
+            r"Request to Pylon API timed out \(connect\) after 5\.0s\.",
+            id="connect_timeout",
+        ),
+        pytest.param(
+            ReadTimeout("read timeout"),
+            TimeoutReason.READ,
+            60.0,
+            r"Request to Pylon API timed out \(read\) after 60\.0s\.",
+            id="read_timeout",
+        ),
+        pytest.param(
+            WriteTimeout("write timeout"),
+            TimeoutReason.WRITE,
+            5.0,
+            r"Request to Pylon API timed out \(write\) after 5\.0s\.",
+            id="write_timeout",
+        ),
+        pytest.param(
+            PoolTimeout("pool timeout"),
+            TimeoutReason.POOL,
+            5.0,
+            r"Request to Pylon API timed out \(pool\) after 5\.0s\.",
+            id="pool_timeout",
+        ),
+    ],
+)
+def test_timeout_exception_maps_to_correct_reason(
+    sync_open_access_client: PylonClient,
+    service_mock,
+    neurons_url,
+    httpx_exception,
+    expected_reason,
+    expected_timeout_seconds,
+    expected_message,
+):
+    service_mock.get(neurons_url).mock(side_effect=httpx_exception)
+
+    with sync_open_access_client:
+        with pytest.raises(PylonTimeoutException, match=expected_message) as exc_info:
+            sync_open_access_client.open_access.get_neurons(netuid=NetUid(1), block_number=BlockNumber(1000))
+
+    assert exc_info.value.reason == expected_reason
+    assert exc_info.value.timeout_seconds == expected_timeout_seconds
+
+
+def test_unexpected_timeout_exception_raises_type_error(
+    sync_open_access_client: PylonClient,
+    service_mock,
+    neurons_url,
+):
+    service_mock.get(neurons_url).mock(side_effect=TimeoutException("unexpected"))
+
+    with sync_open_access_client:
+        with pytest.raises(TypeError, match="Unexpected timeout exception type: TimeoutException"):
+            sync_open_access_client.open_access.get_neurons(netuid=NetUid(1), block_number=BlockNumber(1000))
