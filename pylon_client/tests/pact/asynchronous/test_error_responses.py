@@ -40,5 +40,7 @@ async def test_gateway_timeout(pact: Pact, pylon_client_factory):
     with pact.serve() as srv:
         client = pylon_client_factory(str(srv.url))
         async with client:
-            with pytest.raises(PylonTimeoutException, match=r"Request to Pylon API timed out \(gateway_timeout\): Request timed out"):
+            with pytest.raises(
+                PylonTimeoutException, match=r"Request to Pylon API timed out \(gateway_timeout\): Request timed out"
+            ):
                 await client.open_access.get_latest_neurons(netuid=NetUid(1))
