@@ -8,7 +8,13 @@ from pylon_client._internal.pylon_commons.types import IdentityName, PylonAuthTo
 
 @pytest.fixture
 def open_access_client(test_url):
-    return AsyncPylonClient(AsyncConfig(address=test_url, open_access_token=PylonAuthToken("open_access_token")))
+    return AsyncPylonClient(
+        AsyncConfig(
+            address=test_url,
+            open_access_token=PylonAuthToken("open_access_token"),
+            retry=ASYNC_DEFAULT_RETRIES.copy(wait=wait_none()),
+        )
+    )
 
 
 @pytest.fixture

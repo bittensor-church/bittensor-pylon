@@ -265,7 +265,8 @@ waits for the server to respond. When a request times out, a `PylonTimeoutExcept
 
 The client automatically sends an `X-Pylon-Timeout` header derived from the `read` timeout
 (reduced by a small buffer) so that the server can abort processing before the client times out,
-returning a `504 Gateway Timeout` response instead.
+returning a `504 Gateway Timeout` response instead. Both client-side timeouts and server 504
+responses raise `PylonTimeoutException` and are retried automatically.
 
 ### Custom Timeout Configuration
 
@@ -288,11 +289,10 @@ Pylon client may throw the following exceptions:
 ```
 BasePylonException
 ├── PylonRequestException      # Network/connection errors
-│   └── PylonTimeoutException  # Request timed out before receiving a response
+│   └── PylonTimeoutException  # Request timed out (client-side or 504 gateway timeout)
 ├── PylonResponseException     # Server response errors
 │   ├── PylonUnauthorized      # Trying to access the server with no credentials passed.
-│   ├── PylonForbidden         # Trying to access the resource with no permissions.
-│   └── PylonGatewayTimeout    # Server returned 504 (took too long to process the request)
+│   └── PylonForbidden         # Trying to access the resource with no permissions.
 ├── PylonClosed                # Trying to use closed client instance.
 └── PylonMisconfigured         # Invalid client configuration
 ```

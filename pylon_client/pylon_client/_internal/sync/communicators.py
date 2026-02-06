@@ -3,7 +3,18 @@ from abc import ABC, abstractmethod
 from functools import singledispatchmethod
 from typing import Generic, TypeVar
 
-from httpx import Client, HTTPStatusError, Request, RequestError, Response, TimeoutException
+from httpx import (
+    Client,
+    ConnectTimeout,
+    HTTPStatusError,
+    PoolTimeout,
+    ReadTimeout,
+    Request,
+    RequestError,
+    Response,
+    TimeoutException,
+    WriteTimeout,
+)
 from httpx import Timeout as HttpxTimeout
 
 from pylon_client._internal.pylon_commons.endpoints import Endpoint
@@ -11,12 +22,12 @@ from pylon_client._internal.pylon_commons.exceptions import (
     PylonBadGateway,
     PylonClosed,
     PylonForbidden,
-    PylonGatewayTimeout,
     PylonNotFound,
     PylonRequestException,
     PylonResponseException,
     PylonTimeoutException,
     PylonUnauthorized,
+    TimeoutReason,
 )
 from pylon_client._internal.pylon_commons.requests import (
     AuthenticatedPylonRequest,
@@ -297,7 +308,18 @@ class HttpCommunicator(AbstractCommunicator[Request, Response]):
         return response
 
     def _handle_timeout_error(self, exc: TimeoutException) -> Response:
-        raise PylonTimeoutException(f"Request to Pylon API timed out after {self.config.timeout.read}s.") from exc
+        timeout = self.config.timeout
+        if isinstance(exc, ConnectTimeout):
+            reason, seconds = TimeoutReason.CONNECT, timeout.connect
+        elif isinstance(exc, ReadTimeout):
+            reason, seconds = TimeoutReason.READ, timeout.read
+        elif isinstance(exc, WriteTimeout):
+            reason, seconds = TimeoutReason.WRITE, timeout.write
+        elif isinstance(exc, PoolTimeout):
+            reason, seconds = TimeoutReason.POOL, timeout.pool
+        else:
+            raise TypeError(f"Unexpected timeout exception type: {type(exc).__name__}") from exc
+        raise PylonTimeoutException(reason=reason, timeout_seconds=seconds) from exc
 
     def _handle_request_error(self, exc: RequestError) -> Response:
         raise PylonRequestException("An error occurred while making a request to Pylon API.") from exc
@@ -314,7 +336,7 @@ class HttpCommunicator(AbstractCommunicator[Request, Response]):
         if status_code == 502:
             raise PylonBadGateway(detail=detail) from exc
         if status_code == 504:
-            raise PylonGatewayTimeout(detail=detail) from exc
+            raise PylonTimeoutException(reason=TimeoutReason.GATEWAY_TIMEOUT, detail=detail) from exc
         raise PylonResponseException("Invalid response from Pylon API", status_code=status_code, detail=detail) from exc
 
     @staticmethod

@@ -13,6 +13,7 @@ from pylon_client._internal.pylon_commons.exceptions import (
     PylonForbidden,
     PylonNotFound,
     PylonResponseException,
+    PylonTimeoutException,
     PylonUnauthorized,
 )
 from pylon_client._internal.pylon_commons.types import BlockNumber, NetUid
@@ -60,6 +61,12 @@ def neurons_url():
             r"Bad gateway \(HTTP 502\)",
             id="bad_gateway_502",
         ),
+        pytest.param(
+            codes.GATEWAY_TIMEOUT,
+            PylonTimeoutException,
+            r"Request to Pylon API timed out \(gateway_timeout\)",
+            id="gateway_timeout_504",
+        ),
     ],
 )
 async def test_status_code_raises_correct_exception(
@@ -89,6 +96,7 @@ async def test_status_code_raises_correct_exception(
         pytest.param(codes.NOT_FOUND, PylonNotFound, id="not_found_404"),
         pytest.param(codes.INTERNAL_SERVER_ERROR, PylonResponseException, id="internal_server_error_500"),
         pytest.param(codes.BAD_GATEWAY, PylonBadGateway, id="bad_gateway_502"),
+        pytest.param(codes.GATEWAY_TIMEOUT, PylonTimeoutException, id="gateway_timeout_504"),
     ],
 )
 async def test_extracts_detail_from_json_response(

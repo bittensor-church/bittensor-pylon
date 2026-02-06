@@ -2,7 +2,7 @@ import pytest
 from httpx import codes
 from pact import Pact, match
 
-from pylon_client._internal.pylon_commons.exceptions import PylonBadGateway, PylonGatewayTimeout
+from pylon_client._internal.pylon_commons.exceptions import PylonBadGateway, PylonTimeoutException
 from pylon_client._internal.pylon_commons.types import BlockNumber, NetUid
 
 
@@ -38,5 +38,5 @@ def test_gateway_timeout(pact: Pact, pylon_client_factory):
     with pact.serve() as srv:
         client = pylon_client_factory(str(srv.url))
         with client:
-            with pytest.raises(PylonGatewayTimeout, match="Request timed out"):
+            with pytest.raises(PylonTimeoutException, match="Request timed out"):
                 client.open_access.get_latest_neurons(netuid=NetUid(1))

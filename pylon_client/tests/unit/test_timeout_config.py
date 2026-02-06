@@ -87,7 +87,7 @@ class TestSyncClientTimeout:
             )
         )
         with client:
-            with pytest.raises(PylonTimeoutException, match=r"Request to Pylon API timed out after 0\.1s\."):
+            with pytest.raises(PylonTimeoutException, match=r"Request to Pylon API timed out \(read\) after 0\.1s\."):
                 client.open_access.get_recent_neurons(netuid=NetUid(1))
 
 
@@ -118,5 +118,5 @@ class TestAsyncClientTimeout:
             )
         )
         async with client:
-            with pytest.raises(PylonTimeoutException, match=r"Request to Pylon API timed out after 0\.1s\."):
+            with pytest.raises(PylonTimeoutException, match=r"Request to Pylon API timed out \(read\) after 0\.1s\."):
                 await client.open_access.get_recent_neurons(netuid=NetUid(1))

@@ -8,7 +8,13 @@ from pylon_client._internal.sync.config import DEFAULT_RETRIES, Config
 
 @pytest.fixture
 def sync_open_access_client(test_url):
-    return PylonClient(Config(address=test_url, open_access_token=PylonAuthToken("open_access_token")))
+    return PylonClient(
+        Config(
+            address=test_url,
+            open_access_token=PylonAuthToken("open_access_token"),
+            retry=DEFAULT_RETRIES.copy(wait=wait_none()),
+        )
+    )
 
 
 @pytest.fixture
