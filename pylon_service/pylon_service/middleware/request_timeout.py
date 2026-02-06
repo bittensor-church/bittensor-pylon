@@ -54,5 +54,8 @@ class RequestTimeoutMiddleware:
                     raise ClientException(
                         detail=f"{TIMEOUT_HEADER} header value must be positive, got {client_timeout}"
                     )
-                return min(client_timeout, settings.max_request_timeout_seconds)
+                if client_timeout > settings.max_request_timeout_seconds:
+                    logger.warning("Value of X-Pylon-Timeout header (%ss) exceeds maximum allowed timeout (%ss).", client_timeout, settings.max_request_timeout_seconds)
+                    return settings.max_request_timeout_seconds
+                return client_timeout
         return settings.default_request_timeout_seconds
