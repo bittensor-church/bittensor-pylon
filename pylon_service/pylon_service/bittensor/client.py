@@ -262,7 +262,6 @@ class TurboBtClient(AbstractBittensorClient):
         super().__init__(wallet, uri)
         self._raw_client: Bittensor | None = None
         self._is_client_ready = asyncio.Event()
-        self._client_lock = asyncio.Lock()
 
     async def _get_bt_client(self) -> Bittensor:
         if self._raw_client is None:
