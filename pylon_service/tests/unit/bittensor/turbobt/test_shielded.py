@@ -1,7 +1,11 @@
 import asyncio
+from unittest.mock import create_autospec
 
 import pytest
-from pylon_commons.types import BittensorNetwork, BlockNumber
+from pylon_commons.models import Block
+from pylon_commons.types import BittensorNetwork, BlockHash, BlockNumber
+from turbobt import Bittensor
+from turbobt import BlockReference as TurboBtBlockReference
 from turbobt.block import Block as TurboBtBlock
 
 from pylon_service.bittensor.client import TurboBtClient
@@ -35,23 +39,25 @@ async def test_cancelled_task_does_not_cancel_turbobt_call(turbobt_client, block
 
 @pytest.mark.asyncio
 async def test_runtime_error_triggers_client_recreation_and_retry(turbobt_client, bittensor_spec, block_spec):
-    call_count = 0
+    old_bittensor_mock = bittensor_spec.return_value
 
-    async def failing_then_succeeding_get():
-        nonlocal call_count
-        call_count += 1
-        if call_count == 1:
-            raise RuntimeError("turbobt internal state broken")
-        return TurboBtBlock("hash", 42, client=turbobt_client._raw_client)
+    block_spec.get.side_effect = RuntimeError("turbobt internal state broken")
 
-    block_spec.get.side_effect = failing_then_succeeding_get
+    new_bittensor_mock = create_autospec(Bittensor, instance=True)
+    new_bittensor_mock.__aenter__.return_value = new_bittensor_mock
+
+    new_block_spec = create_autospec(TurboBtBlockReference, instance=True)
+    new_block_spec.get.return_value = TurboBtBlock("hash", 42, client=new_bittensor_mock)
+    new_bittensor_mock.block.return_value = new_block_spec
+
+    bittensor_spec.return_value = new_bittensor_mock
 
     result = await turbobt_client.get_block(BlockNumber(42))
 
-    assert result.number == 42
-    assert result.hash == "hash"
-    assert call_count == 2
-    bittensor_spec.return_value.__aexit__.assert_called_once()
+    assert result == Block(number=BlockNumber(42), hash=BlockHash("hash"))
+    assert block_spec.get.call_count == 1
+    assert new_block_spec.get.call_count == 1
+    old_bittensor_mock.__aexit__.assert_called_once()
     assert bittensor_spec.call_count == 2
 
 
