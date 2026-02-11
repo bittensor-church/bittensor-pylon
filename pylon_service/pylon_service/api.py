@@ -214,7 +214,7 @@ class IdentityController(OpenAccessController):
         """
         Set multiple hotkeys' weights for the current epoch in a single transaction.
         """
-        await ApplyWeights.schedule(bt_client, data.weights, netuid=netuid)
+        ApplyWeights(bt_client, data.weights, netuid).schedule()
 
         return Response(
             {
@@ -235,8 +235,8 @@ class IdentityController(OpenAccessController):
             BadGatewayException: When commitment could not be set after all retries.
         """
         try:
-            await SetCommitment(bt_client).execute(netuid, data.commitment)
-        except RuntimeError as exc:
+            await SetCommitment(bt_client, netuid, data.commitment)()
+        except Exception as exc:
             raise BadGatewayException(detail=str(exc)) from exc
         return Response(
             {"detail": "Commitment set successfully."},

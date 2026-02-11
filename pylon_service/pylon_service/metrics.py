@@ -173,6 +173,20 @@ apply_weights_attempt_duration = Histogram(
     buckets=(0.1, 0.5, 1.0, 2.0, 5.0, 10.0, 30.0, 60.0, 120.0),
 )
 
+set_commitment_job_duration = Histogram(
+    "pylon_set_commitment_job_duration_seconds",
+    """Duration of entire SetCommitment job execution.
+
+    Labels:
+        operation: Name of the operation.
+        status: Operation outcome ("success", "error", or "cancelled").
+              Set automatically by _track_operation_context.
+        netuid: Subnet identifier.
+    """,
+    ["operation", "status", "netuid"],
+    buckets=(1.0, 5.0, 10.0, 30.0, 60.0, 120.0, 300.0, 600.0, 1200.0),
+)
+
 
 def track_operation(
     duration_metric: Histogram,

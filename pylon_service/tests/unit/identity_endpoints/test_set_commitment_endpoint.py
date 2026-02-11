@@ -58,7 +58,7 @@ async def test_set_commitment_identity_blockchain_error(
     assert response.status_code == HTTP_502_BAD_GATEWAY
     assert response.json() == {
         "status_code": HTTP_502_BAD_GATEWAY,
-        "detail": "Failed to set commitment after 1 attempts: Blockchain connection failed",
+        "detail": "Blockchain connection failed",
     }
 
 

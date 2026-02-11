@@ -211,6 +211,14 @@ Labels: `operation`, `status`, `uri`, `netuid`, `hotkey`, `reason`.
 
 Labels: `operation`, `status`, `netuid`, `hotkey`.
 
+*SetCommitment Job Metrics:*
+
+| Metric | Type | Description |
+|--------|------|-------------|
+| `pylon_set_commitment_job_duration_seconds` | Histogram | Duration of entire SetCommitment job |
+
+Labels: `operation`, `status`, `netuid`.
+
 The `status` label has three possible values: `success`, `error`, or `cancelled`.
 
 *Python Runtime Metrics:*
