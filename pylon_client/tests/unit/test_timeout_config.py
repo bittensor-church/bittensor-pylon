@@ -18,29 +18,6 @@ from pylon_client._internal.pylon_commons.types import BlockHash, BlockNumber, N
 from pylon_client._internal.sync.client import PylonClient
 from pylon_client._internal.sync.config import DEFAULT_RETRIES, Config
 
-
-class TestGetHeader:
-    def test_default_buffer(self):
-        timeout = PylonTimeout(read=60.0)
-        assert timeout.get_header() == {TIMEOUT_HEADER: "59.5"}
-
-    def test_custom_buffer(self):
-        timeout = PylonTimeout(read=60.0)
-        assert timeout.get_header(buffer=2.0) == {TIMEOUT_HEADER: "58.0"}
-
-    def test_capped_at_minimum(self):
-        timeout = PylonTimeout(read=0.5)
-        assert timeout.get_header() == {TIMEOUT_HEADER: "0.5"}
-
-    def test_capped_at_minimum_when_read_below_buffer(self):
-        timeout = PylonTimeout(read=0.3)
-        assert timeout.get_header() == {TIMEOUT_HEADER: "0.5"}
-
-    def test_capped_at_minimum_with_large_buffer(self):
-        timeout = PylonTimeout(read=2.0)
-        assert timeout.get_header(buffer=5.0) == {TIMEOUT_HEADER: "0.5"}
-
-
 NEURONS_URL = Endpoint.RECENT_NEURONS.absolute_url(ApiVersion.V1, netuid_=NetUid(1))
 NEURONS_RESPONSE_JSON = GetNeuronsResponse(
     block=Block(number=BlockNumber(1), hash=BlockHash("0x1")),
@@ -74,7 +51,7 @@ class TestSyncClientTimeout:
         with client:
             client.open_access.get_recent_neurons(netuid=NetUid(1))
 
-        assert route.calls.last.request.headers[TIMEOUT_HEADER] == "119.5"
+        assert route.calls.last.request.headers[TIMEOUT_HEADER] == "120.0"
 
     def test_times_out_when_server_is_slow(self, slow_server):
         timeout = PylonTimeout(connect=1.0, read=0.1, write=1.0, pool=1.0)
@@ -104,7 +81,7 @@ class TestAsyncClientTimeout:
         async with client:
             await client.open_access.get_recent_neurons(netuid=NetUid(1))
 
-        assert route.calls.last.request.headers[TIMEOUT_HEADER] == "119.5"
+        assert route.calls.last.request.headers[TIMEOUT_HEADER] == "120.0"
 
     @pytest.mark.asyncio
     async def test_times_out_when_server_is_slow(self, slow_server):

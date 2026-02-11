@@ -1,7 +1,6 @@
 from pydantic import BaseModel
 
 TIMEOUT_HEADER = "X-Pylon-Timeout"
-MIN_SERVER_TIMEOUT = 0.5
 
 
 class PylonTimeout(BaseModel):
@@ -20,12 +19,8 @@ class PylonTimeout(BaseModel):
     write: float = 5.0
     pool: float = 5.0
 
-    def get_header(self, buffer: float = 0.5) -> dict[str, str]:
+    def get_header(self) -> dict[str, str]:
         """
         Returns the timeout header for the server request.
-
-        The server timeout is reduced by `buffer` so the server responds before the client times out.
-        The server timeout is capped at a minimum of MIN_SERVER_TIMEOUT.
         """
-        server_timeout = max(self.read - buffer, MIN_SERVER_TIMEOUT)
-        return {TIMEOUT_HEADER: str(server_timeout)}
+        return {TIMEOUT_HEADER: str(self.read)}
