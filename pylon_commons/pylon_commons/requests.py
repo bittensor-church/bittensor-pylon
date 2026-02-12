@@ -9,6 +9,7 @@ from .responses import (
     GetCommitmentResponse,
     GetCommitmentsResponse,
     GetExtrinsicResponse,
+    GetLatestBlockInfoResponse,
     GetNeuronsResponse,
     GetValidatorsResponse,
     IdentityLoginResponse,
@@ -133,6 +134,17 @@ class GetCommitmentsRequest(AuthenticatedPylonRequest[GetCommitmentsResponse]):
 
     version = ApiVersion.V1
     response_cls = GetCommitmentsResponse
+
+
+class GetLatestBlockInfoRequest(PylonRequest[GetLatestBlockInfoResponse]):
+    """
+    Class used to fetch latest block info by the Pylon client.
+
+    This request does not require subnet context as blocks are blockchain-level data.
+    """
+
+    version = ApiVersion.V1
+    response_cls = GetLatestBlockInfoResponse
 
 
 class GetExtrinsicRequest(PylonRequest[GetExtrinsicResponse]):

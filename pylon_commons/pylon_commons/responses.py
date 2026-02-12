@@ -1,6 +1,7 @@
 from pydantic import BaseModel
 
 from .models import (
+    BlockInfoBag,
     Commitment,
     Extrinsic,
     SubnetCommitments,
@@ -91,6 +92,14 @@ class GetCommitmentResponse(PylonResponse, Commitment):
 class GetCommitmentsResponse(PylonResponse, SubnetCommitments):
     """
     Response class that is returned for the GetCommitmentsRequest.
+    """
+
+    pass
+
+
+class GetLatestBlockInfoResponse(PylonResponse, BlockInfoBag):
+    """
+    Response class that is returned for the GetLatestBlockInfoRequest.
     """
 
     pass

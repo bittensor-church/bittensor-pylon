@@ -76,6 +76,14 @@ class Block(BittensorModel):
     hash: BlockHash
 
 
+class BlockInfoBag(Block):
+    """
+    Enriched block info used for the block info endpoint, so as not to bloat the Block struct.
+    """
+
+    timestamp: Timestamp
+
+
 class AxonProtocol(UnknownIntEnum):
     TCP = 0
     UDP = 1

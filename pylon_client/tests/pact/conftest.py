@@ -7,6 +7,7 @@ from tests.pact.matchers import (
     commitment_response_matcher,
     commitments_response_matcher,
     extrinsic_response_matcher,
+    latest_block_info_response_matcher,
     neurons_response_matcher,
     set_commitment_response_matcher,
     set_weights_response_matcher,
@@ -55,3 +56,8 @@ def put_weights_response_matcher() -> dict:
 @pytest.fixture
 def post_commitment_response_matcher() -> dict:
     return set_commitment_response_matcher()
+
+
+@pytest.fixture
+def get_latest_block_info_response_matcher() -> dict:
+    return latest_block_info_response_matcher()

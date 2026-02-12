@@ -15,6 +15,7 @@ from pylon_client._internal.pylon_commons.requests import (
     GetCommitmentRequest,
     GetCommitmentsRequest,
     GetExtrinsicRequest,
+    GetLatestBlockInfoRequest,
     GetLatestNeuronsRequest,
     GetLatestValidatorsRequest,
     GetNeuronsRequest,
@@ -30,6 +31,7 @@ from pylon_client._internal.pylon_commons.responses import (
     GetCommitmentResponse,
     GetCommitmentsResponse,
     GetExtrinsicResponse,
+    GetLatestBlockInfoResponse,
     GetNeuronsResponse,
     GetValidatorsResponse,
     IdentityLoginResponse,
@@ -240,6 +242,17 @@ class AbstractAsyncOpenAccessApi(AbstractAsyncApi[LoginResponseT], ABC):
         """
         return await self._send_authenticated_request(partial(self._get_latest_validators_request, netuid))
 
+    async def get_latest_block_info(self) -> GetLatestBlockInfoResponse:
+        """
+        Retrieves the latest block information from the chain.
+
+        This is a blockchain-level query that does not require subnet context.
+
+        Returns:
+            GetLatestBlockInfoResponse: containing the block number and hash.
+        """
+        return await self._send_authenticated_request(self._get_latest_block_info_request)
+
     async def get_extrinsic(self, block_number: BlockNumber, extrinsic_index: ExtrinsicIndex) -> GetExtrinsicResponse:
         """
         Retrieves a decoded extrinsic from a specific block.
@@ -279,6 +292,9 @@ class AbstractAsyncOpenAccessApi(AbstractAsyncApi[LoginResponseT], ABC):
 
     @abstractmethod
     async def _get_commitment_request(self, netuid: NetUid, hotkey: Hotkey) -> GetCommitmentRequest: ...
+
+    @abstractmethod
+    async def _get_latest_block_info_request(self) -> GetLatestBlockInfoRequest: ...
 
     @abstractmethod
     async def _get_extrinsic_request(
@@ -433,6 +449,17 @@ class AbstractAsyncIdentityApi(AbstractAsyncApi[LoginResponseT], ABC):
         """
         return await self._send_authenticated_request(self._get_latest_validators_request)
 
+    async def get_latest_block_info(self) -> GetLatestBlockInfoResponse:
+        """
+        Retrieves the latest block information from the chain.
+
+        This is a blockchain-level query that does not require subnet context.
+
+        Returns:
+            GetLatestBlockInfoResponse: containing the block number and hash.
+        """
+        return await self._send_authenticated_request(self._get_latest_block_info_request)
+
     async def get_extrinsic(self, block_number: BlockNumber, extrinsic_index: ExtrinsicIndex) -> GetExtrinsicResponse:
         """
         Retrieves a decoded extrinsic from a specific block.
@@ -485,6 +512,9 @@ class AbstractAsyncIdentityApi(AbstractAsyncApi[LoginResponseT], ABC):
     async def _get_latest_validators_request(self) -> GetLatestValidatorsRequest: ...
 
     @abstractmethod
+    async def _get_latest_block_info_request(self) -> GetLatestBlockInfoRequest: ...
+
+    @abstractmethod
     async def _get_extrinsic_request(
         self, block_number: BlockNumber, extrinsic_index: ExtrinsicIndex
     ) -> GetExtrinsicRequest: ...
@@ -521,6 +551,9 @@ class AsyncOpenAccessApi(AbstractAsyncOpenAccessApi[OpenAccessLoginResponse]):
 
     async def _get_latest_validators_request(self, netuid: NetUid) -> GetLatestValidatorsRequest:
         return GetLatestValidatorsRequest(netuid=netuid)
+
+    async def _get_latest_block_info_request(self) -> GetLatestBlockInfoRequest:
+        return GetLatestBlockInfoRequest()
 
     async def _get_extrinsic_request(
         self, block_number: BlockNumber, extrinsic_index: ExtrinsicIndex
@@ -614,6 +647,9 @@ class AsyncIdentityApi(AbstractAsyncIdentityApi[IdentityLoginResponse]):
             netuid=self._login_response.netuid,
             identity_name=self._login_response.identity_name,
         )
+
+    async def _get_latest_block_info_request(self) -> GetLatestBlockInfoRequest:
+        return GetLatestBlockInfoRequest()
 
     async def _get_extrinsic_request(
         self, block_number: BlockNumber, extrinsic_index: ExtrinsicIndex

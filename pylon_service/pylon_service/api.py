@@ -7,6 +7,7 @@ from litestar.handlers.http_handlers import decorators as http_decorators
 from pylon_commons.bodies import LoginBody, SetCommitmentBody, SetWeightsBody
 from pylon_commons.endpoints import Endpoint
 from pylon_commons.models import (
+    BlockInfoBag,
     Commitment,
     Extrinsic,
     Hotkey,
@@ -57,6 +58,20 @@ def handler(endpoint: Endpoint, **kwargs):
 async def identity_login(data: LoginBody, identity: Identity) -> IdentityLoginResponse:
     # TODO: Add real authentication and session.
     return IdentityLoginResponse(netuid=identity.netuid, identity_name=identity.identity_name)
+
+
+@handler(
+    Endpoint.LATEST_BLOCK_INFO,
+    cache=3,
+    dependencies={"bt_client": Provide(bt_client_open_access_dep)},
+)
+async def get_latest_block_info_endpoint(bt_client: AbstractBittensorClient) -> BlockInfoBag:
+    """
+    Get latest block info - here "latest" meaning at most a couple of seconds old.
+    """
+    block = await bt_client.get_latest_block()
+    timestamp = await bt_client.get_block_timestamp(block)
+    return BlockInfoBag(number=block.number, hash=block.hash, timestamp=timestamp)
 
 
 @handler(

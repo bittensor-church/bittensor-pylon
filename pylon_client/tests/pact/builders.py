@@ -5,6 +5,7 @@ from pylon_client._internal.pylon_commons.models import (
     AxonInfo,
     AxonProtocol,
     Block,
+    BlockInfoBag,
     Extrinsic,
     ExtrinsicCall,
     ExtrinsicCallArg,
@@ -37,11 +38,19 @@ from pylon_client._internal.pylon_commons.types import (
     ValidatorPermit,
     ValidatorTrust,
 )
-from tests.pact.constants import BLOCK_HASH, BLOCK_NUMBER, COLDKEY, EXTRINSIC_HASH, EXTRINSIC_INDEX
+from tests.pact.constants import BLOCK_HASH, BLOCK_NUMBER, BLOCK_TIMESTAMP, COLDKEY, EXTRINSIC_HASH, EXTRINSIC_INDEX
 
 
 def build_block() -> Block:
     return Block(number=BlockNumber(BLOCK_NUMBER), hash=BlockHash(BLOCK_HASH))
+
+
+def build_block_info_bag() -> BlockInfoBag:
+    return BlockInfoBag(
+        number=BlockNumber(BLOCK_NUMBER),
+        hash=BlockHash(BLOCK_HASH),
+        timestamp=Timestamp(BLOCK_TIMESTAMP),
+    )
 
 
 def build_neuron(hotkey: str, uid: int) -> Neuron:

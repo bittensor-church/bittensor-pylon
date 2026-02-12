@@ -30,6 +30,7 @@ class Endpoint(EndpointMember, Enum):
     NEURONS = (HTTPMethod.GET, "/block/{block_number:int}/neurons", "neurons")
     LATEST_NEURONS = (HTTPMethod.GET, "/block/latest/neurons", "latest_neurons")
     RECENT_NEURONS = (HTTPMethod.GET, "/block/recent/neurons", "recent_neurons")
+    LATEST_BLOCK_INFO = (HTTPMethod.GET, "/block/latest", "latest_block_info")
     VALIDATORS = (HTTPMethod.GET, "/block/{block_number:int}/validators", "validators")
     LATEST_VALIDATORS = (HTTPMethod.GET, "/block/latest/validators", "latest_validators")
     SUBNET_WEIGHTS = (HTTPMethod.PUT, "/weights", "subnet_weights")

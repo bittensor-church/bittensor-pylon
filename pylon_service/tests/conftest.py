@@ -34,10 +34,17 @@ async def mock_bt_client_pool():
 
 
 @pytest.fixture(scope="session")
-def mock_stores() -> dict[StoreName, MockStore]:
+def mock_stores():
     return {
         StoreName.RECENT_OBJECTS: MockStore(),
     }
+
+
+@pytest.fixture(autouse=True)
+def reset_mock_stores(mock_stores):
+    yield
+    for store in mock_stores.values():
+        store.reset()
 
 
 @pytest.fixture(scope="session")
@@ -60,10 +67,18 @@ def test_app(mock_bt_client_pool, mock_stores):
     with (
         patch.object(lifespans, "bittensor_client_pool", mock_lifespan),
         patch.object(lifespans, "scheduler_lifespan", mock_scheduler_lifespan),
-        patch.object(main, "stores", mock_stores),
+        # Litestar appends its own stuff to the dict we give it - so let's give it a copy, otherwise we end up
+        # resetting the cache store which we don't care about here. (caching is already disabled directly for tests)
+        patch.object(main, "stores", {**mock_stores}),
     ):
         app = create_app()
-        app.debug = True  # Enable detailed error responses
+
+        # Disable cache by marking all responses uncacheable
+        app.response_cache_config.cache_response_filter = lambda _, __: False
+
+        # Enable detailed error responses
+        app.debug = True
+
         yield app
 
 

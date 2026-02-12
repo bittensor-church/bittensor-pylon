@@ -1,6 +1,14 @@
 from pact import match
 
-from tests.pact.constants import BLOCK_HASH, BLOCK_NUMBER, COLDKEY, COMMITMENT_HEX, EXTRINSIC_HASH, EXTRINSIC_INDEX
+from tests.pact.constants import (
+    BLOCK_HASH,
+    BLOCK_NUMBER,
+    BLOCK_TIMESTAMP,
+    COLDKEY,
+    COMMITMENT_HEX,
+    EXTRINSIC_HASH,
+    EXTRINSIC_INDEX,
+)
 
 
 def block_matcher() -> dict:
@@ -115,3 +123,10 @@ def set_weights_response_matcher() -> dict:
 
 def set_commitment_response_matcher() -> dict:
     return {}
+
+
+def latest_block_info_response_matcher() -> dict:
+    return {
+        **block_matcher(),
+        "timestamp": match.int(BLOCK_TIMESTAMP),
+    }

@@ -1,5 +1,6 @@
 from typing import Self
 
+from litestar.config.response_cache import ResponseCacheConfig
 from pydantic import Field, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 from pylon_commons.constants import BLOCK_PROCESSING_TIME
@@ -43,4 +44,8 @@ class RecentObjectsSettings(BaseSettings):
 
 
 recent_objects_settings = RecentObjectsSettings()
+
+# Default cache config. Only used for endpoints with explicit @handler(..., cache=...)
+response_cache_config = ResponseCacheConfig()
+
 settings = Settings()  # type: ignore

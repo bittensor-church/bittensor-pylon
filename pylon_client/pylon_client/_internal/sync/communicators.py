@@ -20,6 +20,7 @@ from pylon_client._internal.pylon_commons.requests import (
     GetCommitmentRequest,
     GetCommitmentsRequest,
     GetExtrinsicRequest,
+    GetLatestBlockInfoRequest,
     GetLatestNeuronsRequest,
     GetLatestValidatorsRequest,
     GetNeuronsRequest,
@@ -256,6 +257,12 @@ class HttpCommunicator(AbstractCommunicator[Request, Response]):
             url=url,
             json=request.model_dump(include={"commitment"}),
         )
+
+    @_translate_request.register
+    def _(self, request: GetLatestBlockInfoRequest) -> Request:
+        assert self._raw_client is not None
+        url = self._build_url(Endpoint.LATEST_BLOCK_INFO, request)
+        return self._raw_client.build_request(method=Endpoint.LATEST_BLOCK_INFO.method, url=url)
 
     @_translate_request.register
     def _(self, request: GetExtrinsicRequest) -> Request:

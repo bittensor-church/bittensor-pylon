@@ -14,6 +14,7 @@ from pylon_client._internal.pylon_commons.requests import (
     GetCommitmentRequest,
     GetCommitmentsRequest,
     GetExtrinsicRequest,
+    GetLatestBlockInfoRequest,
     GetLatestNeuronsRequest,
     GetLatestValidatorsRequest,
     GetNeuronsRequest,
@@ -29,6 +30,7 @@ from pylon_client._internal.pylon_commons.responses import (
     GetCommitmentResponse,
     GetCommitmentsResponse,
     GetExtrinsicResponse,
+    GetLatestBlockInfoResponse,
     GetNeuronsResponse,
     GetValidatorsResponse,
     IdentityLoginResponse,
@@ -235,6 +237,17 @@ class AbstractOpenAccessApi(AbstractApi[LoginResponseT], ABC):
         """
         return self._send_authenticated_request(partial(self._get_latest_validators_request, netuid))
 
+    def get_latest_block_info(self) -> GetLatestBlockInfoResponse:
+        """
+        Retrieves the latest block information from the chain.
+
+        This is a blockchain-level query that does not require subnet context.
+
+        Returns:
+            GetLatestBlockInfoResponse: containing the block number and hash.
+        """
+        return self._send_authenticated_request(self._get_latest_block_info_request)
+
     def get_extrinsic(self, block_number: BlockNumber, extrinsic_index: ExtrinsicIndex) -> GetExtrinsicResponse:
         """
         Retrieves a decoded extrinsic from a specific block.
@@ -272,6 +285,9 @@ class AbstractOpenAccessApi(AbstractApi[LoginResponseT], ABC):
 
     @abstractmethod
     def _get_commitment_request(self, netuid: NetUid, hotkey: Hotkey) -> GetCommitmentRequest: ...
+
+    @abstractmethod
+    def _get_latest_block_info_request(self) -> GetLatestBlockInfoRequest: ...
 
     @abstractmethod
     def _get_extrinsic_request(
@@ -426,6 +442,17 @@ class AbstractIdentityApi(AbstractApi[LoginResponseT], ABC):
         """
         return self._send_authenticated_request(self._get_latest_validators_request)
 
+    def get_latest_block_info(self) -> GetLatestBlockInfoResponse:
+        """
+        Retrieves the latest block information from the chain.
+
+        This is a blockchain-level query that does not require subnet context.
+
+        Returns:
+            GetLatestBlockInfoResponse: containing the block number and hash.
+        """
+        return self._send_authenticated_request(self._get_latest_block_info_request)
+
     def get_extrinsic(self, block_number: BlockNumber, extrinsic_index: ExtrinsicIndex) -> GetExtrinsicResponse:
         """
         Retrieves a decoded extrinsic from a specific block.
@@ -474,6 +501,9 @@ class AbstractIdentityApi(AbstractApi[LoginResponseT], ABC):
     def _get_latest_validators_request(self) -> GetLatestValidatorsRequest: ...
 
     @abstractmethod
+    def _get_latest_block_info_request(self) -> GetLatestBlockInfoRequest: ...
+
+    @abstractmethod
     def _get_extrinsic_request(
         self, block_number: BlockNumber, extrinsic_index: ExtrinsicIndex
     ) -> GetExtrinsicRequest: ...
@@ -508,6 +538,9 @@ class OpenAccessApi(AbstractOpenAccessApi[OpenAccessLoginResponse]):
 
     def _get_latest_validators_request(self, netuid: NetUid) -> GetLatestValidatorsRequest:
         return GetLatestValidatorsRequest(netuid=netuid)
+
+    def _get_latest_block_info_request(self) -> GetLatestBlockInfoRequest:
+        return GetLatestBlockInfoRequest()
 
     def _get_extrinsic_request(self, block_number: BlockNumber, extrinsic_index: ExtrinsicIndex) -> GetExtrinsicRequest:
         return GetExtrinsicRequest(block_number=block_number, extrinsic_index=extrinsic_index)
@@ -597,6 +630,9 @@ class IdentityApi(AbstractIdentityApi[IdentityLoginResponse]):
             netuid=self._login_response.netuid,
             identity_name=self._login_response.identity_name,
         )
+
+    def _get_latest_block_info_request(self) -> GetLatestBlockInfoRequest:
+        return GetLatestBlockInfoRequest()
 
     def _get_extrinsic_request(self, block_number: BlockNumber, extrinsic_index: ExtrinsicIndex) -> GetExtrinsicRequest:
         return GetExtrinsicRequest(block_number=block_number, extrinsic_index=extrinsic_index)

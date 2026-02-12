@@ -22,10 +22,3 @@ async def test_client(test_app):
 @pytest.fixture
 def mock_recent_objects_store(mock_stores) -> MockStore:
     return mock_stores[StoreName.RECENT_OBJECTS]
-
-
-@pytest.fixture(autouse=True)
-def reset_mock_stores(mock_stores):
-    yield
-    for store in mock_stores.values():
-        store.reset()

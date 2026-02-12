@@ -209,6 +209,15 @@ class OwnCommitmentExistsHandler(StateHandler):
         client.add_behavior("get_commitment", commitment)
 
 
+class LatestBlockInfoExistsHandler(StateHandler):
+    name = "latest block info exists"
+
+    def setup(self, parameters: dict[str, Any]) -> None:
+        client = self._get_client(parameters)
+        client.add_behavior("get_latest_block", BlockFactory.build())
+        client.add_behavior("get_block_timestamp", Timestamp(1700000000))
+
+
 class ExtrinsicExistsHandler(StateHandler):
     name = "extrinsic exists"
 
