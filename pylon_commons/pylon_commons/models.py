@@ -196,11 +196,6 @@ class Commitment(BittensorModel):
 
 class SubnetCommitments(BittensorModel):
     block: Block
-    commitments: dict[Hotkey, CommitmentDataHex]
-
-
-class SubnetCommitmentsV2(BittensorModel):
-    block: Block
     commitments: dict[Hotkey, Commitment]
 
 

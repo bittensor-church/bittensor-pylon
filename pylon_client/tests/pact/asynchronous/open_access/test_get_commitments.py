@@ -2,8 +2,8 @@ import pytest
 from httpx import codes
 from pact import Pact
 
-from pylon_client._internal.pylon_commons.responses import GetCommitmentsResponse
 from pylon_client._internal.pylon_commons.types import CommitmentDataHex, Hotkey, NetUid
+from pylon_client._internal.pylon_commons.v1.responses import GetCommitmentsResponse
 from tests.pact.builders import build_block
 from tests.pact.constants import COMMITMENT_HEX, HOTKEY_1, HOTKEY_2
 

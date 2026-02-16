@@ -1,8 +1,8 @@
 from httpx import codes
 from pact import Pact
 
-from pylon_client._internal.pylon_commons.responses import SetCommitmentResponse
 from pylon_client._internal.pylon_commons.types import CommitmentDataHex
+from pylon_client._internal.pylon_commons.v1.responses import SetCommitmentResponse
 from tests.pact.constants import COMMITMENT_HEX, IDENTITY_NAME, NETUID
 
 

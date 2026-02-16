@@ -23,7 +23,7 @@ from pylon_commons.models import (
     NeuronCertificate,
     NeuronCertificateKeypair,
     Stakes,
-    SubnetCommitmentsV2,
+    SubnetCommitments,
     SubnetHyperparams,
     SubnetNeurons,
     SubnetState,
@@ -208,7 +208,7 @@ class AbstractBittensorClient(ABC):
         """
 
     @abstractmethod
-    async def get_commitments(self, netuid: NetUid, block: Block) -> SubnetCommitmentsV2:
+    async def get_commitments(self, netuid: NetUid, block: Block) -> SubnetCommitments:
         """
         Fetches all commitments for a subnet.
         """
@@ -590,9 +590,7 @@ class TurboBtClient(AbstractBittensorClient):
     async def get_commitment(self, netuid: NetUid, block: Block, hotkey: Hotkey | None = None) -> Commitment | None:
         hotkey = self._resolve_hotkey(hotkey)
         logger.debug(f"Fetching commitment for {hotkey} from subnet {netuid} at block {block.number}, {self.uri}")
-        result = await self._protect_turbobt(
-            lambda c: c.subnet(netuid).commitments.get(hotkey, block_hash=block.hash)
-        )
+        result = await self._protect_turbobt(lambda c: c.subnet(netuid).commitments.get(hotkey, block_hash=block.hash))
         if result is None:
             return None
         return Commitment(
@@ -609,9 +607,11 @@ class TurboBtClient(AbstractBittensorClient):
             "hotkey": Attr("hotkey"),
         },
     )
-    async def get_commitments(self, netuid: NetUid, block: Block) -> SubnetCommitmentsV2:
+    async def get_commitments(self, netuid: NetUid, block: Block) -> SubnetCommitments:
         logger.debug(f"Fetching all commitments from subnet {netuid} at block {block.number}, {self.uri}")
-        raw_commitments = await self._protect_turbobt(lambda c: c.subnet(netuid).commitments.fetch(block_hash=block.hash))
+        raw_commitments = await self._protect_turbobt(
+            lambda c: c.subnet(netuid).commitments.fetch(block_hash=block.hash)
+        )
         commitments: dict[Hotkey, Commitment] = {}
         for hotkey_str, result in raw_commitments.items():
             hotkey = Hotkey(hotkey_str)
@@ -620,7 +620,7 @@ class TurboBtClient(AbstractBittensorClient):
                 hotkey=hotkey,
                 commitment=CommitmentDataBytes(result["data"]).hex(),
             )
-        return SubnetCommitmentsV2(block=block, commitments=commitments)
+        return SubnetCommitments(block=block, commitments=commitments)
 
     @track_operation(
         bittensor_operation_duration,
@@ -778,7 +778,7 @@ class BittensorClient[SubClient: AbstractBittensorClient](AbstractBittensorClien
     async def get_commitment(self, netuid: NetUid, block: Block, hotkey: Hotkey | None = None) -> Commitment | None:
         return await self._delegate(self.subclient_cls.get_commitment, netuid=netuid, block=block, hotkey=hotkey)
 
-    async def get_commitments(self, netuid: NetUid, block: Block) -> SubnetCommitmentsV2:
+    async def get_commitments(self, netuid: NetUid, block: Block) -> SubnetCommitments:
         return await self._delegate(self.subclient_cls.get_commitments, netuid=netuid, block=block)
 
     async def set_commitment(self, netuid: NetUid, data: CommitmentDataBytes) -> None:

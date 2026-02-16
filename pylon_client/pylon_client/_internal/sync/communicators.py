@@ -17,7 +17,7 @@ from httpx import (
 )
 from httpx import Timeout as HttpxTimeout
 
-from pylon_client._internal.pylon_commons.endpoints import Endpoint, EndpointV1
+from pylon_client._internal.pylon_commons.endpoints import Endpoint
 from pylon_client._internal.pylon_commons.exceptions import (
     PylonBadGateway,
     PylonClosed,
@@ -29,7 +29,8 @@ from pylon_client._internal.pylon_commons.exceptions import (
     PylonUnauthorized,
     TimeoutReason,
 )
-from pylon_client._internal.pylon_commons.requests import (
+from pylon_client._internal.pylon_commons.v1.endpoints import Endpoint as EndpointV1
+from pylon_client._internal.pylon_commons.v1.requests import (
     AuthenticatedPylonRequest,
     GetCommitmentRequest,
     GetCommitmentsRequest,
@@ -46,7 +47,7 @@ from pylon_client._internal.pylon_commons.requests import (
     SetCommitmentRequest,
     SetWeightsRequest,
 )
-from pylon_client._internal.pylon_commons.responses import PylonResponse
+from pylon_client._internal.pylon_commons.v1.responses import PylonResponse
 from pylon_client._internal.sync.config import Config
 
 RawRequestT = TypeVar("RawRequestT")
@@ -286,8 +287,8 @@ class HttpCommunicator(AbstractCommunicator[Request, Response]):
     @_translate_request.register
     def _(self, request: GetLatestBlockInfoRequest) -> Request:
         assert self._raw_client is not None
-        url = self._build_url(Endpoint.LATEST_BLOCK_INFO, request)
-        return self._raw_client.build_request(method=Endpoint.LATEST_BLOCK_INFO.method, url=url)
+        url = self._build_url(EndpointV1.LATEST_BLOCK_INFO, request)
+        return self._raw_client.build_request(method=EndpointV1.LATEST_BLOCK_INFO.method, url=url)
 
     @_translate_request.register
     def _(self, request: GetExtrinsicRequest) -> Request:

@@ -1,8 +1,8 @@
 from httpx import codes
 from pact import Pact
 
-from pylon_client._internal.pylon_commons.responses import GetExtrinsicResponse
 from pylon_client._internal.pylon_commons.types import BlockNumber, ExtrinsicIndex
+from pylon_client._internal.pylon_commons.v1.responses import GetExtrinsicResponse
 from tests.pact.builders import build_extrinsic
 from tests.pact.constants import BLOCK_NUMBER, EXTRINSIC_INDEX
 

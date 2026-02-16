@@ -4,7 +4,7 @@ from abc import ABC, abstractmethod
 from typing import TYPE_CHECKING, Any, ClassVar, Literal
 from unittest.mock import AsyncMock
 
-from pylon_commons.models import Commitment, SubnetCommitmentsV2, SubnetNeurons, SubnetValidators
+from pylon_commons.models import Commitment, SubnetCommitments, SubnetNeurons, SubnetValidators
 from pylon_commons.types import BlockNumber, CommitmentDataHex, Hotkey, Timestamp
 
 from pylon_service.bittensor.exceptions import ArchiveFallbackException
@@ -174,7 +174,7 @@ class CommitmentsExistHandler(StateHandler):
             )
             for i in range(parameters.get("commitment_count", 1))
         }
-        subnet_commitments = SubnetCommitmentsV2(block=block, commitments=commitments)
+        subnet_commitments = SubnetCommitments(block=block, commitments=commitments)
 
         client = self._get_client(parameters)
         client.add_behavior("get_latest_block", block)
@@ -243,7 +243,7 @@ class WeightsCanBeSetHandler(StateHandler):
     name = "weights can be set"
 
     def setup(self, parameters: dict[str, Any]) -> None:
-        self.monkeypatch.setattr("pylon_service.api.ApplyWeights.schedule", AsyncMock())
+        self.monkeypatch.setattr("pylon_service.api._unstable.api.ApplyWeights.schedule", AsyncMock())
 
 
 class BlockDataUnavailableHandler(StateHandler):

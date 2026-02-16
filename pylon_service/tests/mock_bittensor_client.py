@@ -17,7 +17,7 @@ from pylon_commons.models import (
     Neuron,
     NeuronCertificate,
     NeuronCertificateKeypair,
-    SubnetCommitmentsV2,
+    SubnetCommitments,
     SubnetHyperparams,
     SubnetNeurons,
     SubnetState,
@@ -211,7 +211,7 @@ class MockBittensorClient(AbstractBittensorClient):
         self.calls["get_commitment"].append((netuid, block, hotkey))
         return await self._execute_behavior("get_commitment", netuid, block, hotkey)
 
-    async def get_commitments(self, netuid: NetUid, block: Block) -> SubnetCommitmentsV2:
+    async def get_commitments(self, netuid: NetUid, block: Block) -> SubnetCommitments:
         """
         Get all commitments for a subnet.
         """

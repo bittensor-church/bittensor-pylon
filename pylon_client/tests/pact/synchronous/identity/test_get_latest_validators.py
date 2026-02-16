@@ -1,7 +1,7 @@
 from httpx import codes
 from pact import Pact
 
-from pylon_client._internal.pylon_commons.responses import GetValidatorsResponse
+from pylon_client._internal.pylon_commons.v1.responses import GetValidatorsResponse
 from tests.pact.builders import build_block, build_neuron
 from tests.pact.constants import HOTKEY_1, IDENTITY_NAME, NETUID
 

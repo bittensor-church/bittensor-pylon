@@ -2,8 +2,9 @@ import typing
 
 from pydantic import BaseModel, field_validator
 
+from ..models import CertificateAlgorithm
+from ..types import BlockNumber, ExtrinsicIndex, Hotkey, IdentityName, NetUid
 from .bodies import LoginBody, SetCommitmentBody, SetWeightsBody
-from .models import CertificateAlgorithm
 from .responses import (
     GetCommitmentResponse,
     GetCommitmentsResponse,
@@ -18,7 +19,6 @@ from .responses import (
     SetCommitmentResponse,
     SetWeightsResponse,
 )
-from .types import BlockNumber, ExtrinsicIndex, Hotkey, IdentityName, NetUid
 
 PylonResponseT = typing.TypeVar("PylonResponseT", bound=PylonResponse, covariant=True)
 LoginResponseT = typing.TypeVar("LoginResponseT", bound=LoginResponse, covariant=True)
@@ -132,7 +132,6 @@ class GetLatestBlockInfoRequest(PylonRequest[GetLatestBlockInfoResponse]):
     This request does not require subnet context as blocks are blockchain-level data.
     """
 
-    version = ApiVersion.V1
     response_cls = GetLatestBlockInfoResponse
 
 

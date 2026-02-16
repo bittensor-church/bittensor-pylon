@@ -11,7 +11,16 @@ from pylon_client._internal.pylon_commons.exceptions import (
     PylonMisconfigured,
     PylonUnauthorized,
 )
-from pylon_client._internal.pylon_commons.requests import (
+from pylon_client._internal.pylon_commons.types import (
+    BlockNumber,
+    CommitmentDataBytes,
+    CommitmentDataHex,
+    ExtrinsicIndex,
+    Hotkey,
+    NetUid,
+    Weight,
+)
+from pylon_client._internal.pylon_commons.v1.requests import (
     GetCommitmentRequest,
     GetCommitmentsRequest,
     GetExtrinsicRequest,
@@ -27,7 +36,7 @@ from pylon_client._internal.pylon_commons.requests import (
     SetCommitmentRequest,
     SetWeightsRequest,
 )
-from pylon_client._internal.pylon_commons.responses import (
+from pylon_client._internal.pylon_commons.v1.responses import (
     GetCommitmentResponse,
     GetCommitmentsResponse,
     GetExtrinsicResponse,
@@ -40,15 +49,6 @@ from pylon_client._internal.pylon_commons.responses import (
     PylonResponse,
     SetCommitmentResponse,
     SetWeightsResponse,
-)
-from pylon_client._internal.pylon_commons.types import (
-    BlockNumber,
-    CommitmentDataBytes,
-    CommitmentDataHex,
-    ExtrinsicIndex,
-    Hotkey,
-    NetUid,
-    Weight,
 )
 
 ResponseT = TypeVar("ResponseT", bound=PylonResponse)

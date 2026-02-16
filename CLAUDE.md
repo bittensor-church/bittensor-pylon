@@ -63,15 +63,21 @@ Shared utilities and models used by both client and service:
 - **`pylon_commons/types.py`**: Type definitions and NewType wrappers
 
 ### pylon_service Package
-The REST API service:
+The REST API service, organized with an `api/` package containing versioned subpackages (`v1/`, `_unstable/`) and shared infrastructure at root:
+- **`pylon_service/main.py`**: The main entry point. It wires up the application, manages the startup/shutdown lifecycle
+- **`pylon_service/dependencies.py`**: DI providers shared across all API versions
+- **`pylon_service/identities.py`**: Identity system for multi-subnet/multi-wallet support with per-identity authentication
 - **`pylon_service/bittensor/client.py`**: Manages all interactions with the Bittensor network using the `turbobt` library, including wallet operations. Provides `AbstractBittensorClient` base class and `TurboBtClient` implementation
 - **`pylon_service/bittensor/pool.py`**: Manages `BittensorClientPool` for acquiring and sharing client instances per wallet
-- **`pylon_service/identities.py`**: Identity system for multi-subnet/multi-wallet support with per-identity authentication
-- **`pylon_service/api.py`**: The Litestar-based API layer that defines all external endpoints using two controllers:
+- **`pylon_service/api/utils.py`**: Shared `handler()` decorator used by all API versions to create Litestar handlers from `Endpoint` enums
+- **`pylon_service/api/v1/api.py`**: The v1 Litestar-based API layer that defines all v1 endpoints using two controllers:
   - `OpenAccessController`: Endpoints under `/subnet/{netuid}/` (requires `open_access_token`)
   - `IdentityController`: Endpoints under `/identity/{identity_name}/subnet/{netuid}` (requires per-identity token)
-- **`pylon_service/main.py`**: The main entry point. It wires up the application, manages the startup/shutdown lifecycle
-- **`pylon_service/tasks.py`**: Contains `ApplyWeights` task for applying weights to the subnet on-demand
+- **`pylon_service/api/v1/routers.py`**: v1 router registration
+- **`pylon_service/api/v1/tasks.py`**: Contains `ApplyWeights` and `SetCommitment` background tasks for v1 API
+- **`pylon_service/api/v1/utils.py`**: Epoch and commit window calculation utilities for v1 weight management
+- **`pylon_service/api/_unstable/api.py`**: Unstable/experimental API endpoints
+- **`pylon_service/api/_unstable/routers.py`**: Unstable router registration
 
 ### pylon_client Package
 The client library:
@@ -96,7 +102,7 @@ Both clients follow the Communicator pattern, allowing for different transport i
 - **Containerization**: Docker
 
 ### Background Tasks
-- **`ApplyWeights`** (`pylon_service/tasks.py`): Applies weights to the subnet on-demand (triggered by PUT /subnet/weights endpoint)
+- **`ApplyWeights`** (`pylon_service/api/v1/tasks.py`): Applies weights to the subnet on-demand (triggered by PUT /subnet/weights endpoint)
   - Uses retry logic with exponential backoff (configurable: default 200 attempts, 1-second delay)
   - Handles both commit-reveal and direct weight setting based on subnet hyperparameters
 

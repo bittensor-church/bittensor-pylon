@@ -1,11 +1,9 @@
 from litestar import Router
 from pylon_commons.apiver import ApiVersion
 
-from pylon_service.api import (
+from pylon_service.api.v1.api import (
     IdentityController,
-    IdentityControllerV2,
     OpenAccessController,
-    OpenAccessControllerV2,
     get_extrinsic_endpoint,
     get_latest_block_info_endpoint,
     identity_login,
@@ -20,9 +18,4 @@ v1_router = Router(
         get_extrinsic_endpoint,
         get_latest_block_info_endpoint,
     ],
-)
-
-v2_router = Router(
-    path=ApiVersion.V2.prefix,
-    route_handlers=[IdentityControllerV2, OpenAccessControllerV2],
 )

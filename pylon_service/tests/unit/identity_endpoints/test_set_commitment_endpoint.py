@@ -43,7 +43,7 @@ async def test_set_commitment_identity_blockchain_error(
     Test that blockchain errors return 502 Bad Gateway after retries exhausted.
     """
     # Set retry attempts to 0 for faster test
-    monkeypatch.setattr("pylon_service.tasks.settings.commitment_retry_attempts", 0)
+    monkeypatch.setattr("pylon_service.api._unstable.tasks.settings.commitment_retry_attempts", 0)
 
     commitment_data = "0102030405060708"
 
@@ -70,8 +70,8 @@ async def test_set_commitment_identity_retries_on_failure(
     Test that set_commitment retries on transient failures and succeeds when blockchain recovers.
     """
     # Set retry attempts to 2 and minimal delay for faster test
-    monkeypatch.setattr("pylon_service.tasks.settings.commitment_retry_attempts", 2)
-    monkeypatch.setattr("pylon_service.tasks.settings.commitment_retry_delay_seconds", 0.01)
+    monkeypatch.setattr("pylon_service.api._unstable.tasks.settings.commitment_retry_attempts", 2)
+    monkeypatch.setattr("pylon_service.api._unstable.tasks.settings.commitment_retry_delay_seconds", 0.01)
 
     commitment_data = "0102030405060708"
 

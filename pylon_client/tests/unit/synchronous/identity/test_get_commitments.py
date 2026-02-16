@@ -3,10 +3,10 @@ from http import HTTPMethod
 import pytest
 from httpx import Response, codes
 
-from pylon_client._internal.pylon_commons.endpoints import EndpointV1
 from pylon_client._internal.pylon_commons.models import Block
-from pylon_client._internal.pylon_commons.responses import GetCommitmentsResponse
 from pylon_client._internal.pylon_commons.types import BlockHash, BlockNumber, CommitmentDataHex, Hotkey
+from pylon_client._internal.pylon_commons.v1.endpoints import Endpoint as EndpointV1
+from pylon_client._internal.pylon_commons.v1.responses import GetCommitmentsResponse
 from tests.unit.synchronous.base_test import IdentityEndpointTest
 
 

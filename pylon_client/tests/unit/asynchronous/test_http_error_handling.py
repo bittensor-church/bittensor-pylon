@@ -6,7 +6,6 @@ import pytest
 from httpx import ConnectTimeout, PoolTimeout, ReadTimeout, Response, TimeoutException, WriteTimeout, codes
 
 from pylon_client._internal.asynchronous.client import AsyncPylonClient
-from pylon_client._internal.pylon_commons.endpoints import EndpointV1
 from pylon_client._internal.pylon_commons.exceptions import (
     PylonBadGateway,
     PylonForbidden,
@@ -17,6 +16,7 @@ from pylon_client._internal.pylon_commons.exceptions import (
     TimeoutReason,
 )
 from pylon_client._internal.pylon_commons.types import BlockNumber, NetUid
+from pylon_client._internal.pylon_commons.v1.endpoints import Endpoint as EndpointV1
 
 
 @pytest.fixture

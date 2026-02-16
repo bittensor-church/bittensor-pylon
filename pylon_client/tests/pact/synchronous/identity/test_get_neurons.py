@@ -1,8 +1,8 @@
 from httpx import codes
 from pact import Pact
 
-from pylon_client._internal.pylon_commons.responses import GetNeuronsResponse
 from pylon_client._internal.pylon_commons.types import BlockNumber, Hotkey
+from pylon_client._internal.pylon_commons.v1.responses import GetNeuronsResponse
 from tests.pact.builders import build_block, build_neuron
 from tests.pact.constants import BLOCK_NUMBER, HOTKEY_1, HOTKEY_2, IDENTITY_NAME, NETUID
 

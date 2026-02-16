@@ -4,10 +4,10 @@ from tenacity import stop_after_attempt
 
 from pylon_client._internal.asynchronous.client import AsyncPylonClient
 from pylon_client._internal.asynchronous.config import ASYNC_DEFAULT_RETRIES, AsyncConfig
-from pylon_client._internal.pylon_commons.endpoints import EndpointV1
 from pylon_client._internal.pylon_commons.exceptions import PylonRequestException
-from pylon_client._internal.pylon_commons.responses import SetWeightsResponse
 from pylon_client._internal.pylon_commons.types import Hotkey, IdentityName, NetUid, PylonAuthToken, Weight
+from pylon_client._internal.pylon_commons.v1.endpoints import Endpoint as EndpointV1
+from pylon_client._internal.pylon_commons.v1.responses import SetWeightsResponse
 
 
 @pytest.mark.parametrize(

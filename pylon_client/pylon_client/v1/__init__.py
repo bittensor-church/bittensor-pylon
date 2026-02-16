@@ -25,11 +25,10 @@ from pylon_client._internal.pylon_commons.models import (
     Neuron,
     NeuronCertificate,
     NeuronCertificateKeypair,
-    SubnetCommitments,
     SubnetNeurons,
     SubnetValidators,
 )
-from pylon_client._internal.pylon_commons.responses import (
+from pylon_client._internal.pylon_commons.v1.responses import (
     GetCommitmentResponse,
     GetCommitmentsResponse,
     GetNeuronsResponse,

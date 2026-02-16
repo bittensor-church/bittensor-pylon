@@ -5,7 +5,6 @@ Tests for HTTP error handling in the sync communicator.
 import pytest
 from httpx import ConnectTimeout, PoolTimeout, ReadTimeout, Response, TimeoutException, WriteTimeout, codes
 
-from pylon_client._internal.pylon_commons.endpoints import EndpointV1
 from pylon_client._internal.pylon_commons.exceptions import (
     PylonBadGateway,
     PylonForbidden,
@@ -16,6 +15,7 @@ from pylon_client._internal.pylon_commons.exceptions import (
     TimeoutReason,
 )
 from pylon_client._internal.pylon_commons.types import BlockNumber, NetUid
+from pylon_client._internal.pylon_commons.v1.endpoints import Endpoint as EndpointV1
 from pylon_client._internal.sync.client import PylonClient
 
 

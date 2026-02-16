@@ -1,6 +1,6 @@
 from pydantic import BaseModel, field_serializer, field_validator
 
-from .types import CommitmentDataBytes, CommitmentDataHex, Hotkey, PylonAuthToken, Weight
+from ..types import CommitmentDataBytes, CommitmentDataHex, Hotkey, PylonAuthToken, Weight
 
 
 class PylonBody(BaseModel):

@@ -2,8 +2,8 @@ import pytest
 from httpx import codes
 from pact import Pact
 
-from pylon_client._internal.pylon_commons.responses import SetWeightsResponse
 from pylon_client._internal.pylon_commons.types import Hotkey, Weight
+from pylon_client._internal.pylon_commons.v1.responses import SetWeightsResponse
 from tests.pact.constants import HOTKEY_1, HOTKEY_2, IDENTITY_NAME, NETUID
 
 

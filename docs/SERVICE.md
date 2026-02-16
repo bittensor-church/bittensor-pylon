@@ -181,6 +181,9 @@ providing them fixes and improvements, without maintaining separate branches.
 
 Current newest API version: `v1` (endpoints under `/api/v1/...`)
 
+New versions of endpoints are first published under `_unstable` namespace before being released to a
+new stable version. These may be used, but are subject to change without notice.
+
 ## Observability
 
 ### Prometheus Metrics

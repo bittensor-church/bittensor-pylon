@@ -14,6 +14,7 @@ from tenacity import (
     wait_exponential,
 )
 
+from pylon_service.api._unstable.utils import Epoch, get_epoch_containing_block
 from pylon_service.bittensor.client import AbstractBittensorClient
 from pylon_service.metrics import (
     Attr,
@@ -24,7 +25,6 @@ from pylon_service.metrics import (
     track_operation,
 )
 from pylon_service.settings import settings
-from pylon_service.utils import Epoch, get_epoch_containing_block
 
 logger = logging.getLogger(__name__)
 

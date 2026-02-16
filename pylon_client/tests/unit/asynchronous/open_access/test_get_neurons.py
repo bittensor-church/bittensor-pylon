@@ -4,11 +4,11 @@ import pytest
 from httpx import Response, codes
 from pydantic import ValidationError
 
-from pylon_client._internal.pylon_commons.endpoints import EndpointV1
 from pylon_client._internal.pylon_commons.models import Block
-from pylon_client._internal.pylon_commons.requests import GetNeuronsRequest
-from pylon_client._internal.pylon_commons.responses import GetNeuronsResponse
 from pylon_client._internal.pylon_commons.types import BlockHash, BlockNumber, NetUid
+from pylon_client._internal.pylon_commons.v1.endpoints import Endpoint as EndpointV1
+from pylon_client._internal.pylon_commons.v1.requests import GetNeuronsRequest
+from pylon_client._internal.pylon_commons.v1.responses import GetNeuronsResponse
 from tests.factories import NeuronFactory
 from tests.unit.asynchronous.base_test import OpenAccessEndpointTest
 

@@ -4,14 +4,15 @@ from http import HTTPMethod
 import pytest
 from httpx import ConnectError, Response, codes
 
-from pylon_client._internal.pylon_commons.endpoints import Endpoint, EndpointV1
+from pylon_client._internal.pylon_commons.endpoints import Endpoint
 from pylon_client._internal.pylon_commons.exceptions import (
     PylonClosed,
     PylonMisconfigured,
     PylonRequestException,
     PylonResponseException,
 )
-from pylon_client._internal.pylon_commons.responses import PylonResponse
+from pylon_client._internal.pylon_commons.v1.endpoints import Endpoint as EndpointV1
+from pylon_client._internal.pylon_commons.v1.responses import PylonResponse
 from pylon_client._internal.sync.client import PylonClient
 
 

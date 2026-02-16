@@ -2,8 +2,8 @@ import pytest
 from httpx import codes
 from pact import Pact
 
-from pylon_client._internal.pylon_commons.responses import GetNeuronsResponse
 from pylon_client._internal.pylon_commons.types import Hotkey
+from pylon_client._internal.pylon_commons.v1.responses import GetNeuronsResponse
 from tests.pact.builders import build_block, build_neuron
 from tests.pact.constants import HOTKEY_1, HOTKEY_2, IDENTITY_NAME, NETUID
 

@@ -1,7 +1,7 @@
 from httpx import codes
 from pact import Pact
 
-from pylon_client._internal.pylon_commons.responses import GetLatestBlockInfoResponse
+from pylon_client._internal.pylon_commons.v1.responses import GetLatestBlockInfoResponse
 from tests.pact.builders import build_block_info_bag
 
 
