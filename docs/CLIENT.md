@@ -34,7 +34,7 @@ and authentication credentials.
 
 **Open access configuration:**
 ```python
-from pylon_client.v1 import AsyncConfig
+from pylon_client.artanis import AsyncConfig
 
 config = AsyncConfig(
     address="http://localhost:8000",
@@ -44,7 +44,7 @@ config = AsyncConfig(
 
 **Identity access configuration:**
 ```python
-from pylon_client.v1 import AsyncConfig
+from pylon_client.artanis import AsyncConfig
 
 config = AsyncConfig(
     address="http://localhost:8000",
@@ -55,7 +55,7 @@ config = AsyncConfig(
 
 **Both access modes:**
 ```python
-from pylon_client.v1 import AsyncConfig
+from pylon_client.artanis import AsyncConfig
 
 config = AsyncConfig(
     address="http://localhost:8000",
@@ -75,7 +75,7 @@ The client should be used as a context manager to ensure proper resource managem
 The connection pool is opened when entering the context and closed when exiting.
 
 ```python
-from pylon_client.v1 import AsyncPylonClient, AsyncConfig
+from pylon_client.artanis import AsyncPylonClient, AsyncConfig
 
 config = AsyncConfig(address="http://localhost:8000", open_access_token="my_token")
 
@@ -99,19 +99,19 @@ Once the client is open, you can make requests using the
 **Open Access API** - for read-only operations on any subnet:
 
 ```python
-from pylon_client.v1 import AsyncPylonClient, AsyncConfig, NetUid
+from pylon_client.artanis import AsyncPylonClient, AsyncConfig, NetUid
 
 config = AsyncConfig(address="http://localhost:8000", open_access_token="my_token")
 
 async with AsyncPylonClient(config) as client:
-    response = await client.open_access.get_latest_neurons(netuid=NetUid(1))
+    response = await client.v1.open_access.get_latest_neurons(netuid=NetUid(1))
     print(f"Found {len(response.neurons)} neurons")
 ```
 
 **Identity API** - for operations on the subnet associated with the configured identity:
 
 ```python
-from pylon_client.v1 import AsyncPylonClient, AsyncConfig, Hotkey, Weight
+from pylon_client.artanis import AsyncPylonClient, AsyncConfig, Hotkey, Weight
 
 config = AsyncConfig(
     address="http://localhost:8000",
@@ -121,11 +121,11 @@ config = AsyncConfig(
 
 async with AsyncPylonClient(config) as client:
     # Read neurons for the identity's subnet
-    response = await client.identity.get_latest_neurons()
+    response = await client.v1.identity.get_latest_neurons()
 
     # Set weights
     weights = {Hotkey("5C..."): Weight(0.5), Hotkey("5D..."): Weight(0.3)}
-    await client.identity.put_weights(weights=weights)
+    await client.v1.identity.put_weights(weights=weights)
 ```
 
 ### Synchronous Client
@@ -133,29 +133,44 @@ async with AsyncPylonClient(config) as client:
 For synchronous code, use `PylonClient` with `Config`:
 
 ```python
-from pylon_client.v1 import PylonClient, Config, NetUid
+from pylon_client.artanis import PylonClient, Config, NetUid
 
 config = Config(address="http://localhost:8000", open_access_token="my_token")
 
 with PylonClient(config) as client:
-    response = client.open_access.get_latest_neurons(netuid=NetUid(1))
+    response = client.v1.open_access.get_latest_neurons(netuid=NetUid(1))
     print(f"Found {len(response.neurons)} neurons")
 ```
 
 ## Versioning
 
-The client library uses versioned packages to ensure backward compatibility. All objects
-are exported under versioned modules (e.g., `pylon_client.v1`). If breaking changes need
-to be introduced, they will be exported under a new version (e.g., `v2`, `v3`), while the
-previous version remains unchanged. This allows us to deploy seemingly breaking changes without
-bumping up the package major version and therefore not breaking existing clients. The aim of this
-is to support older clients, providing them fixes and improvements, without maintaining separate branches.
+See the [Versioning documentation](VERSIONS.md) for details on package versioning,
+client interface versioning, and API version namespaces.
 
-Current newest version: `v1` (import from `pylon_client.v1`)
+## Using Different API Versions
+
+By default, the client communicates with the latest stable API version (v1).
+To use the unstable API, access methods through the `client.unstable` namespace:
+
+```python
+from pylon_client.artanis import AsyncPylonClient, AsyncConfig, NetUid
+
+async with AsyncPylonClient(config) as client:
+    # V1 API (default)
+    response = await client.v1.open_access.get_latest_neurons(netuid=NetUid(1))
+    response = await client.v1.identity.get_commitments()
+
+    # Unstable API
+    response = await client.unstable.open_access.get_latest_neurons(netuid=NetUid(1))
+    response = await client.unstable.identity.get_commitments()
+```
+
+> **Note:** The unstable API may change with breaking modifications in any release.
+> See the [Versioning documentation](VERSIONS.md#unstable-api) for details.
 
 ## API Reference
 
-### Open Access API (`client.open_access`)
+### Open Access API (`client.v1.open_access`)
 
 To use these methods you might need to provide open access token via client config,
 depending on the service configuration.
@@ -172,7 +187,7 @@ Target subnet is chosen based on the netuid passed to the method via the argumen
 | `get_commitments(netuid)` | Get all commitments for the subnet |
 | `get_commitment(netuid, hotkey)` | Get commitment for specific hotkey |
 
-### Identity API (`client.identity`)
+### Identity API (`client.v1.identity`)
 
 To use these methods you must provide the identity name and token via client config.
 
@@ -223,7 +238,7 @@ of available options.
 **Example: Retry up to 5 times with random wait:**
 
 ```python
-from pylon_client.v1 import AsyncConfig, ASYNC_DEFAULT_RETRIES
+from pylon_client.artanis import AsyncConfig, ASYNC_DEFAULT_RETRIES
 from tenacity import stop_after_attempt, wait_random
 
 config = AsyncConfig(
@@ -239,7 +254,7 @@ config = AsyncConfig(
 ### Disable Retries (for testing)
 
 ```python
-from pylon_client.v1 import AsyncConfig, ASYNC_DEFAULT_RETRIES
+from pylon_client.artanis import AsyncConfig, ASYNC_DEFAULT_RETRIES
 from tenacity import stop_after_attempt
 
 config = AsyncConfig(
@@ -271,7 +286,7 @@ responses raise `PylonTimeoutException` and are retried automatically.
 ### Custom Timeout Configuration
 
 ```python
-from pylon_client.v1 import AsyncConfig, PylonTimeout
+from pylon_client.artanis import AsyncConfig, PylonTimeout
 
 config = AsyncConfig(
     address="http://localhost:8000",
@@ -300,13 +315,13 @@ BasePylonException
 **Example:**
 
 ```python
-from pylon_client.v1 import AsyncPylonClient, AsyncConfig, NetUid, PylonRequestException
+from pylon_client.artanis import AsyncPylonClient, AsyncConfig, NetUid, PylonRequestException
 
 config = AsyncConfig(address="http://localhost:8000", open_access_token="my_token")
 
 async with AsyncPylonClient(config) as client:
     try:
-        response = await client.open_access.get_latest_neurons(netuid=NetUid(1))
+        response = await client.v1.open_access.get_latest_neurons(netuid=NetUid(1))
     except PylonRequestException:
         print("Network or connection error")
 ```
@@ -317,10 +332,11 @@ The client provides strongly-typed [pydantic](https://docs.pydantic.dev/latest/)
 for all Bittensor data:
 
 ```python
-from pylon_client.v1 import (
+from pylon_client.artanis import (
     # Core types
     Hotkey, Coldkey, BlockNumber, NetUid, Weight,
-
+)
+from pylon_client.artanis.v1 import (
     # Models
     Block, Neuron, AxonInfo, Stakes,
 

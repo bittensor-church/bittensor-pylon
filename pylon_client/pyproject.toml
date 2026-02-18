@@ -61,6 +61,8 @@ extend-select = ["DOC501"]
 
 [tool.ruff.lint.per-file-ignores]
 "__init__.py" = ["I", "F401"]
+"pylon_client/v1/__init__.py" = ["E402"]
+"pylon_client/artanis/*.py" = ["F401"]
 
 [tool.ruff.lint.flake8-bugbear]
 extend-immutable-calls = [

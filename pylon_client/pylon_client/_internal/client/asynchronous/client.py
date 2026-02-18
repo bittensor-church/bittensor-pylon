@@ -1,23 +1,25 @@
 import logging
+import warnings
 from abc import ABC
 from typing import Generic, TypeVar
 
-from pylon_client._internal.asynchronous.api import (
+from pylon_client._internal.api._unstable.asynchronous.api import AsyncIdentityApi as UnstableAsyncIdentityApi
+from pylon_client._internal.api._unstable.asynchronous.api import AsyncOpenAccessApi as UnstableAsyncOpenAccessApi
+from pylon_client._internal.api.abstract_async import (
     AbstractAsyncIdentityApi,
     AbstractAsyncOpenAccessApi,
-    AsyncIdentityApi,
-    AsyncOpenAccessApi,
 )
-from pylon_client._internal.asynchronous.communicators import AbstractAsyncCommunicator, AsyncHttpCommunicator
-from pylon_client._internal.asynchronous.config import AsyncConfig
+from pylon_client._internal.api.v1.asynchronous.api import AsyncIdentityApi, AsyncOpenAccessApi
+from pylon_client._internal.client.asynchronous.communicators import AbstractAsyncCommunicator, AsyncHttpCommunicator
+from pylon_client._internal.client.asynchronous.config import AsyncConfig
+from pylon_client._internal.client.namespace import ClientNamespace
 
-OpenAccessApiT = TypeVar("OpenAccessApiT", bound=AbstractAsyncOpenAccessApi)
-IdentityApiT = TypeVar("IdentityApiT", bound=AbstractAsyncIdentityApi)
 CommunicatorT = TypeVar("CommunicatorT", bound=AbstractAsyncCommunicator)
+
 logger = logging.getLogger(__name__)
 
 
-class AbstractAsyncPylonClient(Generic[OpenAccessApiT, IdentityApiT, CommunicatorT], ABC):
+class AbstractAsyncPylonClient(Generic[CommunicatorT], ABC):
     """
     Base for every async Pylon client.
 
@@ -33,17 +35,47 @@ class AbstractAsyncPylonClient(Generic[OpenAccessApiT, IdentityApiT, Communicato
             response = await client.identity.get_latest_neurons()
     """
 
-    _open_access_api_cls: type[OpenAccessApiT]
-    _identity_api_cls: type[IdentityApiT]
     _communicator_cls: type[CommunicatorT]
+
+    config: AsyncConfig
+
+    v1: ClientNamespace[AsyncOpenAccessApi, AsyncIdentityApi]
+    unstable: ClientNamespace[UnstableAsyncOpenAccessApi, UnstableAsyncIdentityApi]
 
     def __init__(self, config: AsyncConfig):
         self.config = config
         self._open_access_communicator = self._communicator_cls(config)
         self._identity_communicator = self._communicator_cls(config)
-        self.open_access: OpenAccessApiT = self._open_access_api_cls(self._open_access_communicator)
-        self.identity: IdentityApiT = self._identity_api_cls(self._identity_communicator)
+
+        self.v1 = ClientNamespace(
+            open_access=AsyncOpenAccessApi(self._open_access_communicator),
+            identity=AsyncIdentityApi(self._identity_communicator),
+        )
+
+        self.unstable = ClientNamespace(
+            open_access=UnstableAsyncOpenAccessApi(self._open_access_communicator),
+            identity=UnstableAsyncIdentityApi(self._identity_communicator),
+        )
+
         self.is_open = False
+
+    @property
+    def open_access(self) -> AbstractAsyncOpenAccessApi:
+        warnings.warn(
+            "client.open_access is deprecated, use client.v1.open_access instead.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        return self.v1.open_access
+
+    @property
+    def identity(self) -> AbstractAsyncIdentityApi:
+        warnings.warn(
+            "client.identity is deprecated, use client.v1.identity instead.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        return self.v1.identity
 
     async def __aenter__(self):
         await self.open()
@@ -81,7 +113,5 @@ class AbstractAsyncPylonClient(Generic[OpenAccessApiT, IdentityApiT, Communicato
         await self._identity_communicator.close()
 
 
-class AsyncPylonClient(AbstractAsyncPylonClient[AsyncOpenAccessApi, AsyncIdentityApi, AsyncHttpCommunicator]):
-    _open_access_api_cls = AsyncOpenAccessApi
-    _identity_api_cls = AsyncIdentityApi
+class AsyncPylonClient(AbstractAsyncPylonClient[AsyncHttpCommunicator]):
     _communicator_cls = AsyncHttpCommunicator

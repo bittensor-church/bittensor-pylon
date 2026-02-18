@@ -1,10 +1,12 @@
+import re
 import typing
 
-from pydantic import BaseModel, field_validator
+from pydantic import BaseModel, Field, field_validator
 
-from ..models import CertificateAlgorithm
+from ..apiver import ApiVersion
 from ..types import BlockNumber, ExtrinsicIndex, Hotkey, IdentityName, NetUid
 from .bodies import LoginBody, SetCommitmentBody, SetWeightsBody
+from .models import CertificateAlgorithm
 from .responses import (
     GetCommitmentResponse,
     GetCommitmentsResponse,
@@ -35,6 +37,13 @@ class PylonRequest(BaseModel, typing.Generic[PylonResponseT]):
     """
 
     response_cls: typing.ClassVar[type[PylonResponseT]]  # type: ignore[reportGeneralTypeIssues]
+
+    api_version: ApiVersion = Field(default=ApiVersion.UNSTABLE, exclude=True)
+
+    @property
+    def request_type(self) -> str:
+        name = type(self).__name__.removesuffix("Request")
+        return re.sub(r"(?<=[a-z0-9])(?=[A-Z])|(?<=[A-Z])(?=[A-Z][a-z])", "_", name).lower()
 
 
 # Request classes used to log in into Pylon

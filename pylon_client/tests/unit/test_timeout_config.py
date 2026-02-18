@@ -6,16 +6,16 @@ import pytest
 from httpx import Response, codes
 from tenacity import stop_after_attempt
 
-from pylon_client._internal.asynchronous.client import AsyncPylonClient
-from pylon_client._internal.asynchronous.config import ASYNC_DEFAULT_RETRIES, AsyncConfig
+from pylon_client._internal.client.asynchronous.client import AsyncPylonClient
+from pylon_client._internal.client.asynchronous.config import ASYNC_DEFAULT_RETRIES, AsyncConfig
+from pylon_client._internal.client.sync.client import PylonClient
+from pylon_client._internal.client.sync.config import DEFAULT_RETRIES, Config
 from pylon_client._internal.pylon_commons.exceptions import PylonTimeoutException
 from pylon_client._internal.pylon_commons.models import Block
 from pylon_client._internal.pylon_commons.timeout import TIMEOUT_HEADER, PylonTimeout
 from pylon_client._internal.pylon_commons.types import BlockHash, BlockNumber, NetUid, PylonAuthToken
 from pylon_client._internal.pylon_commons.v1.endpoints import Endpoint as EndpointV1
 from pylon_client._internal.pylon_commons.v1.responses import GetNeuronsResponse
-from pylon_client._internal.sync.client import PylonClient
-from pylon_client._internal.sync.config import DEFAULT_RETRIES, Config
 
 NEURONS_URL = EndpointV1.RECENT_NEURONS.absolute_url(netuid_=NetUid(1))
 NEURONS_RESPONSE_JSON = GetNeuronsResponse(
