@@ -210,7 +210,7 @@ class AbstractBittensorClient(ABC):
     @abstractmethod
     async def get_commitments(self, netuid: NetUid, block: Block) -> SubnetCommitments:
         """
-        Fetches all commitments for a subnet.
+        Fetches commitments for currently registered hotkeys in a subnet.
         """
 
     @abstractmethod
@@ -609,12 +609,16 @@ class TurboBtClient(AbstractBittensorClient):
     )
     async def get_commitments(self, netuid: NetUid, block: Block) -> SubnetCommitments:
         logger.debug(f"Fetching all commitments from subnet {netuid} at block {block.number}, {self.uri}")
-        raw_commitments = await self._protect_turbobt(
-            lambda c: c.subnet(netuid).commitments.fetch(block_hash=block.hash)
+        raw_commitments, state = await asyncio.gather(
+            self._protect_turbobt(lambda c: c.subnet(netuid).commitments.fetch(block_hash=block.hash)),
+            self.get_subnet_state(netuid, block),
         )
+        registered_hotkeys = set(state.hotkeys)
         commitments: dict[Hotkey, Commitment] = {}
         for hotkey_str, result in raw_commitments.items():
             hotkey = Hotkey(hotkey_str)
+            if hotkey not in registered_hotkeys:
+                continue
             commitments[hotkey] = Commitment(
                 commitment_block_number=BlockNumber(result["block"]),
                 hotkey=hotkey,
