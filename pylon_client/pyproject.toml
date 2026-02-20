@@ -60,9 +60,11 @@ explicit-preview-rules = true
 extend-select = ["DOC501"]
 
 [tool.ruff.lint.per-file-ignores]
+# F401 = unused imports
 "__init__.py" = ["I", "F401"]
-"pylon_client/v1/__init__.py" = ["E402"]
 "pylon_client/artanis/*.py" = ["F401"]
+# E402 = imports that are not at the top of the file
+"pylon_client/v1/__init__.py" = ["E402"]
 
 [tool.ruff.lint.flake8-bugbear]
 extend-immutable-calls = [
