@@ -1,6 +1,7 @@
 from pydantic import BaseModel
 
-from ..models import (
+from ..types import IdentityName, NetUid
+from .models import (
     Block,
     BlockInfoBag,
     Commitment,
@@ -9,7 +10,6 @@ from ..models import (
     SubnetNeurons,
     SubnetValidators,
 )
-from ..types import IdentityName, NetUid
 
 
 class PylonResponse(BaseModel):

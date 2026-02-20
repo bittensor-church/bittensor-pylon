@@ -1,7 +1,6 @@
 import logging
 from abc import ABC, abstractmethod
-from functools import singledispatchmethod
-from typing import Generic, TypeVar
+from typing import Any, Generic, TypeVar
 
 from httpx import (
     AsyncClient,
@@ -17,8 +16,12 @@ from httpx import (
 )
 from httpx import Timeout as HttpxTimeout
 
-from pylon_client._internal.asynchronous.config import AsyncConfig
-from pylon_client._internal.pylon_commons.endpoints import Endpoint
+from pylon_client._internal.api._unstable.translators import HttpTranslator as UnstableHttpTranslator
+from pylon_client._internal.api.v1.translators import HttpTranslator as V1HttpTranslator
+from pylon_client._internal.client.asynchronous.config import AsyncConfig
+from pylon_client._internal.pylon_commons._unstable.requests import PylonRequest
+from pylon_client._internal.pylon_commons._unstable.responses import PylonResponse
+from pylon_client._internal.pylon_commons.apiver import ApiVersion
 from pylon_client._internal.pylon_commons.exceptions import (
     PylonBadGateway,
     PylonClosed,
@@ -30,25 +33,7 @@ from pylon_client._internal.pylon_commons.exceptions import (
     PylonUnauthorized,
     TimeoutReason,
 )
-from pylon_client._internal.pylon_commons.v1.endpoints import Endpoint as EndpointV1
-from pylon_client._internal.pylon_commons.v1.requests import (
-    AuthenticatedPylonRequest,
-    GetCommitmentRequest,
-    GetCommitmentsRequest,
-    GetExtrinsicRequest,
-    GetLatestBlockInfoRequest,
-    GetLatestNeuronsRequest,
-    GetLatestValidatorsRequest,
-    GetNeuronsRequest,
-    GetOwnCommitmentRequest,
-    GetRecentNeuronsRequest,
-    GetValidatorsRequest,
-    IdentityLoginRequest,
-    PylonRequest,
-    SetCommitmentRequest,
-    SetWeightsRequest,
-)
-from pylon_client._internal.pylon_commons.v1.responses import PylonResponse
+from pylon_client._internal.translators import AbstractRequestTranslator
 
 RawRequestT = TypeVar("RawRequestT")
 RawResponseT = TypeVar("RawResponseT")
@@ -66,6 +51,8 @@ class AbstractAsyncCommunicator(Generic[RawRequestT, RawResponseT], ABC):
     interface (Api classes) and the Pylon API interface,
     for example, changing an http response object into a PylonResponse object.
     """
+
+    _translators: dict[ApiVersion, AbstractRequestTranslator[RawRequestT, Any]]
 
     def __init__(self, config: AsyncConfig):
         self.config = config
@@ -117,14 +104,14 @@ class AbstractAsyncCommunicator(Generic[RawRequestT, RawResponseT], ABC):
         """
         if not self.is_open:
             raise PylonClosed("The communicator is closed.")
-        raw_request = await self._translate_request(request)
+        raw_request = self._translate_request(request)
         raw_response: RawResponseT | None = None
         async for attempt in self.config.retry.copy():
             with attempt:
                 raw_response = await self._request(raw_request)
 
         assert raw_response is not None
-        return await self._translate_response(request, raw_response)
+        return self._translate_response(request, raw_response)
 
     @abstractmethod
     async def _open(self) -> None:
@@ -148,14 +135,15 @@ class AbstractAsyncCommunicator(Generic[RawRequestT, RawResponseT], ABC):
             PylonRequestError: In case the request fails (no response is received from the server).
         """
 
-    @abstractmethod
-    async def _translate_request(self, request: PylonRequest) -> RawRequestT:
+    def _translate_request(self, request: PylonRequest) -> RawRequestT:
         """
         Translates PylonRequest into a raw request object that will be used to communicate with Pylon.
         """
+        translator = self._translators[request.api_version]
+        return translator.translate(request, self)
 
     @abstractmethod
-    async def _translate_response(
+    def _translate_response(
         self, pylon_request: PylonRequest[PylonResponseT], response: RawResponseT
     ) -> PylonResponseT:
         """
@@ -174,6 +162,15 @@ class AsyncHttpCommunicator(AbstractAsyncCommunicator[Request, Response]):
     def __init__(self, config: AsyncConfig):
         super().__init__(config)
         self._raw_client: AsyncClient | None = None
+        self._translators = {
+            ApiVersion.V1: V1HttpTranslator(),
+            ApiVersion.UNSTABLE: UnstableHttpTranslator(),
+        }
+
+    @property
+    def raw_client(self) -> AsyncClient:
+        assert self._raw_client is not None, "Communicator is not open."
+        return self._raw_client
 
     async def _open(self) -> None:
         logger.debug(f"Opening communicator for the server {self.config.address}")
@@ -195,110 +192,7 @@ class AsyncHttpCommunicator(AbstractAsyncCommunicator[Request, Response]):
             await self._raw_client.aclose()
         self._raw_client = None
 
-    def _build_url(self, endpoint: Endpoint, request: PylonRequest) -> str:
-        if isinstance(request, AuthenticatedPylonRequest):
-            return endpoint.absolute_url(
-                netuid_=request.netuid,
-                identity_name_=request.identity_name,
-                **request.model_dump(exclude={"netuid", "identity_name"}),
-            )
-        return endpoint.absolute_url(**request.model_dump())
-
-    @singledispatchmethod
-    async def _translate_request(self, request: PylonRequest) -> Request:  # type: ignore
-        raise NotImplementedError(f"Request of type {type(request).__name__} is not supported.")
-
-    @_translate_request.register
-    async def _(self, request: SetWeightsRequest) -> Request:
-        assert self._raw_client is not None
-        url = self._build_url(EndpointV1.SUBNET_WEIGHTS, request)
-        return self._raw_client.build_request(
-            method=EndpointV1.SUBNET_WEIGHTS.method,
-            url=url,
-            json=request.model_dump(include={"weights"}),
-        )
-
-    @_translate_request.register
-    async def _(self, request: GetNeuronsRequest) -> Request:
-        assert self._raw_client is not None
-        url = self._build_url(EndpointV1.NEURONS, request)
-        return self._raw_client.build_request(method=EndpointV1.NEURONS.method, url=url)
-
-    @_translate_request.register
-    async def _(self, request: GetLatestNeuronsRequest) -> Request:
-        assert self._raw_client is not None
-        url = self._build_url(EndpointV1.LATEST_NEURONS, request)
-        return self._raw_client.build_request(method=EndpointV1.LATEST_NEURONS.method, url=url)
-
-    @_translate_request.register
-    async def _(self, request: GetRecentNeuronsRequest) -> Request:
-        assert self._raw_client is not None
-        url = self._build_url(EndpointV1.RECENT_NEURONS, request)
-        return self._raw_client.build_request(method=EndpointV1.RECENT_NEURONS.method, url=url)
-
-    @_translate_request.register
-    async def _(self, request: GetValidatorsRequest) -> Request:
-        assert self._raw_client is not None
-        url = self._build_url(EndpointV1.VALIDATORS, request)
-        return self._raw_client.build_request(method=EndpointV1.VALIDATORS.method, url=url)
-
-    @_translate_request.register
-    async def _(self, request: GetLatestValidatorsRequest) -> Request:
-        assert self._raw_client is not None
-        url = self._build_url(EndpointV1.LATEST_VALIDATORS, request)
-        return self._raw_client.build_request(method=EndpointV1.LATEST_VALIDATORS.method, url=url)
-
-    @_translate_request.register
-    async def _(self, request: IdentityLoginRequest) -> Request:
-        assert self._raw_client is not None
-        url = self._build_url(EndpointV1.IDENTITY_LOGIN, request)
-        return self._raw_client.build_request(
-            method=EndpointV1.IDENTITY_LOGIN.method, url=url, json=request.model_dump()
-        )
-
-    @_translate_request.register
-    async def _(self, request: GetCommitmentsRequest) -> Request:
-        assert self._raw_client is not None
-        url = self._build_url(EndpointV1.LATEST_COMMITMENTS, request)
-        return self._raw_client.build_request(method=EndpointV1.LATEST_COMMITMENTS.method, url=url)
-
-    @_translate_request.register
-    async def _(self, request: GetCommitmentRequest) -> Request:
-        assert self._raw_client is not None
-        url = self._build_url(EndpointV1.LATEST_COMMITMENTS_HOTKEY, request)
-        return self._raw_client.build_request(method=EndpointV1.LATEST_COMMITMENTS_HOTKEY.method, url=url)
-
-    @_translate_request.register
-    async def _(self, request: GetOwnCommitmentRequest) -> Request:
-        assert self._raw_client is not None
-        url = self._build_url(EndpointV1.LATEST_COMMITMENTS_SELF, request)
-        return self._raw_client.build_request(method=EndpointV1.LATEST_COMMITMENTS_SELF.method, url=url)
-
-    @_translate_request.register
-    async def _(self, request: SetCommitmentRequest) -> Request:
-        assert self._raw_client is not None
-        url = self._build_url(EndpointV1.COMMITMENTS, request)
-        return self._raw_client.build_request(
-            method=EndpointV1.COMMITMENTS.method,
-            url=url,
-            json=request.model_dump(include={"commitment"}),
-        )
-
-    @_translate_request.register
-    async def _(self, request: GetLatestBlockInfoRequest) -> Request:
-        assert self._raw_client is not None
-        url = self._build_url(EndpointV1.LATEST_BLOCK_INFO, request)
-        return self._raw_client.build_request(method=EndpointV1.LATEST_BLOCK_INFO.method, url=url)
-
-    @_translate_request.register
-    async def _(self, request: GetExtrinsicRequest) -> Request:
-        assert self._raw_client is not None
-        url = self._build_url(EndpointV1.EXTRINSIC, request)
-        return self._raw_client.build_request(method=EndpointV1.EXTRINSIC.method, url=url)
-
-    async def _translate_response(
-        self, pylon_request: PylonRequest[PylonResponseT], response: Response
-    ) -> PylonResponseT:
+    def _translate_response(self, pylon_request: PylonRequest[PylonResponseT], response: Response) -> PylonResponseT:
         return pylon_request.response_cls(**response.json())
 
     async def _request(self, request: Request) -> Response:

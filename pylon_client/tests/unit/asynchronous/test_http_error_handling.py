@@ -5,7 +5,7 @@ Tests for HTTP error handling in the async communicator.
 import pytest
 from httpx import ConnectTimeout, PoolTimeout, ReadTimeout, Response, TimeoutException, WriteTimeout, codes
 
-from pylon_client._internal.asynchronous.client import AsyncPylonClient
+from pylon_client._internal.client.asynchronous.client import AsyncPylonClient
 from pylon_client._internal.pylon_commons.exceptions import (
     PylonBadGateway,
     PylonForbidden,

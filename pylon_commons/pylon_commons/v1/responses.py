@@ -11,8 +11,8 @@ from .._unstable.responses import (  # noqa: F401
     SetCommitmentResponse,
     SetWeightsResponse,
 )
-from ..models import Block
 from ..types import CommitmentDataHex, Hotkey
+from .models import Block
 
 __all__ = [
     "GetCommitmentResponse",

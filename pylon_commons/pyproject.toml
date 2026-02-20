@@ -49,6 +49,8 @@ extend-select = ["DOC501"]
 
 [tool.ruff.lint.per-file-ignores]
 "__init__.py" = ["I", "F401"]
+"pylon_commons/v1/models.py" = ["F401"]
+"pylon_commons/_unstable/models.py" = ["F401"]
 
 [tool.ruff.lint.flake8-bugbear]
 extend-immutable-calls = [

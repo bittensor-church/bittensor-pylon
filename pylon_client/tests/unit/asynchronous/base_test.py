@@ -4,7 +4,7 @@ from http import HTTPMethod
 import pytest
 from httpx import ConnectError, Response, codes
 
-from pylon_client._internal.asynchronous.client import AsyncPylonClient
+from pylon_client._internal.client.asynchronous.client import AsyncPylonClient
 from pylon_client._internal.pylon_commons.endpoints import Endpoint
 from pylon_client._internal.pylon_commons.exceptions import (
     PylonClosed,

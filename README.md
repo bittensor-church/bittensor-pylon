@@ -41,7 +41,7 @@ The benefits of using Pylon are:
 
     ```python
     import asyncio
-    from pylon_client.v1 import AsyncPylonClient, AsyncConfig, NetUid
+    from pylon_client.artanis import AsyncPylonClient, AsyncConfig, NetUid
 
     async def main():
         config = AsyncConfig(
@@ -49,7 +49,7 @@ The benefits of using Pylon are:
             open_access_token="my_open_access_token",
         )
         async with AsyncPylonClient(config) as client:
-            response = await client.open_access.get_latest_neurons(netuid=NetUid(1))
+            response = await client.v1.open_access.get_latest_neurons(netuid=NetUid(1))
             print(f"Block: {response.block.number}, Neurons: {len(response.neurons)}")
 
     asyncio.run(main())
@@ -83,7 +83,7 @@ After that, operations like setting weights are just one method call away:
 
 ```python
 import asyncio
-from pylon_client.v1 import AsyncPylonClient, AsyncConfig, Hotkey, Weight
+from pylon_client.artanis import AsyncPylonClient, AsyncConfig, Hotkey, Weight
 
 async def main():
     config = AsyncConfig(
@@ -93,7 +93,7 @@ async def main():
     )
     async with AsyncPylonClient(config) as client:
         weights = {Hotkey("5C..."): Weight(0.5), Hotkey("5D..."): Weight(0.3)}
-        await client.identity.put_weights(weights=weights)
+        await client.v1.identity.put_weights(weights=weights)
 
 asyncio.run(main())
 ```
@@ -102,6 +102,7 @@ asyncio.run(main())
 
 - **[Pylon Documentation](docs/SERVICE.md)** - Configuration, deployment, and observability
 - **[Pylon Client Documentation](docs/CLIENT.md)** - Installation, usage, and API reference
+- **[Versioning](docs/VERSIONS.md)** - Package versioning, API versioning, and migration guide
 
 ## Development
 
@@ -123,9 +124,10 @@ Instead, it is vendored into `pylon_client` via a symlink at `pylon_client/_inte
 - **In development**: The symlink points to `pylon_commons`, so changes are reflected immediately
 - **In release**: The symlink contents are copied into the wheel at build time
 
-The client re-exports common objects through `pylon_client.v1`:
+The client re-exports common objects through `pylon_client.artanis`:
 ```python
-from pylon_client.v1 import Hotkey, Block, Neuron
+from pylon_client.artanis import Hotkey
+from pylon_client.artanis.v1 import Block, Neuron
 ```
 
 ### Setup

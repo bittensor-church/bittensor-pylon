@@ -1,9 +1,9 @@
 import pytest
 
+from pylon_client._internal.client.sync.client import PylonClient
+from pylon_client._internal.client.sync.config import Config
 from pylon_client._internal.pylon_commons.types import IdentityName, NetUid, PylonAuthToken
 from pylon_client._internal.pylon_commons.v1.responses import IdentityLoginResponse
-from pylon_client._internal.sync.client import PylonClient
-from pylon_client._internal.sync.config import Config
 from tests.pact.constants import IDENTITY_NAME, NETUID
 
 

@@ -1,18 +1,18 @@
-from tenacity import Retrying, retry_if_exception_type, stop_after_attempt, wait_exponential_jitter
+from tenacity import AsyncRetrying, retry_if_exception_type, stop_after_attempt, wait_exponential_jitter
 
-from pylon_client._internal.config import BaseConfig
+from pylon_client._internal.client.config import BaseConfig
 from pylon_client._internal.pylon_commons.exceptions import PylonRequestException
 
-DEFAULT_RETRIES = Retrying(
+ASYNC_DEFAULT_RETRIES = AsyncRetrying(
     wait=wait_exponential_jitter(initial=0.1, jitter=0.2),
     stop=stop_after_attempt(3),
     retry=retry_if_exception_type(PylonRequestException),
 )
 
 
-class Config(BaseConfig[Retrying]):
+class AsyncConfig(BaseConfig[AsyncRetrying]):
     """
-    Configuration for the synchronous Pylon clients.
+    Configuration for the asynchronous Pylon clients.
 
     Args:
         address (required): The Pylon service address.
@@ -22,4 +22,4 @@ class Config(BaseConfig[Retrying]):
         retry: Configuration of retrying in case of a failed request.
     """
 
-    retry: Retrying = DEFAULT_RETRIES.copy()
+    retry: AsyncRetrying = ASYNC_DEFAULT_RETRIES.copy()
