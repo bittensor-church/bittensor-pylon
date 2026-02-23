@@ -40,8 +40,13 @@ from pylon_client._internal.pylon_commons.v1.models import (
 from pylon_client._internal.pylon_commons.v1.responses import (
     GetCommitmentResponse,
     GetCommitmentsResponse,
+    GetExtrinsicResponse,
+    GetLatestBlockInfoResponse,
     GetNeuronsResponse,
     GetValidatorsResponse,
+    IdentityLoginResponse,
+    LoginResponse,
+    OpenAccessLoginResponse,
     PylonResponse,
     SetCommitmentResponse,
     SetWeightsResponse,
