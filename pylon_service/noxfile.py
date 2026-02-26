@@ -20,6 +20,20 @@ def test_pact(session):
     session.run("pytest", "-s", "-vv", "tests/pact/", *session.posargs, env={"PYLON_ENV_FILE": "tests/.test-env"})
 
 
+@nox.session(name="test-integration", python=PYTHON_VERSION)
+def test_integration(session):
+    session.run("uv", "sync", "--active", "--extra", "dev")
+    session.run(
+        "pytest",
+        "-s",
+        "-vv",
+        "--log-cli-level=INFO",
+        "tests/integration/",
+        *session.posargs,
+        env={"PYLON_ENV_FILE": "tests/.test-env"},
+    )
+
+
 @nox.session(name="format", python=PYTHON_VERSION)
 def format(session):
     session.run("uv", "sync", "--active", "--extra", "dev")
@@ -54,6 +68,28 @@ def release(session):
         session.error("Aborted by user")
     session.run("git", "tag", "-a", tag_name, "-m", tag_message, "origin/master", external=True)
     session.run("git", "push", "origin", tag_name, external=True)
+
+
+@nox.session(name="prepare-localchain", python=PYTHON_VERSION, default=False)
+def prepare_localchain(session):
+    """
+    Prepare the local subtensor chain snapshot for integration tests.
+
+    Creates a Docker image with pre-configured chain state (subnets, neurons, stake).
+    Run this once to create the snapshot, or when the chain state needs updating.
+
+    Usage:
+      nox -s prepare-localchain
+    """
+    session.run("uv", "sync", "--active", "--extra", "dev")
+    session.run(
+        "uv",
+        "run",
+        "--active",
+        "python",
+        "-m",
+        "tests.integration.localchain.prepare_chain",
+    )
 
 
 @nox.session(name="build-docker", python=False, default=False)

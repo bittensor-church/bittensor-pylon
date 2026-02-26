@@ -33,6 +33,16 @@ def test_pact(session):
     _run_nox_in_package(session, "pylon_service", "test-pact")
 
 
+@nox.session(name="test-integration", python=False)
+def test_integration(session):
+    _run_nox_in_package(session, "pylon_service", "test-integration")
+
+
+@nox.session(name="prepare-localchain", python=False, default=False)
+def prepare_localchain(session):
+    _run_nox_in_package(session, "pylon_service", "prepare-localchain")
+
+
 @nox.session(name="format", python=False)
 def format(session):
     for package in PACKAGES:

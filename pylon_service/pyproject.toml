@@ -6,7 +6,7 @@ requires-python = ">=3.13"
 authors = [{name = "Reef Technologies", email = "opensource@reef.pl"}]
 dependencies = [
     "bittensor-pylon-commons",
-    "turbobt>=1.0.0",
+    "turbobt>=1.0.1.dev3",
     "litestar[standard,prometheus]",
     "bittensor_wallet",
     "sentry-sdk[litestar]",
@@ -21,6 +21,9 @@ dev = [
     "pytest-asyncio>=1.0.0",
     "polyfactory>=2.22.2",
     "pact-python>=2.0.0",
+    "bittensor-pylon-client",
+    "docker",
+    "httpx",
     "ruff",
     "pyright",
     "nox",
@@ -49,6 +52,7 @@ package = true
 
 [tool.uv.sources]
 bittensor-pylon-commons = { path = "../pylon_commons", editable = true }
+bittensor-pylon-client = { path = "../pylon_client", editable = true }
 
 [tool.ruff]
 line-length = 120

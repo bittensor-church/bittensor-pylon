@@ -76,6 +76,36 @@ wheels = [
 ]
 
 [[package]]
+name = "bittensor-pylon-client"
+source = { editable = "../pylon_client" }
+dependencies = [
+    { name = "apscheduler" },
+    { name = "docker" },
+    { name = "httpx" },
+    { name = "pydantic" },
+    { name = "pydantic-settings" },
+    { name = "tenacity" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "apscheduler" },
+    { name = "docker" },
+    { name = "httpx" },
+    { name = "pact-python", marker = "extra == 'dev'", specifier = ">=2.0.0" },
+    { name = "polyfactory", marker = "extra == 'dev'", specifier = ">=2.22.2" },
+    { name = "pydantic", specifier = ">=2.0" },
+    { name = "pydantic-settings", specifier = ">=2.0" },
+    { name = "pyright", marker = "extra == 'dev'" },
+    { name = "pytest", marker = "extra == 'dev'" },
+    { name = "pytest-asyncio", marker = "extra == 'dev'", specifier = ">=1.0.0" },
+    { name = "respx", marker = "extra == 'dev'", specifier = ">=0.22.0" },
+    { name = "ruff", marker = "extra == 'dev'" },
+    { name = "tenacity" },
+]
+provides-extras = ["dev"]
+
+[[package]]
 name = "bittensor-pylon-commons"
 source = { editable = "../pylon_commons" }
 dependencies = [
@@ -109,6 +139,9 @@ dependencies = [
 
 [package.optional-dependencies]
 dev = [
+    { name = "bittensor-pylon-client" },
+    { name = "docker" },
+    { name = "httpx" },
     { name = "nox" },
     { name = "pact-python" },
     { name = "polyfactory" },
@@ -121,8 +154,11 @@ dev = [
 [package.metadata]
 requires-dist = [
     { name = "apscheduler" },
+    { name = "bittensor-pylon-client", marker = "extra == 'dev'", editable = "../pylon_client" },
     { name = "bittensor-pylon-commons", editable = "../pylon_commons" },
     { name = "bittensor-wallet" },
+    { name = "docker", marker = "extra == 'dev'" },
+    { name = "httpx", marker = "extra == 'dev'" },
     { name = "litestar", extras = ["prometheus", "standard"] },
     { name = "nox", marker = "extra == 'dev'" },
     { name = "pact-python", marker = "extra == 'dev'", specifier = ">=2.0.0" },
@@ -133,7 +169,7 @@ requires-dist = [
     { name = "ruff", marker = "extra == 'dev'" },
     { name = "sentry-sdk", extras = ["litestar"] },
     { name = "tenacity" },
-    { name = "turbobt", specifier = ">=1.0.0" },
+    { name = "turbobt", specifier = ">=1.0.1.dev3" },
     { name = "uvicorn", specifier = ">=0.35.0" },
 ]
 provides-extras = ["dev"]
@@ -321,6 +357,20 @@ source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/96/8e/709914eb2b5749865801041647dc7f4e6d00b549cfe88b65ca192995f07c/distlib-0.4.0.tar.gz", hash = "sha256:feec40075be03a04501a973d81f633735b4b69f98b05450592310c0f401a4e0d", size = 614605, upload-time = "2025-07-17T16:52:00.465Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/33/6b/e0547afaf41bf2c42e52430072fa5658766e3d65bd4b03a563d1b6336f57/distlib-0.4.0-py2.py3-none-any.whl", hash = "sha256:9659f7d87e46584a30b5780e43ac7a2143098441670ff0a49d5f9034c54a6c16", size = 469047, upload-time = "2025-07-17T16:51:58.613Z" },
+]
+
+[[package]]
+name = "docker"
+version = "7.1.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "pywin32", marker = "sys_platform == 'win32'" },
+    { name = "requests" },
+    { name = "urllib3" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/91/9b/4a2ea29aeba62471211598dac5d96825bb49348fa07e906ea930394a83ce/docker-7.1.0.tar.gz", hash = "sha256:ad8c70e6e3f8926cb8a92619b832b4ea5299e2831c14284663184e200546fa6c", size = 117834, upload-time = "2024-05-23T11:13:57.216Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/e3/26/57c6fb270950d476074c087527a558ccb6f4436657314bfb6cdf484114c4/docker-7.1.0-py3-none-any.whl", hash = "sha256:c96b93b7f0a746f9e77d325bcfb87422a3d8bd4f03136ae8a85b37f1898d5fc0", size = 147774, upload-time = "2024-05-23T11:13:55.01Z" },
 ]
 
 [[package]]
@@ -1108,6 +1158,19 @@ wheels = [
 ]
 
 [[package]]
+name = "pywin32"
+version = "311"
+source = { registry = "https://pypi.org/simple" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/a5/be/3fd5de0979fcb3994bfee0d65ed8ca9506a8a1260651b86174f6a86f52b3/pywin32-311-cp313-cp313-win32.whl", hash = "sha256:f95ba5a847cba10dd8c4d8fefa9f2a6cf283b8b88ed6178fa8a6c1ab16054d0d", size = 8705700, upload-time = "2025-07-14T20:13:26.471Z" },
+    { url = "https://files.pythonhosted.org/packages/e3/28/e0a1909523c6890208295a29e05c2adb2126364e289826c0a8bc7297bd5c/pywin32-311-cp313-cp313-win_amd64.whl", hash = "sha256:718a38f7e5b058e76aee1c56ddd06908116d35147e133427e59a3983f703a20d", size = 9494700, upload-time = "2025-07-14T20:13:28.243Z" },
+    { url = "https://files.pythonhosted.org/packages/04/bf/90339ac0f55726dce7d794e6d79a18a91265bdf3aa70b6b9ca52f35e022a/pywin32-311-cp313-cp313-win_arm64.whl", hash = "sha256:7b4075d959648406202d92a2310cb990fea19b535c7f4a78d3f5e10b926eeb8a", size = 8709318, upload-time = "2025-07-14T20:13:30.348Z" },
+    { url = "https://files.pythonhosted.org/packages/c9/31/097f2e132c4f16d99a22bfb777e0fd88bd8e1c634304e102f313af69ace5/pywin32-311-cp314-cp314-win32.whl", hash = "sha256:b7a2c10b93f8986666d0c803ee19b5990885872a7de910fc460f9b0c2fbf92ee", size = 8840714, upload-time = "2025-07-14T20:13:32.449Z" },
+    { url = "https://files.pythonhosted.org/packages/90/4b/07c77d8ba0e01349358082713400435347df8426208171ce297da32c313d/pywin32-311-cp314-cp314-win_amd64.whl", hash = "sha256:3aca44c046bd2ed8c90de9cb8427f581c479e594e99b5c0bb19b29c10fd6cb87", size = 9656800, upload-time = "2025-07-14T20:13:34.312Z" },
+    { url = "https://files.pythonhosted.org/packages/c0/d2/21af5c535501a7233e734b8af901574572da66fcc254cb35d0609c9080dd/pywin32-311-cp314-cp314-win_arm64.whl", hash = "sha256:a508e2d9025764a8270f93111a970e1d0fbfc33f4153b388bb649b7eec4f9b42", size = 8932540, upload-time = "2025-07-14T20:13:36.379Z" },
+]
+
+[[package]]
 name = "pyyaml"
 version = "6.0.3"
 source = { registry = "https://pypi.org/simple" }
@@ -1272,7 +1335,7 @@ wheels = [
 
 [[package]]
 name = "turbobt"
-version = "1.0.0"
+version = "1.0.1.dev3"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "bittensor-drand" },
@@ -1283,9 +1346,9 @@ dependencies = [
     { name = "websockets" },
     { name = "xxhash" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/51/9b/8442677fbc79fdf4a5ef9637b87705d3743dda433712b050402819152eea/turbobt-1.0.0.tar.gz", hash = "sha256:82cc1cc567b7da9b705bd752b54bbb4518cb788ef687f7966504ca23302ba8c9", size = 136699, upload-time = "2026-01-28T12:47:30.396Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/c9/26/08bf1888897dadbb90448cb9ec367d06c5a97253f1060a597dc754db2007/turbobt-1.0.1.dev3.tar.gz", hash = "sha256:22d2af5a77dbbdc401b6475869e45dce8f1eeca6849881d8aeef41c5e1d7773c", size = 136877, upload-time = "2026-02-20T08:58:23.97Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/f4/84/0142e92d8b8096c9fdcf15455000300b54099ec89da041e40fd47977b645/turbobt-1.0.0-py3-none-any.whl", hash = "sha256:018dceb1019500d8a9e0aa112c16d645a7b5127785dbf4d11a6d40527f596177", size = 43813, upload-time = "2026-01-28T12:47:28.89Z" },
+    { url = "https://files.pythonhosted.org/packages/b7/a5/bb0a1453b7040c994f07f47e701f541631561565830c75928209775e2cb6/turbobt-1.0.1.dev3-py3-none-any.whl", hash = "sha256:6260067f12401a540ad9a5728f52169732e84daa5b57a7a58e3a6895d6ab5539", size = 44053, upload-time = "2026-02-20T08:58:22.475Z" },
 ]
 
 [[package]]

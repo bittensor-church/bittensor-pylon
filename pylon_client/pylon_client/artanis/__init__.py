@@ -7,6 +7,7 @@ from pylon_client._internal.pylon_commons.exceptions import (
     PylonClosed,
     PylonForbidden,
     PylonMisconfigured,
+    PylonNotFound,
     PylonRequestException,
     PylonResponseException,
     PylonTimeoutException,
