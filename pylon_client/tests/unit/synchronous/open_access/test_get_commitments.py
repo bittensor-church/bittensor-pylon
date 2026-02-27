@@ -3,10 +3,9 @@ from http import HTTPMethod
 import pytest
 from httpx import Response, codes
 
-from pylon_client._internal.pylon_commons.models import Block
-from pylon_client._internal.pylon_commons.types import BlockHash, BlockNumber, CommitmentDataHex, Hotkey, NetUid
 from pylon_client._internal.pylon_commons.v1.endpoints import Endpoint as EndpointV1
-from pylon_client._internal.pylon_commons.v1.responses import GetCommitmentsResponse
+from pylon_client.artanis import BlockHash, BlockNumber, CommitmentDataHex, Hotkey, NetUid
+from pylon_client.artanis.v1 import Block, GetCommitmentsResponse
 from tests.unit.synchronous.base_test import OpenAccessEndpointTest
 
 
@@ -16,7 +15,7 @@ class TestSyncOpenAccessGetCommitments(OpenAccessEndpointTest):
     http_method = HTTPMethod.GET
 
     def make_endpoint_call(self, client):
-        return client.open_access.get_commitments(netuid=NetUid(1))
+        return client.v1.open_access.get_commitments(netuid=NetUid(1))
 
     @pytest.fixture
     def block(self) -> Block:
@@ -36,6 +35,6 @@ class TestSyncOpenAccessGetCommitments(OpenAccessEndpointTest):
         route_mock.mock(return_value=Response(status_code=codes.OK, json=response_data.model_dump(mode="json")))
 
         with pylon_client:
-            response = pylon_client.open_access.get_commitments(netuid=NetUid(1))
+            response = pylon_client.v1.open_access.get_commitments(netuid=NetUid(1))
 
         assert response == response_data

@@ -1,8 +1,8 @@
 from httpx import codes
 from pact import Pact
 
-from pylon_client._internal.pylon_commons.types import CommitmentDataHex, Hotkey
-from pylon_client._internal.pylon_commons.v1.responses import GetCommitmentsResponse
+from pylon_client.artanis import CommitmentDataHex, Hotkey
+from pylon_client.artanis.v1 import GetCommitmentsResponse
 from tests.pact.builders import build_block
 from tests.pact.constants import COMMITMENT_HEX, HOTKEY_1, HOTKEY_2, IDENTITY_NAME, NETUID
 
@@ -19,7 +19,7 @@ def test_get_commitments_success(pact: Pact, get_commitments_response_matcher: d
     with pact.serve() as srv:
         client = pylon_client_factory(str(srv.url), logged_in=True)
         with client:
-            response = client.identity.get_commitments()
+            response = client.v1.identity.get_commitments()
 
     assert response == GetCommitmentsResponse(
         block=build_block(),

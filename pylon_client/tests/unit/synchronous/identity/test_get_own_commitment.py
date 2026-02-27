@@ -2,10 +2,9 @@ from http import HTTPMethod
 
 import pytest
 
-from pylon_client._internal.pylon_commons.models import Block
-from pylon_client._internal.pylon_commons.types import BlockHash, BlockNumber, CommitmentDataHex, Hotkey
 from pylon_client._internal.pylon_commons.v1.endpoints import Endpoint as EndpointV1
-from pylon_client._internal.pylon_commons.v1.responses import GetCommitmentResponse
+from pylon_client.artanis import BlockHash, BlockNumber, CommitmentDataHex, Hotkey
+from pylon_client.artanis.v1 import Block, GetCommitmentResponse
 from tests.unit.synchronous.base_test import IdentityEndpointTest
 
 
@@ -15,7 +14,7 @@ class TestSyncIdentityGetOwnCommitment(IdentityEndpointTest):
     http_method = HTTPMethod.GET
 
     def make_endpoint_call(self, client):
-        return client.identity.get_own_commitment()
+        return client.v1.identity.get_own_commitment()
 
     @pytest.fixture
     def success_response(self) -> GetCommitmentResponse:

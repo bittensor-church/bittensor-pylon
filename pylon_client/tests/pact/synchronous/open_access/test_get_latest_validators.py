@@ -1,8 +1,8 @@
 from httpx import codes
 from pact import Pact
 
-from pylon_client._internal.pylon_commons.types import NetUid
-from pylon_client._internal.pylon_commons.v1.responses import GetValidatorsResponse
+from pylon_client.artanis import NetUid
+from pylon_client.artanis.v1 import GetValidatorsResponse
 from tests.pact.builders import build_block, build_neuron
 from tests.pact.constants import HOTKEY_1
 
@@ -19,7 +19,7 @@ def test_get_latest_validators_success(pact: Pact, get_validators_response_match
     with pact.serve() as srv:
         client = pylon_client_factory(str(srv.url))
         with client:
-            response = client.open_access.get_latest_validators(netuid=NetUid(1))
+            response = client.v1.open_access.get_latest_validators(netuid=NetUid(1))
 
     assert response == GetValidatorsResponse(
         block=build_block(),

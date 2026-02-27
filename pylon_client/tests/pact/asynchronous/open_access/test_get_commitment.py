@@ -2,8 +2,8 @@ import pytest
 from httpx import codes
 from pact import Pact
 
-from pylon_client._internal.pylon_commons.types import BlockNumber, CommitmentDataHex, Hotkey, NetUid
-from pylon_client._internal.pylon_commons.v1.responses import GetCommitmentResponse
+from pylon_client.artanis import BlockNumber, CommitmentDataHex, Hotkey, NetUid
+from pylon_client.artanis.v1 import GetCommitmentResponse
 from tests.pact.builders import build_block
 from tests.pact.constants import BLOCK_NUMBER, COMMITMENT_HEX, HOTKEY_1
 
@@ -21,7 +21,7 @@ async def test_get_commitment_success(pact: Pact, get_commitment_response_matche
     with pact.serve() as srv:
         client = pylon_client_factory(str(srv.url))
         async with client:
-            response = await client.open_access.get_commitment(netuid=NetUid(1), hotkey=Hotkey(HOTKEY_1))
+            response = await client.v1.open_access.get_commitment(netuid=NetUid(1), hotkey=Hotkey(HOTKEY_1))
 
     assert response == GetCommitmentResponse(
         block=build_block(),

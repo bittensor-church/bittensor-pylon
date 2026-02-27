@@ -2,8 +2,8 @@ import pytest
 from httpx import codes
 from pact import Pact
 
-from pylon_client._internal.pylon_commons.types import BlockNumber, ExtrinsicIndex
-from pylon_client._internal.pylon_commons.v1.responses import GetExtrinsicResponse
+from pylon_client.artanis import BlockNumber, ExtrinsicIndex
+from pylon_client.artanis.v1 import GetExtrinsicResponse
 from tests.pact.builders import build_extrinsic
 from tests.pact.constants import BLOCK_NUMBER, EXTRINSIC_INDEX
 
@@ -21,7 +21,7 @@ async def test_get_extrinsic_success(pact: Pact, get_extrinsic_response_matcher:
     with pact.serve() as srv:
         client = pylon_client_factory(str(srv.url))
         async with client:
-            response = await client.open_access.get_extrinsic(
+            response = await client.v1.open_access.get_extrinsic(
                 block_number=BlockNumber(BLOCK_NUMBER),
                 extrinsic_index=ExtrinsicIndex(EXTRINSIC_INDEX),
             )
