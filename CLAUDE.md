@@ -260,13 +260,14 @@ PYLON_ID_SN1_TOKEN=secret_token_here
 
 ### Client Test Import Policy
 
-Client tests (`pylon_client/tests/`) MUST import from the public API (`pylon_client.artanis`, `pylon_client.artanis.v1`, `pylon_client.artanis.unstable`) instead of `pylon_client._internal.*`.
+Client tests (`pylon_client/tests/`) MUST default to testing the `unstable` API (`pylon_client.artanis.unstable`, `client.unstable.*`).
+V1 API (`pylon_client.artanis.v1`, `client.v1.*`) should only have separate tests where it differs from unstable (currently: `GetCommitmentsResponse`).
 
 **Exception:** Test infrastructure CAN use `_internal` imports:
-- `Endpoint` enums from `pylon_client._internal.pylon_commons.{endpoints,v1.endpoints}`
-- Request classes from `pylon_client._internal.pylon_commons.v1.requests`
+- `Endpoint` enums from `pylon_client._internal.pylon_commons.{endpoints,_unstable.endpoints,v1.endpoints}`
+- Request classes from `pylon_client._internal.pylon_commons.{_unstable,v1}.requests`
 - `TIMEOUT_HEADER` from `pylon_client._internal.pylon_commons.timeout`
-- `IdentityLoginResponse` from `pylon_client._internal.pylon_commons.v1.responses`
+- `IdentityLoginResponse` from `pylon_client._internal.pylon_commons._unstable.responses`
 
 ### Service API Testing
 

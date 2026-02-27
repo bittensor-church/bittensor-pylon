@@ -3,7 +3,7 @@ from httpx import codes
 from pact import Pact
 
 from pylon_client.artanis import BlockNumber, CommitmentDataHex, Hotkey, NetUid
-from pylon_client.artanis.v1 import GetCommitmentResponse
+from pylon_client.artanis.unstable import GetCommitmentResponse
 from tests.pact.builders import build_block
 from tests.pact.constants import BLOCK_NUMBER, COMMITMENT_HEX, HOTKEY_1
 
@@ -13,7 +13,7 @@ async def test_get_commitment_success(pact: Pact, get_commitment_response_matche
     (
         pact.upon_receiving("a request for a specific commitment")
         .given("commitment exists", netuid=1, hotkey=HOTKEY_1)
-        .with_request("GET", f"/api/v1/subnet/1/block/latest/commitments/{HOTKEY_1}")
+        .with_request("GET", f"/api/_unstable/subnet/1/block/latest/commitments/{HOTKEY_1}")
         .will_respond_with(codes.OK)
         .with_body(get_commitment_response_matcher, content_type="application/json")
     )
@@ -21,7 +21,7 @@ async def test_get_commitment_success(pact: Pact, get_commitment_response_matche
     with pact.serve() as srv:
         client = pylon_client_factory(str(srv.url))
         async with client:
-            response = await client.v1.open_access.get_commitment(netuid=NetUid(1), hotkey=Hotkey(HOTKEY_1))
+            response = await client.unstable.open_access.get_commitment(netuid=NetUid(1), hotkey=Hotkey(HOTKEY_1))
 
     assert response == GetCommitmentResponse(
         block=build_block(),

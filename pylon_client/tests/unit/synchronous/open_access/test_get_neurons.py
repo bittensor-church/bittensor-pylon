@@ -4,21 +4,21 @@ import pytest
 from httpx import Response, codes
 from pydantic import ValidationError
 
-from pylon_client._internal.pylon_commons.v1.endpoints import Endpoint as EndpointV1
+from pylon_client._internal.pylon_commons._unstable.endpoints import Endpoint as EndpointUnstable
 from pylon_client._internal.pylon_commons.v1.requests import GetNeuronsRequest
 from pylon_client.artanis import BlockHash, BlockNumber, NetUid
-from pylon_client.artanis.v1 import Block, GetNeuronsResponse
+from pylon_client.artanis.unstable import Block, GetNeuronsResponse
 from tests.factories import NeuronFactory
 from tests.unit.synchronous.base_test import OpenAccessEndpointTest
 
 
 class TestSyncOpenAccessGetNeurons(OpenAccessEndpointTest):
-    endpoint = EndpointV1.NEURONS
+    endpoint = EndpointUnstable.NEURONS
     route_params = {"netuid": 1, "block_number": 1000}
     http_method = HTTPMethod.GET
 
     def make_endpoint_call(self, client):
-        return client.v1.open_access.get_neurons(netuid=NetUid(1), block_number=BlockNumber(1000))
+        return client.unstable.open_access.get_neurons(netuid=NetUid(1), block_number=BlockNumber(1000))
 
     @pytest.fixture
     def block(self) -> Block:

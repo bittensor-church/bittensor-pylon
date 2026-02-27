@@ -2,7 +2,7 @@ from httpx import codes
 from pact import Pact
 
 from pylon_client.artanis import NetUid
-from pylon_client.artanis.v1 import GetValidatorsResponse
+from pylon_client.artanis.unstable import GetValidatorsResponse
 from tests.pact.builders import build_block, build_neuron
 from tests.pact.constants import HOTKEY_1
 
@@ -11,7 +11,7 @@ def test_get_latest_validators_success(pact: Pact, get_validators_response_match
     (
         pact.upon_receiving("a request for latest validators")
         .given("validators exist", netuid=1, validator_count=2)
-        .with_request("GET", "/api/v1/subnet/1/block/latest/validators")
+        .with_request("GET", "/api/_unstable/subnet/1/block/latest/validators")
         .will_respond_with(codes.OK)
         .with_body(get_validators_response_matcher, content_type="application/json")
     )
@@ -19,7 +19,7 @@ def test_get_latest_validators_success(pact: Pact, get_validators_response_match
     with pact.serve() as srv:
         client = pylon_client_factory(str(srv.url))
         with client:
-            response = client.v1.open_access.get_latest_validators(netuid=NetUid(1))
+            response = client.unstable.open_access.get_latest_validators(netuid=NetUid(1))
 
     assert response == GetValidatorsResponse(
         block=build_block(),

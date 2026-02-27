@@ -5,7 +5,7 @@ Tests for HTTP error handling in the sync communicator.
 import pytest
 from httpx import ConnectTimeout, PoolTimeout, ReadTimeout, Response, TimeoutException, WriteTimeout, codes
 
-from pylon_client._internal.pylon_commons.v1.endpoints import Endpoint as EndpointV1
+from pylon_client._internal.pylon_commons._unstable.endpoints import Endpoint as EndpointUnstable
 from pylon_client.artanis import (
     BlockNumber,
     NetUid,
@@ -25,7 +25,7 @@ def neurons_url():
     """
     URL for the neurons endpoint used in error handling tests.
     """
-    return EndpointV1.NEURONS.absolute_url(netuid_=NetUid(1), block_number=1000)
+    return EndpointUnstable.NEURONS.absolute_url(netuid_=NetUid(1), block_number=1000)
 
 
 @pytest.mark.parametrize(
@@ -84,7 +84,7 @@ def test_status_code_raises_correct_exception(
 
     with sync_open_access_client:
         with pytest.raises(expected_exception, match=expected_message):
-            sync_open_access_client.v1.open_access.get_neurons(netuid=NetUid(1), block_number=BlockNumber(1000))
+            sync_open_access_client.unstable.open_access.get_neurons(netuid=NetUid(1), block_number=BlockNumber(1000))
 
 
 @pytest.mark.parametrize(
@@ -113,7 +113,7 @@ def test_extracts_detail_from_json_response(
 
     with sync_open_access_client:
         with pytest.raises(expected_exception) as exc_info:
-            sync_open_access_client.v1.open_access.get_neurons(netuid=NetUid(1), block_number=BlockNumber(1000))
+            sync_open_access_client.unstable.open_access.get_neurons(netuid=NetUid(1), block_number=BlockNumber(1000))
 
     assert exc_info.value.detail == error_detail
     assert error_detail in str(exc_info.value)
@@ -133,7 +133,7 @@ def test_handles_json_without_detail_field(
 
     with sync_open_access_client:
         with pytest.raises(PylonNotFound) as exc_info:
-            sync_open_access_client.v1.open_access.get_neurons(netuid=NetUid(1), block_number=BlockNumber(1000))
+            sync_open_access_client.unstable.open_access.get_neurons(netuid=NetUid(1), block_number=BlockNumber(1000))
 
     assert exc_info.value.detail is None
 
@@ -150,7 +150,7 @@ def test_handles_non_json_response(
 
     with sync_open_access_client:
         with pytest.raises(PylonNotFound) as exc_info:
-            sync_open_access_client.v1.open_access.get_neurons(netuid=NetUid(1), block_number=BlockNumber(1000))
+            sync_open_access_client.unstable.open_access.get_neurons(netuid=NetUid(1), block_number=BlockNumber(1000))
 
     assert exc_info.value.detail is None
 
@@ -201,7 +201,7 @@ def test_timeout_exception_maps_to_correct_reason(
 
     with sync_open_access_client:
         with pytest.raises(PylonTimeoutException, match=expected_message) as exc_info:
-            sync_open_access_client.v1.open_access.get_neurons(netuid=NetUid(1), block_number=BlockNumber(1000))
+            sync_open_access_client.unstable.open_access.get_neurons(netuid=NetUid(1), block_number=BlockNumber(1000))
 
     assert exc_info.value.reason == expected_reason
     assert exc_info.value.timeout_seconds == expected_timeout_seconds
@@ -216,4 +216,4 @@ def test_unexpected_timeout_exception_raises_type_error(
 
     with sync_open_access_client:
         with pytest.raises(TypeError, match="Unexpected timeout exception type: TimeoutException"):
-            sync_open_access_client.v1.open_access.get_neurons(netuid=NetUid(1), block_number=BlockNumber(1000))
+            sync_open_access_client.unstable.open_access.get_neurons(netuid=NetUid(1), block_number=BlockNumber(1000))

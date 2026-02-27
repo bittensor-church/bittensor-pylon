@@ -3,7 +3,7 @@ from httpx import codes
 from pact import Pact
 
 from pylon_client.artanis import Hotkey, NetUid
-from pylon_client.artanis.v1 import GetNeuronsResponse
+from pylon_client.artanis.unstable import GetNeuronsResponse
 from tests.pact.builders import build_block, build_neuron
 from tests.pact.constants import HOTKEY_1, HOTKEY_2
 
@@ -13,7 +13,7 @@ async def test_get_latest_neurons_success(pact: Pact, get_neurons_response_match
     (
         pact.upon_receiving("a request for latest neurons")
         .given("neurons exist", netuid=1, neuron_count=2)
-        .with_request("GET", "/api/v1/subnet/1/block/latest/neurons")
+        .with_request("GET", "/api/_unstable/subnet/1/block/latest/neurons")
         .will_respond_with(codes.OK)
         .with_body(get_neurons_response_matcher, content_type="application/json")
     )
@@ -21,7 +21,7 @@ async def test_get_latest_neurons_success(pact: Pact, get_neurons_response_match
     with pact.serve() as srv:
         client = pylon_client_factory(str(srv.url))
         async with client:
-            response = await client.v1.open_access.get_latest_neurons(netuid=NetUid(1))
+            response = await client.unstable.open_access.get_latest_neurons(netuid=NetUid(1))
 
     assert response == GetNeuronsResponse(
         block=build_block(),

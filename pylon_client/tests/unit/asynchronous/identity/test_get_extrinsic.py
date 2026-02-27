@@ -3,19 +3,21 @@ from http import HTTPMethod
 import pytest
 from httpx import Response, codes
 
-from pylon_client._internal.pylon_commons.v1.endpoints import Endpoint as EndpointV1
+from pylon_client._internal.pylon_commons._unstable.endpoints import Endpoint as EndpointUnstable
 from pylon_client.artanis import BlockNumber, ExtrinsicHash, ExtrinsicIndex, ExtrinsicLength
-from pylon_client.artanis.v1 import ExtrinsicCall, ExtrinsicCallArg, GetExtrinsicResponse
+from pylon_client.artanis.unstable import ExtrinsicCall, ExtrinsicCallArg, GetExtrinsicResponse
 from tests.unit.asynchronous.base_test import IdentityEndpointTest
 
 
 class TestIdentityGetExtrinsic(IdentityEndpointTest):
-    endpoint = EndpointV1.EXTRINSIC
+    endpoint = EndpointUnstable.EXTRINSIC
     route_params = {"block_number": 1000, "extrinsic_index": 0}
     http_method = HTTPMethod.GET
 
     async def make_endpoint_call(self, client):
-        return await client.v1.identity.get_extrinsic(block_number=BlockNumber(1000), extrinsic_index=ExtrinsicIndex(0))
+        return await client.unstable.identity.get_extrinsic(
+            block_number=BlockNumber(1000), extrinsic_index=ExtrinsicIndex(0)
+        )
 
     @pytest.fixture
     def success_response(self) -> GetExtrinsicResponse:

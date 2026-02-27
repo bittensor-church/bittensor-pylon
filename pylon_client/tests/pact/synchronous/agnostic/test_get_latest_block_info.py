@@ -1,7 +1,7 @@
 from httpx import codes
 from pact import Pact
 
-from pylon_client.artanis.v1 import GetLatestBlockInfoResponse
+from pylon_client.artanis.unstable import GetLatestBlockInfoResponse
 from tests.pact.builders import build_block_info_bag
 
 
@@ -9,7 +9,7 @@ def test_get_latest_block_info_success(pact: Pact, get_latest_block_info_respons
     (
         pact.upon_receiving("a request for latest block info")
         .given("latest block info exists")
-        .with_request("GET", "/api/v1/block/latest")
+        .with_request("GET", "/api/_unstable/block/latest")
         .will_respond_with(codes.OK)
         .with_body(get_latest_block_info_response_matcher, content_type="application/json")
     )
@@ -17,6 +17,6 @@ def test_get_latest_block_info_success(pact: Pact, get_latest_block_info_respons
     with pact.serve() as srv:
         client = pylon_client_factory(str(srv.url))
         with client:
-            response = client.v1.open_access.get_latest_block_info()
+            response = client.unstable.open_access.get_latest_block_info()
 
     assert response == GetLatestBlockInfoResponse(**build_block_info_bag().model_dump())
