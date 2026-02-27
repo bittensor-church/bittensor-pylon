@@ -80,7 +80,7 @@ def commitment_response_matcher(hotkey: str) -> dict:
     }
 
 
-def commitments_response_matcher(hotkey_1: str, hotkey_2: str) -> dict:
+def v1_commitments_response_matcher(hotkey_1: str, hotkey_2: str) -> dict:
     return {
         "block": block_matcher(),
         "commitments": match.each_value_matches(
@@ -92,6 +92,35 @@ def commitments_response_matcher(hotkey_1: str, hotkey_2: str) -> dict:
                 rules=match.str(hotkey_1),
             ),
             rules=match.str(COMMITMENT_HEX),
+        ),
+    }
+
+
+def commitments_response_matcher(hotkey_1: str, hotkey_2: str) -> dict:
+    commitment_matcher = {
+        "commitment_block_number": match.int(BLOCK_NUMBER),
+        "hotkey": match.str(hotkey_1),
+        "commitment": match.str(COMMITMENT_HEX),
+    }
+    return {
+        "block": block_matcher(),
+        "commitments": match.each_value_matches(
+            match.each_key_matches(  # type: ignore[reportArgumentType]
+                {
+                    hotkey_1: {
+                        "commitment_block_number": match.int(BLOCK_NUMBER),
+                        "hotkey": match.str(hotkey_1),
+                        "commitment": match.str(COMMITMENT_HEX),
+                    },
+                    hotkey_2: {
+                        "commitment_block_number": match.int(BLOCK_NUMBER),
+                        "hotkey": match.str(hotkey_2),
+                        "commitment": match.str(COMMITMENT_HEX),
+                    },
+                },
+                rules=match.str(hotkey_1),
+            ),
+            rules=match.like(commitment_matcher),
         ),
     }
 

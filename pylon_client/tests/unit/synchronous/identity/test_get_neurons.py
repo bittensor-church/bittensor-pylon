@@ -3,20 +3,20 @@ from http import HTTPMethod
 import pytest
 from httpx import Response, codes
 
-from pylon_client._internal.pylon_commons.v1.endpoints import Endpoint as EndpointV1
+from pylon_client._internal.pylon_commons._unstable.endpoints import Endpoint as EndpointUnstable
 from pylon_client.artanis import BlockHash, BlockNumber
-from pylon_client.artanis.v1 import Block, GetNeuronsResponse
+from pylon_client.artanis.unstable import Block, GetNeuronsResponse
 from tests.factories import NeuronFactory
 from tests.unit.synchronous.base_test import IdentityEndpointTest
 
 
 class TestSyncIdentityGetNeurons(IdentityEndpointTest):
-    endpoint = EndpointV1.NEURONS
+    endpoint = EndpointUnstable.NEURONS
     route_params = {"identity_name": "sn1", "netuid": 1, "block_number": 1000}
     http_method = HTTPMethod.GET
 
     def make_endpoint_call(self, client):
-        return client.v1.identity.get_neurons(block_number=BlockNumber(1000))
+        return client.unstable.identity.get_neurons(block_number=BlockNumber(1000))
 
     def get_endpoint_response(self) -> Response:
         return Response(status_code=codes.OK, json={"block": {"number": 1000, "hash": "0x123"}, "neurons": {}})

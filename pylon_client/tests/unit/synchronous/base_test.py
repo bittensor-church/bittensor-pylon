@@ -5,7 +5,6 @@ import pytest
 from httpx import ConnectError, Response, codes
 
 from pylon_client._internal.pylon_commons.endpoints import Endpoint
-from pylon_client._internal.pylon_commons.v1.endpoints import Endpoint as EndpointV1
 from pylon_client.artanis import (
     PylonClient,
     PylonClosed,
@@ -13,7 +12,7 @@ from pylon_client.artanis import (
     PylonRequestException,
     PylonResponseException,
 )
-from pylon_client.artanis.v1 import PylonResponse
+from pylon_client.artanis.unstable import PylonResponse
 
 
 class BaseEndpointTest(ABC):
@@ -30,7 +29,7 @@ class BaseEndpointTest(ABC):
     Note: The happy-path tests are covered by Pact contract tests.
 
     Required class attributes to override:
-    - endpoint_name: The Endpoint enum value for the route (e.g., EndpointV1.NEURONS)
+    - endpoint_name: The Endpoint enum value for the route (e.g., Endpoint.NEURONS)
     - route_params: Dict of parameters for route_reverse (e.g., {"netuid": 1, "block_number": 1000})
     - client_fixture_name: Name of the client fixture to use (e.g., "sync_identity_client")
     - no_credentials_error_message: Expected error message when credentials missing
@@ -135,15 +134,19 @@ class IdentityEndpointTest(BaseEndpointTest, ABC):
     client_fixture_name = "sync_identity_client"
     no_credentials_error_message = "Can not use identity api - no identity name or token provided in config."
 
+    @property
+    def _login_endpoint(self) -> Endpoint:
+        return type(self.endpoint)["IDENTITY_LOGIN"]
+
     def _setup_login_mock(self, service_mock):
-        login_url = EndpointV1.IDENTITY_LOGIN.absolute_url(identity_name="sn1")
+        login_url = self._login_endpoint.absolute_url(identity_name="sn1")
         service_mock.post(login_url).mock(
             return_value=Response(status_code=codes.OK, json={"netuid": 1, "identity_name": "sn1"})
         )
 
     def test_login_request_error(self, pylon_client, service_mock):
         assert pylon_client.config.retry.stop.max_attempt_number <= 3
-        login_url = EndpointV1.IDENTITY_LOGIN.absolute_url(identity_name="sn1")
+        login_url = self._login_endpoint.absolute_url(identity_name="sn1")
         service_mock.post(login_url).mock(side_effect=ConnectError("Connection failed"))
 
         with pylon_client:
@@ -151,7 +154,7 @@ class IdentityEndpointTest(BaseEndpointTest, ABC):
                 self.make_endpoint_call(pylon_client)
 
     def test_login_response_error(self, pylon_client, service_mock):
-        login_url = EndpointV1.IDENTITY_LOGIN.absolute_url(identity_name="sn1")
+        login_url = self._login_endpoint.absolute_url(identity_name="sn1")
         service_mock.post(login_url).mock(return_value=Response(status_code=codes.INTERNAL_SERVER_ERROR))
 
         with pylon_client:

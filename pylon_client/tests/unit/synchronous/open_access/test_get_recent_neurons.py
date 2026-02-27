@@ -3,20 +3,20 @@ from http import HTTPMethod
 import pytest
 from httpx import Response, codes
 
-from pylon_client._internal.pylon_commons.v1.endpoints import Endpoint as EndpointV1
+from pylon_client._internal.pylon_commons._unstable.endpoints import Endpoint as EndpointUnstable
 from pylon_client.artanis import BlockHash, BlockNumber, NetUid, PylonResponseException
-from pylon_client.artanis.v1 import Block, GetNeuronsResponse
+from pylon_client.artanis.unstable import Block, GetNeuronsResponse
 from tests.factories import NeuronFactory
 from tests.unit.synchronous.base_test import OpenAccessEndpointTest
 
 
 class TestSyncOpenAccessGetRecentNeurons(OpenAccessEndpointTest):
-    endpoint = EndpointV1.RECENT_NEURONS
+    endpoint = EndpointUnstable.RECENT_NEURONS
     route_params = {"netuid": 1}
     http_method = HTTPMethod.GET
 
     def make_endpoint_call(self, client):
-        return client.v1.open_access.get_recent_neurons(netuid=NetUid(1))
+        return client.unstable.open_access.get_recent_neurons(netuid=NetUid(1))
 
     @pytest.fixture
     def block(self) -> Block:

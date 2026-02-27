@@ -28,7 +28,7 @@ from pylon_client.artanis import (
     ValidatorPermit,
     ValidatorTrust,
 )
-from pylon_client.artanis.v1 import (
+from pylon_client.artanis.unstable import (
     AxonInfo,
     AxonProtocol,
     Block,

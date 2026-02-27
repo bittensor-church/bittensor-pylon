@@ -2,19 +2,19 @@ from http import HTTPMethod
 
 import pytest
 
-from pylon_client._internal.pylon_commons.v1.endpoints import Endpoint as EndpointV1
+from pylon_client._internal.pylon_commons._unstable.endpoints import Endpoint as EndpointUnstable
 from pylon_client.artanis import BlockHash, BlockNumber, CommitmentDataHex, Hotkey, NetUid
-from pylon_client.artanis.v1 import Block, GetCommitmentResponse
+from pylon_client.artanis.unstable import Block, GetCommitmentResponse
 from tests.unit.synchronous.base_test import OpenAccessEndpointTest
 
 
 class TestSyncOpenAccessGetCommitment(OpenAccessEndpointTest):
-    endpoint = EndpointV1.LATEST_COMMITMENTS_HOTKEY
+    endpoint = EndpointUnstable.LATEST_COMMITMENTS_HOTKEY
     route_params = {"netuid": 1, "hotkey": "hotkey1"}
     http_method = HTTPMethod.GET
 
     def make_endpoint_call(self, client):
-        return client.v1.open_access.get_commitment(netuid=NetUid(1), hotkey=Hotkey("hotkey1"))
+        return client.unstable.open_access.get_commitment(netuid=NetUid(1), hotkey=Hotkey("hotkey1"))
 
     @pytest.fixture
     def success_response(self) -> GetCommitmentResponse:

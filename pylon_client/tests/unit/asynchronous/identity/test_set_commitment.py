@@ -5,19 +5,19 @@ import pytest
 from httpx import Response, codes
 from pydantic import ValidationError
 
-from pylon_client._internal.pylon_commons.v1.endpoints import Endpoint as EndpointV1
+from pylon_client._internal.pylon_commons._unstable.endpoints import Endpoint as EndpointUnstable
 from pylon_client.artanis import CommitmentDataBytes, CommitmentDataHex
-from pylon_client.artanis.v1 import SetCommitmentResponse
+from pylon_client.artanis.unstable import SetCommitmentResponse
 from tests.unit.asynchronous.base_test import IdentityEndpointTest
 
 
 class TestAsyncIdentitySetCommitment(IdentityEndpointTest):
-    endpoint = EndpointV1.COMMITMENTS
+    endpoint = EndpointUnstable.COMMITMENTS
     route_params = {"identity_name": "sn1", "netuid": 1}
     http_method = HTTPMethod.POST
 
     async def make_endpoint_call(self, client):
-        return await client.v1.identity.set_commitment(commitment=CommitmentDataBytes(b"\xaa\xbb\xcc\xdd"))
+        return await client.unstable.identity.set_commitment(commitment=CommitmentDataBytes(b"\xaa\xbb\xcc\xdd"))
 
     @pytest.fixture
     def success_response(self) -> SetCommitmentResponse:
@@ -29,7 +29,7 @@ class TestAsyncIdentitySetCommitment(IdentityEndpointTest):
         route_mock.mock(return_value=Response(status_code=codes.OK, json=success_response.model_dump(mode="json")))
 
         async with pylon_client:
-            response = await pylon_client.v1.identity.set_commitment(commitment=CommitmentDataHex("0xAaBbCcDd"))
+            response = await pylon_client.unstable.identity.set_commitment(commitment=CommitmentDataHex("0xAaBbCcDd"))
 
         assert response == success_response
         assert json.loads(route_mock.calls.last.request.content) == {"commitment": "0xaabbccdd"}
@@ -43,7 +43,7 @@ class TestAsyncIdentitySetCommitment(IdentityEndpointTest):
         route_mock.mock(return_value=Response(status_code=codes.OK, json=success_response.model_dump(mode="json")))
 
         async with pylon_client:
-            response = await pylon_client.v1.identity.set_commitment(commitment=CommitmentDataHex("aabbccdd"))
+            response = await pylon_client.unstable.identity.set_commitment(commitment=CommitmentDataHex("aabbccdd"))
 
         assert response == success_response
         assert json.loads(route_mock.calls.last.request.content) == {"commitment": "0xaabbccdd"}
@@ -150,7 +150,7 @@ class TestAsyncIdentitySetCommitment(IdentityEndpointTest):
 
         async with pylon_client:
             with pytest.raises(ValidationError) as exc_info:
-                await pylon_client.v1.identity.set_commitment(commitment=invalid_commitment)
+                await pylon_client.unstable.identity.set_commitment(commitment=invalid_commitment)
 
         errors = exc_info.value.errors(include_url=False, include_context=False, include_input=False)
         assert errors == expected_errors

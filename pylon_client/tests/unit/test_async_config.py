@@ -2,7 +2,7 @@ import pytest
 from httpx import ConnectError, Response, codes
 from tenacity import stop_after_attempt
 
-from pylon_client._internal.pylon_commons.v1.endpoints import Endpoint as EndpointV1
+from pylon_client._internal.pylon_commons._unstable.endpoints import Endpoint as EndpointUnstable
 from pylon_client.artanis import (
     ASYNC_DEFAULT_RETRIES,
     AsyncConfig,
@@ -14,7 +14,7 @@ from pylon_client.artanis import (
     PylonRequestException,
     Weight,
 )
-from pylon_client.artanis.v1 import SetWeightsResponse
+from pylon_client.artanis.unstable import SetWeightsResponse
 
 
 @pytest.mark.parametrize(
@@ -26,8 +26,8 @@ from pylon_client.artanis.v1 import SetWeightsResponse
 )
 @pytest.mark.asyncio
 async def test_async_config_retries_success(service_mock, test_url, attempts):
-    login_url = EndpointV1.IDENTITY_LOGIN.absolute_url(identity_name="sn1")
-    weights_url = EndpointV1.SUBNET_WEIGHTS.absolute_url(identity_name_=IdentityName("sn1"), netuid_=NetUid(1))
+    login_url = EndpointUnstable.IDENTITY_LOGIN.absolute_url(identity_name="sn1")
+    weights_url = EndpointUnstable.SUBNET_WEIGHTS.absolute_url(identity_name_=IdentityName("sn1"), netuid_=NetUid(1))
 
     login_response_json = {"netuid": 1, "identity_name": "sn1"}
     service_mock.post(login_url).mock(return_value=Response(status_code=codes.OK, json=login_response_json))
@@ -52,15 +52,15 @@ async def test_async_config_retries_success(service_mock, test_url, attempts):
             retry=ASYNC_DEFAULT_RETRIES.copy(stop=stop_after_attempt(attempts)),
         )
     ) as async_client:
-        response = await async_client.v1.identity.put_weights(weights={Hotkey("h2"): Weight(0.1)})
+        response = await async_client.unstable.identity.put_weights(weights={Hotkey("h2"): Weight(0.1)})
     assert response == SetWeightsResponse()
     assert route.call_count == attempts
 
 
 @pytest.mark.asyncio
 async def test_async_config_retries_error(service_mock, test_url):
-    login_url = EndpointV1.IDENTITY_LOGIN.absolute_url(identity_name="sn1")
-    weights_url = EndpointV1.SUBNET_WEIGHTS.absolute_url(identity_name_=IdentityName("sn1"), netuid_=NetUid(1))
+    login_url = EndpointUnstable.IDENTITY_LOGIN.absolute_url(identity_name="sn1")
+    weights_url = EndpointUnstable.SUBNET_WEIGHTS.absolute_url(identity_name_=IdentityName("sn1"), netuid_=NetUid(1))
 
     login_response_json = {"netuid": 1, "identity_name": "sn1"}
     service_mock.post(login_url).mock(return_value=Response(status_code=codes.OK, json=login_response_json))
@@ -75,5 +75,5 @@ async def test_async_config_retries_error(service_mock, test_url):
         )
     ) as async_client:
         with pytest.raises(PylonRequestException):
-            await async_client.v1.identity.put_weights(weights={Hotkey("h2"): Weight(0.1)})
+            await async_client.unstable.identity.put_weights(weights={Hotkey("h2"): Weight(0.1)})
     assert route.call_count == 2

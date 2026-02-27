@@ -3,20 +3,20 @@ from http import HTTPMethod
 import pytest
 from httpx import Response, codes
 
-from pylon_client._internal.pylon_commons.v1.endpoints import Endpoint as EndpointV1
+from pylon_client._internal.pylon_commons._unstable.endpoints import Endpoint as EndpointUnstable
 from pylon_client.artanis import BlockHash, BlockNumber
-from pylon_client.artanis.v1 import Block, GetValidatorsResponse
+from pylon_client.artanis.unstable import Block, GetValidatorsResponse
 from tests.factories import NeuronFactory
 from tests.unit.synchronous.base_test import IdentityEndpointTest
 
 
 class TestSyncIdentityGetValidators(IdentityEndpointTest):
-    endpoint = EndpointV1.VALIDATORS
+    endpoint = EndpointUnstable.VALIDATORS
     route_params = {"identity_name": "sn1", "netuid": 1, "block_number": 1000}
     http_method = HTTPMethod.GET
 
     def make_endpoint_call(self, client):
-        return client.v1.identity.get_validators(block_number=BlockNumber(1000))
+        return client.unstable.identity.get_validators(block_number=BlockNumber(1000))
 
     @pytest.fixture
     def block(self) -> Block:

@@ -15,7 +15,7 @@ def pylon_client_factory():
         )
         client = AsyncPylonClient(config)
         if logged_in:
-            client.v1.identity._login_response = IdentityLoginResponse(
+            client.unstable.identity._login_response = IdentityLoginResponse(
                 netuid=NetUid(NETUID),
                 identity_name=IdentityName(IDENTITY_NAME),
             )

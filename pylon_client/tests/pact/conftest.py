@@ -11,6 +11,7 @@ from tests.pact.matchers import (
     neurons_response_matcher,
     set_commitment_response_matcher,
     set_weights_response_matcher,
+    v1_commitments_response_matcher,
     validators_response_matcher,
 )
 
@@ -41,6 +42,11 @@ def get_commitment_response_matcher() -> dict:
 @pytest.fixture
 def get_commitments_response_matcher() -> dict:
     return commitments_response_matcher(HOTKEY_1, HOTKEY_2)
+
+
+@pytest.fixture
+def get_commitments_v1_response_matcher() -> dict:
+    return v1_commitments_response_matcher(HOTKEY_1, HOTKEY_2)
 
 
 @pytest.fixture

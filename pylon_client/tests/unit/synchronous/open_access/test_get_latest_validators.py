@@ -3,20 +3,20 @@ from http import HTTPMethod
 import pytest
 from httpx import Response, codes
 
-from pylon_client._internal.pylon_commons.v1.endpoints import Endpoint as EndpointV1
+from pylon_client._internal.pylon_commons._unstable.endpoints import Endpoint as EndpointUnstable
 from pylon_client.artanis import BlockHash, BlockNumber, NetUid
-from pylon_client.artanis.v1 import Block, GetValidatorsResponse
+from pylon_client.artanis.unstable import Block, GetValidatorsResponse
 from tests.factories import NeuronFactory
 from tests.unit.synchronous.base_test import OpenAccessEndpointTest
 
 
 class TestSyncOpenAccessGetLatestValidators(OpenAccessEndpointTest):
-    endpoint = EndpointV1.LATEST_VALIDATORS
+    endpoint = EndpointUnstable.LATEST_VALIDATORS
     route_params = {"netuid": 1}
     http_method = HTTPMethod.GET
 
     def make_endpoint_call(self, client):
-        return client.v1.open_access.get_latest_validators(netuid=NetUid(1))
+        return client.unstable.open_access.get_latest_validators(netuid=NetUid(1))
 
     @pytest.fixture
     def block(self) -> Block:
