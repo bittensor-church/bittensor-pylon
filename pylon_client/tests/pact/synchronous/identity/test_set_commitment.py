@@ -1,8 +1,8 @@
 from httpx import codes
 from pact import Pact
 
-from pylon_client._internal.pylon_commons.types import CommitmentDataHex
-from pylon_client._internal.pylon_commons.v1.responses import SetCommitmentResponse
+from pylon_client.artanis import CommitmentDataHex
+from pylon_client.artanis.v1 import SetCommitmentResponse
 from tests.pact.constants import COMMITMENT_HEX, IDENTITY_NAME, NETUID
 
 
@@ -19,6 +19,6 @@ def test_set_commitment_success(pact: Pact, post_commitment_response_matcher: di
     with pact.serve() as srv:
         client = pylon_client_factory(str(srv.url), logged_in=True)
         with client:
-            response = client.identity.set_commitment(commitment=CommitmentDataHex(COMMITMENT_HEX))
+            response = client.v1.identity.set_commitment(commitment=CommitmentDataHex(COMMITMENT_HEX))
 
     assert response == SetCommitmentResponse()

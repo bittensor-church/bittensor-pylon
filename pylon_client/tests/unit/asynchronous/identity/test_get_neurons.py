@@ -3,10 +3,9 @@ from http import HTTPMethod
 import pytest
 from httpx import Response, codes
 
-from pylon_client._internal.pylon_commons.models import Block
-from pylon_client._internal.pylon_commons.types import BlockHash, BlockNumber
 from pylon_client._internal.pylon_commons.v1.endpoints import Endpoint as EndpointV1
-from pylon_client._internal.pylon_commons.v1.responses import GetNeuronsResponse
+from pylon_client.artanis import BlockHash, BlockNumber
+from pylon_client.artanis.v1 import Block, GetNeuronsResponse
 from tests.factories import NeuronFactory
 from tests.unit.asynchronous.base_test import IdentityEndpointTest
 
@@ -17,7 +16,7 @@ class TestIdentityGetNeurons(IdentityEndpointTest):
     http_method = HTTPMethod.GET
 
     async def make_endpoint_call(self, client):
-        return await client.identity.get_neurons(block_number=BlockNumber(1000))
+        return await client.v1.identity.get_neurons(block_number=BlockNumber(1000))
 
     def get_endpoint_response(self) -> Response:
         return Response(status_code=codes.OK, json={"block": {"number": 1000, "hash": "0x123"}, "neurons": {}})

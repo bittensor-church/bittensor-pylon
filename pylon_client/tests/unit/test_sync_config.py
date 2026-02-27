@@ -2,12 +2,19 @@ import pytest
 from httpx import ConnectError, Response, codes
 from tenacity import stop_after_attempt
 
-from pylon_client._internal.client.sync.client import PylonClient
-from pylon_client._internal.client.sync.config import DEFAULT_RETRIES, Config
-from pylon_client._internal.pylon_commons.exceptions import PylonRequestException
-from pylon_client._internal.pylon_commons.types import Hotkey, IdentityName, NetUid, PylonAuthToken, Weight
 from pylon_client._internal.pylon_commons.v1.endpoints import Endpoint as EndpointV1
-from pylon_client._internal.pylon_commons.v1.responses import SetWeightsResponse
+from pylon_client.artanis import (
+    DEFAULT_RETRIES,
+    Config,
+    Hotkey,
+    IdentityName,
+    NetUid,
+    PylonAuthToken,
+    PylonClient,
+    PylonRequestException,
+    Weight,
+)
+from pylon_client.artanis.v1 import SetWeightsResponse
 
 
 @pytest.mark.parametrize(
@@ -47,7 +54,7 @@ def test_sync_config_retries_success(service_mock, test_url, attempts):
             retry=DEFAULT_RETRIES.copy(stop=stop_after_attempt(attempts)),
         )
     ) as sync_client:
-        response = sync_client.identity.put_weights(weights={Hotkey("h2"): Weight(0.1)})
+        response = sync_client.v1.identity.put_weights(weights={Hotkey("h2"): Weight(0.1)})
     assert response == SetWeightsResponse()
     assert route.call_count == attempts
 
@@ -72,5 +79,5 @@ def test_sync_config_retries_error(service_mock, test_url):
         )
     ) as sync_client:
         with pytest.raises(PylonRequestException):
-            sync_client.identity.put_weights(weights={Hotkey("h2"): Weight(0.1)})
+            sync_client.v1.identity.put_weights(weights={Hotkey("h2"): Weight(0.1)})
     assert route.call_count == 2

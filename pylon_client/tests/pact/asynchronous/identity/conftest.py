@@ -1,9 +1,7 @@
 import pytest
 
-from pylon_client._internal.client.asynchronous.client import AsyncPylonClient
-from pylon_client._internal.client.asynchronous.config import AsyncConfig
-from pylon_client._internal.pylon_commons.types import IdentityName, NetUid, PylonAuthToken
 from pylon_client._internal.pylon_commons.v1.responses import IdentityLoginResponse
+from pylon_client.artanis import AsyncConfig, AsyncPylonClient, IdentityName, NetUid, PylonAuthToken
 from tests.pact.constants import IDENTITY_NAME, NETUID
 
 
@@ -17,7 +15,7 @@ def pylon_client_factory():
         )
         client = AsyncPylonClient(config)
         if logged_in:
-            client.identity._login_response = IdentityLoginResponse(
+            client.v1.identity._login_response = IdentityLoginResponse(
                 netuid=NetUid(NETUID),
                 identity_name=IdentityName(IDENTITY_NAME),
             )

@@ -1,23 +1,12 @@
 from ipaddress import IPv4Address
 
-from pylon_client._internal.pylon_commons.currency import Currency, Token
-from pylon_client._internal.pylon_commons.models import (
-    AxonInfo,
-    AxonProtocol,
-    Block,
-    BlockInfoBag,
-    Extrinsic,
-    ExtrinsicCall,
-    ExtrinsicCallArg,
-    Neuron,
-    Stakes,
-)
-from pylon_client._internal.pylon_commons.types import (
+from pylon_client.artanis import (
     AlphaStake,
     BlockHash,
     BlockNumber,
     Coldkey,
     Consensus,
+    Currency,
     Dividends,
     Emission,
     ExtrinsicHash,
@@ -33,10 +22,22 @@ from pylon_client._internal.pylon_commons.types import (
     Stake,
     TaoStake,
     Timestamp,
+    Token,
     TotalStake,
     Trust,
     ValidatorPermit,
     ValidatorTrust,
+)
+from pylon_client.artanis.v1 import (
+    AxonInfo,
+    AxonProtocol,
+    Block,
+    BlockInfoBag,
+    Extrinsic,
+    ExtrinsicCall,
+    ExtrinsicCallArg,
+    Neuron,
+    Stakes,
 )
 from tests.pact.constants import BLOCK_HASH, BLOCK_NUMBER, BLOCK_TIMESTAMP, COLDKEY, EXTRINSIC_HASH, EXTRINSIC_INDEX
 

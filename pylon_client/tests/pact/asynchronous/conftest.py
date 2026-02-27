@@ -5,10 +5,7 @@ import pytest
 from pact import Pact
 from tenacity import stop_after_attempt
 
-from pylon_client._internal.client.asynchronous.client import AsyncPylonClient
-from pylon_client._internal.client.asynchronous.config import ASYNC_DEFAULT_RETRIES, AsyncConfig
-from pylon_client._internal.pylon_commons.timeout import PylonTimeout
-from pylon_client._internal.pylon_commons.types import PylonAuthToken
+from pylon_client.artanis import ASYNC_DEFAULT_RETRIES, AsyncConfig, AsyncPylonClient, PylonAuthToken, PylonTimeout
 
 
 @pytest.fixture(scope="session")

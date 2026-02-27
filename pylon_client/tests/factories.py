@@ -3,8 +3,8 @@ from typing import Any, Generic, cast
 
 from polyfactory.factories.pydantic_factory import ModelFactory, T
 
-from pylon_client._internal.pylon_commons.currency import Currency, Token
-from pylon_client._internal.pylon_commons.models import Block, Neuron
+from pylon_client.artanis import Currency, Token
+from pylon_client.artanis.v1 import Block, Neuron
 
 
 class PylonModelFactory(Generic[T], ModelFactory[T]):

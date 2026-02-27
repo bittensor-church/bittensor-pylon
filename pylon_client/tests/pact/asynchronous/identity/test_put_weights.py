@@ -2,8 +2,8 @@ import pytest
 from httpx import codes
 from pact import Pact
 
-from pylon_client._internal.pylon_commons.types import Hotkey, Weight
-from pylon_client._internal.pylon_commons.v1.responses import SetWeightsResponse
+from pylon_client.artanis import Hotkey, Weight
+from pylon_client.artanis.v1 import SetWeightsResponse
 from tests.pact.constants import HOTKEY_1, HOTKEY_2, IDENTITY_NAME, NETUID
 
 
@@ -21,7 +21,7 @@ async def test_put_weights_success(pact: Pact, put_weights_response_matcher: dic
     with pact.serve() as srv:
         client = pylon_client_factory(str(srv.url), logged_in=True)
         async with client:
-            response = await client.identity.put_weights(
+            response = await client.v1.identity.put_weights(
                 weights={
                     Hotkey(HOTKEY_1): Weight(0.6),
                     Hotkey(HOTKEY_2): Weight(0.4),

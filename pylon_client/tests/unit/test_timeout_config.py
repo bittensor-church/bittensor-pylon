@@ -6,16 +6,23 @@ import pytest
 from httpx import Response, codes
 from tenacity import stop_after_attempt
 
-from pylon_client._internal.client.asynchronous.client import AsyncPylonClient
-from pylon_client._internal.client.asynchronous.config import ASYNC_DEFAULT_RETRIES, AsyncConfig
-from pylon_client._internal.client.sync.client import PylonClient
-from pylon_client._internal.client.sync.config import DEFAULT_RETRIES, Config
-from pylon_client._internal.pylon_commons.exceptions import PylonTimeoutException
-from pylon_client._internal.pylon_commons.models import Block
-from pylon_client._internal.pylon_commons.timeout import TIMEOUT_HEADER, PylonTimeout
-from pylon_client._internal.pylon_commons.types import BlockHash, BlockNumber, NetUid, PylonAuthToken
+from pylon_client._internal.pylon_commons.timeout import TIMEOUT_HEADER
 from pylon_client._internal.pylon_commons.v1.endpoints import Endpoint as EndpointV1
-from pylon_client._internal.pylon_commons.v1.responses import GetNeuronsResponse
+from pylon_client.artanis import (
+    ASYNC_DEFAULT_RETRIES,
+    DEFAULT_RETRIES,
+    AsyncConfig,
+    AsyncPylonClient,
+    BlockHash,
+    BlockNumber,
+    Config,
+    NetUid,
+    PylonAuthToken,
+    PylonClient,
+    PylonTimeout,
+    PylonTimeoutException,
+)
+from pylon_client.artanis.v1 import Block, GetNeuronsResponse
 
 NEURONS_URL = EndpointV1.RECENT_NEURONS.absolute_url(netuid_=NetUid(1))
 NEURONS_RESPONSE_JSON = GetNeuronsResponse(
@@ -48,7 +55,7 @@ class TestSyncClientTimeout:
         timeout = PylonTimeout(read=120.0)
         client = PylonClient(Config(address=test_url, open_access_token=PylonAuthToken("token"), timeout=timeout))
         with client:
-            client.open_access.get_recent_neurons(netuid=NetUid(1))
+            client.v1.open_access.get_recent_neurons(netuid=NetUid(1))
 
         assert route.calls.last.request.headers[TIMEOUT_HEADER] == "120.0"
 
@@ -64,7 +71,7 @@ class TestSyncClientTimeout:
         )
         with client:
             with pytest.raises(PylonTimeoutException, match=r"Request to Pylon API timed out \(read\) after 0\.1s\."):
-                client.open_access.get_recent_neurons(netuid=NetUid(1))
+                client.v1.open_access.get_recent_neurons(netuid=NetUid(1))
 
 
 class TestAsyncClientTimeout:
@@ -78,7 +85,7 @@ class TestAsyncClientTimeout:
             AsyncConfig(address=test_url, open_access_token=PylonAuthToken("token"), timeout=timeout)
         )
         async with client:
-            await client.open_access.get_recent_neurons(netuid=NetUid(1))
+            await client.v1.open_access.get_recent_neurons(netuid=NetUid(1))
 
         assert route.calls.last.request.headers[TIMEOUT_HEADER] == "120.0"
 
@@ -95,4 +102,4 @@ class TestAsyncClientTimeout:
         )
         async with client:
             with pytest.raises(PylonTimeoutException, match=r"Request to Pylon API timed out \(read\) after 0\.1s\."):
-                await client.open_access.get_recent_neurons(netuid=NetUid(1))
+                await client.v1.open_access.get_recent_neurons(netuid=NetUid(1))

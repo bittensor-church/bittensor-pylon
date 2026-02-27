@@ -3,10 +3,9 @@ from http import HTTPMethod
 import pytest
 from httpx import Response, codes
 
-from pylon_client._internal.pylon_commons.models import Block
-from pylon_client._internal.pylon_commons.types import BlockHash, BlockNumber, CommitmentDataHex, Hotkey
 from pylon_client._internal.pylon_commons.v1.endpoints import Endpoint as EndpointV1
-from pylon_client._internal.pylon_commons.v1.responses import GetCommitmentsResponse
+from pylon_client.artanis import BlockHash, BlockNumber, CommitmentDataHex, Hotkey
+from pylon_client.artanis.v1 import Block, GetCommitmentsResponse
 from tests.unit.asynchronous.base_test import IdentityEndpointTest
 
 
@@ -16,7 +15,7 @@ class TestAsyncIdentityGetCommitments(IdentityEndpointTest):
     http_method = HTTPMethod.GET
 
     async def make_endpoint_call(self, client):
-        return await client.identity.get_commitments()
+        return await client.v1.identity.get_commitments()
 
     @pytest.fixture
     def block(self) -> Block:
@@ -37,6 +36,6 @@ class TestAsyncIdentityGetCommitments(IdentityEndpointTest):
         route_mock.mock(return_value=Response(status_code=codes.OK, json=response_data.model_dump(mode="json")))
 
         async with pylon_client:
-            response = await pylon_client.identity.get_commitments()
+            response = await pylon_client.v1.identity.get_commitments()
 
         assert response == response_data

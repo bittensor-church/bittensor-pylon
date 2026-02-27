@@ -2,11 +2,14 @@ from pylon_client._internal.client.asynchronous.client import AbstractAsyncPylon
 from pylon_client._internal.client.asynchronous.config import ASYNC_DEFAULT_RETRIES, AsyncConfig
 from pylon_client._internal.client.sync.client import AbstractPylonClient, PylonClient
 from pylon_client._internal.client.sync.config import DEFAULT_RETRIES, Config
+from pylon_client._internal.pylon_commons.currency import Currency, Token
 from pylon_client._internal.pylon_commons.exceptions import (
     BasePylonException,
+    PylonBadGateway,
     PylonClosed,
     PylonForbidden,
     PylonMisconfigured,
+    PylonNotFound,
     PylonRequestException,
     PylonResponseException,
     PylonTimeoutException,
@@ -28,6 +31,9 @@ from pylon_client._internal.pylon_commons.types import (
     Dividends,
     Emission,
     EmissionRao,
+    ExtrinsicHash,
+    ExtrinsicIndex,
+    ExtrinsicLength,
     HotkeyName,
     Hotkey,
     Incentive,

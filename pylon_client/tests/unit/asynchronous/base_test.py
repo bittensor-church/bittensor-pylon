@@ -4,16 +4,16 @@ from http import HTTPMethod
 import pytest
 from httpx import ConnectError, Response, codes
 
-from pylon_client._internal.client.asynchronous.client import AsyncPylonClient
 from pylon_client._internal.pylon_commons.endpoints import Endpoint
-from pylon_client._internal.pylon_commons.exceptions import (
+from pylon_client._internal.pylon_commons.v1.endpoints import Endpoint as EndpointV1
+from pylon_client.artanis import (
+    AsyncPylonClient,
     PylonClosed,
     PylonMisconfigured,
     PylonRequestException,
     PylonResponseException,
 )
-from pylon_client._internal.pylon_commons.v1.endpoints import Endpoint as EndpointV1
-from pylon_client._internal.pylon_commons.v1.responses import PylonResponse
+from pylon_client.artanis.v1 import PylonResponse
 
 
 class BaseEndpointTest(ABC):
@@ -160,7 +160,7 @@ class IdentityEndpointTest(BaseEndpointTest, ABC):
             route_params = {"identity_name": "sn1", "netuid": 1, "block_number": 1000}
 
             async def make_endpoint_call(self, client):
-                return await client.identity.get_neurons(block_number=BlockNumber(1000))
+                return await client.v1.identity.get_neurons(block_number=BlockNumber(1000))
 
             @pytest.fixture
             def success_response(self, neuron_factory: NeuronFactory) -> GetNeuronsResponse:
@@ -224,7 +224,7 @@ class OpenAccessEndpointTest(BaseEndpointTest, ABC):
             route_params = {"netuid": 1, "block_number": 1000}
 
             async def make_endpoint_call(self, client):
-                return await client.open_access.get_neurons(netuid=NetUid(1), block_number=BlockNumber(1000))
+                return await client.v1.open_access.get_neurons(netuid=NetUid(1), block_number=BlockNumber(1000))
 
             @pytest.fixture
             def success_response(self, neuron_factory: NeuronFactory) -> GetNeuronsResponse:

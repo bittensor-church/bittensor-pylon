@@ -1,8 +1,8 @@
 from httpx import codes
 from pact import Pact
 
-from pylon_client._internal.pylon_commons.types import Hotkey, NetUid
-from pylon_client._internal.pylon_commons.v1.responses import GetNeuronsResponse
+from pylon_client.artanis import Hotkey, NetUid
+from pylon_client.artanis.v1 import GetNeuronsResponse
 from tests.pact.builders import build_block, build_neuron
 from tests.pact.constants import HOTKEY_1, HOTKEY_2
 
@@ -19,7 +19,7 @@ def test_get_latest_neurons_success(pact: Pact, get_neurons_response_matcher: di
     with pact.serve() as srv:
         client = pylon_client_factory(str(srv.url))
         with client:
-            response = client.open_access.get_latest_neurons(netuid=NetUid(1))
+            response = client.v1.open_access.get_latest_neurons(netuid=NetUid(1))
 
     assert response == GetNeuronsResponse(
         block=build_block(),

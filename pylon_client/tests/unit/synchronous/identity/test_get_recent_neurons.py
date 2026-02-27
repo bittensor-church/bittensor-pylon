@@ -3,11 +3,9 @@ from http import HTTPMethod
 import pytest
 from httpx import Response, codes
 
-from pylon_client._internal.pylon_commons.exceptions import PylonResponseException
-from pylon_client._internal.pylon_commons.models import Block
-from pylon_client._internal.pylon_commons.types import BlockHash, BlockNumber
 from pylon_client._internal.pylon_commons.v1.endpoints import Endpoint as EndpointV1
-from pylon_client._internal.pylon_commons.v1.responses import GetNeuronsResponse
+from pylon_client.artanis import BlockHash, BlockNumber, PylonResponseException
+from pylon_client.artanis.v1 import Block, GetNeuronsResponse
 from tests.factories import NeuronFactory
 from tests.unit.synchronous.base_test import IdentityEndpointTest
 
@@ -18,7 +16,7 @@ class TestSyncIdentityGetRecentNeurons(IdentityEndpointTest):
     http_method = HTTPMethod.GET
 
     def make_endpoint_call(self, client):
-        return client.identity.get_recent_neurons()
+        return client.v1.identity.get_recent_neurons()
 
     @pytest.fixture
     def block(self) -> Block:

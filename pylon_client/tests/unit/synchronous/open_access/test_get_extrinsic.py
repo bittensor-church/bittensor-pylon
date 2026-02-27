@@ -4,11 +4,10 @@ import pytest
 from httpx import Response, codes
 from pydantic import ValidationError
 
-from pylon_client._internal.pylon_commons.models import ExtrinsicCall, ExtrinsicCallArg
-from pylon_client._internal.pylon_commons.types import BlockNumber, ExtrinsicHash, ExtrinsicIndex, ExtrinsicLength
 from pylon_client._internal.pylon_commons.v1.endpoints import Endpoint as EndpointV1
 from pylon_client._internal.pylon_commons.v1.requests import GetExtrinsicRequest
-from pylon_client._internal.pylon_commons.v1.responses import GetExtrinsicResponse
+from pylon_client.artanis import BlockNumber, ExtrinsicHash, ExtrinsicIndex, ExtrinsicLength
+from pylon_client.artanis.v1 import ExtrinsicCall, ExtrinsicCallArg, GetExtrinsicResponse
 from tests.unit.synchronous.base_test import OpenAccessEndpointTest
 
 
@@ -18,7 +17,7 @@ class TestSyncOpenAccessGetExtrinsic(OpenAccessEndpointTest):
     http_method = HTTPMethod.GET
 
     def make_endpoint_call(self, client):
-        return client.open_access.get_extrinsic(block_number=BlockNumber(1000), extrinsic_index=ExtrinsicIndex(0))
+        return client.v1.open_access.get_extrinsic(block_number=BlockNumber(1000), extrinsic_index=ExtrinsicIndex(0))
 
     @pytest.fixture
     def success_response(self) -> GetExtrinsicResponse:

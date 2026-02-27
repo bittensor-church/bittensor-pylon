@@ -2,8 +2,7 @@ import pytest
 from httpx import codes
 from pact import Pact, match
 
-from pylon_client._internal.pylon_commons.exceptions import PylonBadGateway, PylonTimeoutException
-from pylon_client._internal.pylon_commons.types import BlockNumber, NetUid
+from pylon_client.artanis import BlockNumber, NetUid, PylonBadGateway, PylonTimeoutException
 
 
 @pytest.mark.asyncio
@@ -23,7 +22,7 @@ async def test_bad_gateway(pact: Pact, pylon_client_factory):
         client = pylon_client_factory(str(srv.url))
         async with client:
             with pytest.raises(PylonBadGateway, match=r"^Bad gateway \(HTTP 502\): Block 123 data is unavailable$"):
-                await client.open_access.get_neurons(netuid=NetUid(1), block_number=BlockNumber(123))
+                await client.v1.open_access.get_neurons(netuid=NetUid(1), block_number=BlockNumber(123))
 
 
 @pytest.mark.asyncio
@@ -43,4 +42,4 @@ async def test_gateway_timeout(pact: Pact, pylon_client_factory):
             with pytest.raises(
                 PylonTimeoutException, match=r"Request to Pylon API timed out \(gateway_timeout\): Request timed out"
             ):
-                await client.open_access.get_latest_neurons(netuid=NetUid(1))
+                await client.v1.open_access.get_latest_neurons(netuid=NetUid(1))

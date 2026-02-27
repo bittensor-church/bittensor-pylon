@@ -5,8 +5,11 @@ Tests for HTTP error handling in the async communicator.
 import pytest
 from httpx import ConnectTimeout, PoolTimeout, ReadTimeout, Response, TimeoutException, WriteTimeout, codes
 
-from pylon_client._internal.client.asynchronous.client import AsyncPylonClient
-from pylon_client._internal.pylon_commons.exceptions import (
+from pylon_client._internal.pylon_commons.v1.endpoints import Endpoint as EndpointV1
+from pylon_client.artanis import (
+    AsyncPylonClient,
+    BlockNumber,
+    NetUid,
     PylonBadGateway,
     PylonForbidden,
     PylonNotFound,
@@ -15,8 +18,6 @@ from pylon_client._internal.pylon_commons.exceptions import (
     PylonUnauthorized,
     TimeoutReason,
 )
-from pylon_client._internal.pylon_commons.types import BlockNumber, NetUid
-from pylon_client._internal.pylon_commons.v1.endpoints import Endpoint as EndpointV1
 
 
 @pytest.fixture
@@ -84,7 +85,7 @@ async def test_status_code_raises_correct_exception(
 
     async with open_access_client:
         with pytest.raises(expected_exception, match=expected_message):
-            await open_access_client.open_access.get_neurons(netuid=NetUid(1), block_number=BlockNumber(1000))
+            await open_access_client.v1.open_access.get_neurons(netuid=NetUid(1), block_number=BlockNumber(1000))
 
 
 @pytest.mark.asyncio
@@ -114,7 +115,7 @@ async def test_extracts_detail_from_json_response(
 
     async with open_access_client:
         with pytest.raises(expected_exception) as exc_info:
-            await open_access_client.open_access.get_neurons(netuid=NetUid(1), block_number=BlockNumber(1000))
+            await open_access_client.v1.open_access.get_neurons(netuid=NetUid(1), block_number=BlockNumber(1000))
 
     assert exc_info.value.detail == error_detail
     assert error_detail in str(exc_info.value)
@@ -135,7 +136,7 @@ async def test_handles_json_without_detail_field(
 
     async with open_access_client:
         with pytest.raises(PylonNotFound) as exc_info:
-            await open_access_client.open_access.get_neurons(netuid=NetUid(1), block_number=BlockNumber(1000))
+            await open_access_client.v1.open_access.get_neurons(netuid=NetUid(1), block_number=BlockNumber(1000))
 
     assert exc_info.value.detail is None
 
@@ -153,7 +154,7 @@ async def test_handles_non_json_response(
 
     async with open_access_client:
         with pytest.raises(PylonNotFound) as exc_info:
-            await open_access_client.open_access.get_neurons(netuid=NetUid(1), block_number=BlockNumber(1000))
+            await open_access_client.v1.open_access.get_neurons(netuid=NetUid(1), block_number=BlockNumber(1000))
 
     assert exc_info.value.detail is None
 
@@ -205,7 +206,7 @@ async def test_timeout_exception_maps_to_correct_reason(
 
     async with open_access_client:
         with pytest.raises(PylonTimeoutException, match=expected_message) as exc_info:
-            await open_access_client.open_access.get_neurons(netuid=NetUid(1), block_number=BlockNumber(1000))
+            await open_access_client.v1.open_access.get_neurons(netuid=NetUid(1), block_number=BlockNumber(1000))
 
     assert exc_info.value.reason == expected_reason
     assert exc_info.value.timeout_seconds == expected_timeout_seconds
@@ -221,4 +222,4 @@ async def test_unexpected_timeout_exception_raises_type_error(
 
     async with open_access_client:
         with pytest.raises(TypeError, match="Unexpected timeout exception type: TimeoutException"):
-            await open_access_client.open_access.get_neurons(netuid=NetUid(1), block_number=BlockNumber(1000))
+            await open_access_client.v1.open_access.get_neurons(netuid=NetUid(1), block_number=BlockNumber(1000))

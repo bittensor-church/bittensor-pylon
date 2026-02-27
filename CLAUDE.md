@@ -258,6 +258,16 @@ PYLON_ID_SN1_TOKEN=secret_token_here
 - Test environment for service: Set `PYLON_ENV_FILE=tests/.test-env` (nox does this automatically)
 - Both sync (`PylonClient`) and async (`AsyncPylonClient`) clients exist and support testing mode
 
+### Client Test Import Policy
+
+Client tests (`pylon_client/tests/`) MUST import from the public API (`pylon_client.artanis`, `pylon_client.artanis.v1`, `pylon_client.artanis.unstable`) instead of `pylon_client._internal.*`.
+
+**Exception:** Test infrastructure CAN use `_internal` imports:
+- `Endpoint` enums from `pylon_client._internal.pylon_commons.{endpoints,v1.endpoints}`
+- Request classes from `pylon_client._internal.pylon_commons.v1.requests`
+- `TIMEOUT_HEADER` from `pylon_client._internal.pylon_commons.timeout`
+- `IdentityLoginResponse` from `pylon_client._internal.pylon_commons.v1.responses`
+
 ### Service API Testing
 
 The service endpoints are tested using `MockBittensorClient` (`pylon_service/tests/mock_bittensor_client.py`), which provides a mock implementation of `AbstractBittensorClient` for testing without blockchain interactions.
