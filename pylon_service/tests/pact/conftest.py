@@ -2,37 +2,12 @@
 Pact test specific fixtures.
 """
 
-import threading
-import time
 from os import environ
 from pathlib import Path
 
 import pytest
-import uvicorn
 
-
-class UvicornServer:
-    def __init__(self, app, host: str = "localhost", port: int = 58000):
-        self.config = uvicorn.Config(app, host=host, port=port, log_level="debug")
-        self.server = uvicorn.Server(self.config)
-        self._thread: threading.Thread | None = None
-
-    def start(self):
-        self._thread = threading.Thread(target=self.server.run, daemon=True)
-        self._thread.start()
-        timeout_seconds = 5
-        elapsed_seconds = 0.0
-        while not self.server.started:
-            time.sleep(0.1)
-            elapsed_seconds += 0.1
-            if elapsed_seconds >= timeout_seconds:
-                self.stop()
-                raise RuntimeError("Timeout while waiting for uvicorn server to start.")
-
-    def stop(self):
-        self.server.should_exit = True
-        if self._thread:
-            self._thread.join(timeout=5)
+from tests.helpers import UvicornServer
 
 
 @pytest.fixture(scope="session")

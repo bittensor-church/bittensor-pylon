@@ -153,4 +153,21 @@ jobs:
           PACT_FILES_DIR: ${{ github.workspace }}/pact-files
         run: cd pylon_service && nox -s test-pact
 
+  integration-tests:
+    runs-on: ubuntu-latest
+    name: integration-tests
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
 
+      - name: Setup python env
+        uses: ./.github/actions/setup-python-env
+        with:
+          python-version: '3.13'
+
+      # Poor man's solution - image will not change often so better to rebuild it on demand.
+      - name: Prepare local chain
+        run: cd pylon_service && nox -s prepare-localchain
+
+      - name: Run integration tests
+        run: cd pylon_service && nox -s test-integration
