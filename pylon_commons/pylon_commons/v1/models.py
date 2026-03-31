@@ -5,7 +5,6 @@ from .._unstable.models import (
     Block,
     BlockInfoBag,
     CertificateAlgorithm,
-    Commitment,
     CommitReveal,
     Extrinsic,
     ExtrinsicCall,
@@ -21,3 +20,10 @@ from .._unstable.models import (
     SubnetValidators,
     UnknownIntEnum,
 )
+from ..types import BlockNumber, CommitmentDataHex, Hotkey
+
+
+class Commitment(BittensorModel):
+    commitment_block_number: BlockNumber
+    hotkey: Hotkey
+    commitment: CommitmentDataHex

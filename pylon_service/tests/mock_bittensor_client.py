@@ -12,14 +12,16 @@ from typing import Any
 from pylon_commons.models import (
     Block,
     CertificateAlgorithm,
-    Commitment,
+    CommitmentVariant,
     Extrinsic,
     Neuron,
     NeuronCertificate,
     NeuronCertificateKeypair,
+    RevealedCommitment,
     SubnetCommitments,
     SubnetHyperparams,
     SubnetNeurons,
+    SubnetRevealedCommitments,
     SubnetState,
     SubnetValidators,
 )
@@ -30,6 +32,7 @@ from pylon_commons.types import (
     ExtrinsicIndex,
     Hotkey,
     NetUid,
+    RevealedCommitmentData,
     RevealRound,
     Timestamp,
     Weight,
@@ -207,9 +210,20 @@ class MockBittensorClient(AbstractBittensorClient):
         self.calls["get_subnet_state"].append((netuid, block))
         return await self._execute_behavior("get_subnet_state", netuid, block)
 
-    async def get_commitment(self, netuid: NetUid, block: Block, hotkey: Hotkey | None = None) -> Commitment | None:
+    async def get_commitment(
+        self, netuid: NetUid, block: Block, hotkey: Hotkey | None = None
+    ) -> CommitmentVariant | None:
         self.calls["get_commitment"].append((netuid, block, hotkey))
         return await self._execute_behavior("get_commitment", netuid, block, hotkey)
+
+    async def get_revealed_commitments(
+        self, netuid: NetUid, block: Block, hotkey: Hotkey | None = None
+    ) -> list[RevealedCommitment] | None:
+        """
+        Get revealed commitments for a hotkey.
+        """
+        self.calls["get_revealed_commitments"].append((netuid, block, hotkey))
+        return await self._execute_behavior("get_revealed_commitments", netuid, block, hotkey)
 
     async def get_commitments(self, netuid: NetUid, block: Block) -> SubnetCommitments:
         """
@@ -218,12 +232,28 @@ class MockBittensorClient(AbstractBittensorClient):
         self.calls["get_commitments"].append((netuid, block))
         return await self._execute_behavior("get_commitments", netuid, block)
 
+    async def get_all_revealed_commitments(self, netuid: NetUid, block: Block) -> SubnetRevealedCommitments:
+        """
+        Get all revealed commitments for a subnet.
+        """
+        self.calls["get_all_revealed_commitments"].append((netuid, block))
+        return await self._execute_behavior("get_all_revealed_commitments", netuid, block)
+
     async def set_commitment(self, netuid: NetUid, data: CommitmentDataBytes) -> None:
         """
         Set commitment data on chain.
         """
         self.calls["set_commitment"].append((netuid, data))
         return await self._execute_behavior("set_commitment", netuid, data)
+
+    async def set_revealed_commitment(
+        self, netuid: NetUid, commitment: RevealedCommitmentData, block_to_reveal: int, block_time: int | float
+    ) -> int:
+        """
+        Sets revealed commitment on chain.
+        """
+        self.calls["set_revealed_commitment"].append((netuid, commitment, block_to_reveal, block_time))
+        return await self._execute_behavior("set_revealed_commitment", netuid, commitment, block_to_reveal, block_time)
 
     async def get_validators(self, netuid: NetUid, block: Block) -> SubnetValidators:
         """
@@ -245,3 +275,10 @@ class MockBittensorClient(AbstractBittensorClient):
         """
         self.calls["get_extrinsic"].append((block, extrinsic_index))
         return await self._execute_behavior("get_extrinsic", block, extrinsic_index)
+
+    async def get_drand_last_stored_round(self, block: Block | None = None) -> int:
+        """
+        Fetches the last stored drand round from the blockchain.
+        """
+        self.calls["get_drand_last_stored_round"].append((block,))
+        return await self._execute_behavior("get_drand_last_stored_round", block)

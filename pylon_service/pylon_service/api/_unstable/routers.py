@@ -5,6 +5,7 @@ from pylon_service.api._unstable.api import (
     IdentityController,
     OpenAccessController,
     get_extrinsic_endpoint,
+    get_last_stored_round_endpoint,
     get_latest_block_info_endpoint,
     identity_login,
 )
@@ -16,6 +17,7 @@ unstable_router = Router(
         OpenAccessController,
         identity_login,
         get_extrinsic_endpoint,
+        get_last_stored_round_endpoint,
         get_latest_block_info_endpoint,
     ],
 )

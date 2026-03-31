@@ -6,30 +6,39 @@ from typing import Generic, NewType, TypeVar
 
 from pylon_client._internal.client.asynchronous.communicators import AbstractAsyncCommunicator
 from pylon_client._internal.pylon_commons._unstable.requests import (
+    GetAllRevealedCommitmentsRequest,
     GetCommitmentRequest,
     GetCommitmentsRequest,
+    GetDrandLastStoredRoundRequest,
     GetExtrinsicRequest,
     GetLatestBlockInfoRequest,
     GetLatestNeuronsRequest,
     GetLatestValidatorsRequest,
     GetNeuronsRequest,
     GetOwnCommitmentRequest,
+    GetOwnRevealedCommitmentsRequest,
     GetRecentNeuronsRequest,
+    GetRevealedCommitmentsRequest,
     GetValidatorsRequest,
     PylonRequest,
     SetCommitmentRequest,
+    SetRevealedCommitmentRequest,
     SetWeightsRequest,
 )
 from pylon_client._internal.pylon_commons._unstable.responses import (
+    GetAllRevealedCommitmentsResponse,
     GetCommitmentResponse,
     GetCommitmentsResponse,
+    GetDrandLastStoredRoundResponse,
     GetExtrinsicResponse,
     GetLatestBlockInfoResponse,
     GetNeuronsResponse,
+    GetRevealedCommitmentsResponse,
     GetValidatorsResponse,
     LoginResponse,
     PylonResponse,
     SetCommitmentResponse,
+    SetRevealedCommitmentResponse,
     SetWeightsResponse,
 )
 from pylon_client._internal.pylon_commons.apiver import ApiVersion
@@ -131,7 +140,7 @@ class AbstractAsyncOpenAccessApi(AbstractAsyncApi[LoginResponseT], ABC):
 
     All methods in this API may raise the following exceptions:
         PylonClosed: When the api method is called and the communicator is closed.
-        PylonRequestException: When a network or connection error occurs and all retires are exhausted.
+        PylonRequestException: When a network or connection error occurs and all retries are exhausted.
             Requests are retried automatically according to the retry configuration.
         PylonResponseException: When the server returns an error response.
         PylonMisconfigured: When the open access token is not configured.
@@ -196,9 +205,21 @@ class AbstractAsyncOpenAccessApi(AbstractAsyncApi[LoginResponseT], ABC):
             netuid: The unique identifier of the subnet.
 
         Returns:
-            GetCommitmentsResponse: containing commitments data mapping hotkeys to commitment data.
+            GetCommitmentsResponse: containing data mapping hotkeys to commitments.
         """
         return await self._send_authenticated_request(partial(self._get_commitments_request, netuid))
+
+    async def get_all_revealed_commitments(self, netuid: NetUid) -> GetAllRevealedCommitmentsResponse:
+        """
+        Retrieves all revealed commitments for a specific subnet at the latest available block.
+
+        Args:
+            netuid: The unique identifier of the subnet.
+
+        Returns:
+            GetAllRevealedCommitmentsResponse: containing data mapping hotkeys to revealed commitment lists.
+        """
+        return await self._send_authenticated_request(partial(self._get_all_revealed_commitments_request, netuid))
 
     async def get_commitment(self, netuid: NetUid, hotkey: Hotkey) -> GetCommitmentResponse:
         """
@@ -209,9 +230,28 @@ class AbstractAsyncOpenAccessApi(AbstractAsyncApi[LoginResponseT], ABC):
             hotkey: The hotkey to retrieve the commitment for.
 
         Returns:
-            GetCommitmentResponse: containing the hotkey and its commitment data (None if not found).
+            GetCommitmentResponse: containing a commitment.
+
+        Throws:
+            PylonNotFound: If a commitment could not be found.
         """
         return await self._send_authenticated_request(partial(self._get_commitment_request, netuid, hotkey))
+
+    async def get_revealed_commitments(self, netuid: NetUid, hotkey: Hotkey) -> GetRevealedCommitmentsResponse:
+        """
+        Retrieves revealed commitments for a hotkey in a subnet at the latest available block.
+
+        Args:
+            netuid: The unique identifier of the subnet.
+            hotkey: The hotkey to retrieve the commitment for.
+
+        Returns:
+            GetRevealedCommitmentResponse: containing revealed commitments.
+
+        Throws:
+            PylonNotFound: If no commitments could be found.
+        """
+        return await self._send_authenticated_request(partial(self._get_revealed_commitments_request, netuid, hotkey))
 
     async def get_validators(self, netuid: NetUid, block_number: BlockNumber) -> GetValidatorsResponse:
         """
@@ -270,6 +310,17 @@ class AbstractAsyncOpenAccessApi(AbstractAsyncApi[LoginResponseT], ABC):
             partial(self._get_extrinsic_request, block_number, extrinsic_index)
         )
 
+    async def get_drand_last_stored_round(self) -> GetDrandLastStoredRoundResponse:
+        """
+        Retrieves the last stored drand round from the service.
+
+        This is a blockchain-level query that does not require subnet context.
+
+        Returns:
+            GetDrandLastStoredRoundRequest: containing the last stored round number.
+        """
+        return await self._send_authenticated_request(self._get_drand_last_stored_round_request)
+
     # Private API
 
     @abstractmethod
@@ -291,7 +342,15 @@ class AbstractAsyncOpenAccessApi(AbstractAsyncApi[LoginResponseT], ABC):
     async def _get_commitments_request(self, netuid: NetUid) -> GetCommitmentsRequest: ...
 
     @abstractmethod
+    async def _get_all_revealed_commitments_request(self, netuid: NetUid) -> GetAllRevealedCommitmentsRequest: ...
+
+    @abstractmethod
     async def _get_commitment_request(self, netuid: NetUid, hotkey: Hotkey) -> GetCommitmentRequest: ...
+
+    @abstractmethod
+    async def _get_revealed_commitments_request(
+        self, netuid: NetUid, hotkey: Hotkey
+    ) -> GetRevealedCommitmentsRequest: ...
 
     @abstractmethod
     async def _get_latest_block_info_request(self) -> GetLatestBlockInfoRequest: ...
@@ -300,6 +359,9 @@ class AbstractAsyncOpenAccessApi(AbstractAsyncApi[LoginResponseT], ABC):
     async def _get_extrinsic_request(
         self, block_number: BlockNumber, extrinsic_index: ExtrinsicIndex
     ) -> GetExtrinsicRequest: ...
+
+    @abstractmethod
+    async def _get_drand_last_stored_round_request(self) -> GetDrandLastStoredRoundRequest: ...
 
 
 class AbstractAsyncIdentityApi(AbstractAsyncApi[LoginResponseT], ABC):
@@ -313,7 +375,7 @@ class AbstractAsyncIdentityApi(AbstractAsyncApi[LoginResponseT], ABC):
 
     All methods in this API may raise the following exceptions:
         PylonClosed: When the api method is called and the communicator is closed.
-        PylonRequestException: When a network or connection error occurs and all retires are exhausted.
+        PylonRequestException: When a network or connection error occurs and all retries are exhausted.
             Requests are retried automatically according to the retry configuration.
         PylonResponseException: When the server returns an error response.
         PylonUnauthorized: When authentication fails by the reason of wrong credentials.
@@ -384,9 +446,18 @@ class AbstractAsyncIdentityApi(AbstractAsyncApi[LoginResponseT], ABC):
         Retrieves all commitments for the authenticated identity's subnet at the latest available block.
 
         Returns:
-            GetCommitmentsResponse: containing commitments data mapping hotkeys to commitment data.
+            GetCommitmentsResponse: containing data mapping hotkeys to data commitments.
         """
         return await self._send_authenticated_request(self._get_commitments_request)
+
+    async def get_all_revealed_commitments(self) -> GetAllRevealedCommitmentsResponse:
+        """
+        Retrieves all revealed commitments for the authenticated identity's subnet at the latest available block.
+
+        Returns:
+            GetAllRevealedCommitmentsResponse: containing data mapping hotkeys to revealed commitment lists.
+        """
+        return await self._send_authenticated_request(self._get_all_revealed_commitments_request)
 
     async def get_commitment(self, hotkey: Hotkey) -> GetCommitmentResponse:
         """
@@ -396,18 +467,51 @@ class AbstractAsyncIdentityApi(AbstractAsyncApi[LoginResponseT], ABC):
             hotkey: The hotkey to retrieve the commitment for.
 
         Returns:
-            GetCommitmentResponse: containing the hotkey and its commitment data (None if not found).
+            GetCommitmentResponse: containing a commitment.
+
+        Raises:
+            PylonNotFound: If a data commitment could not be found.
         """
         return await self._send_authenticated_request(partial(self._get_commitment_request, hotkey))
+
+    async def get_revealed_commitments(self, hotkey: Hotkey) -> GetRevealedCommitmentsResponse:
+        """
+        Retrieves revealed commitments for a hotkey in the authenticated identity's subnet.
+
+        Args:
+            hotkey: The hotkey to retrieve the commitment for.
+
+        Returns:
+            GetRevealedCommitmentsResponse: containing a list of its revealed commitments.
+
+        Raises:
+            PylonNotFound: If the commitments could not be found.
+        """
+        return await self._send_authenticated_request(partial(self._get_revealed_commitments_request, hotkey))
 
     async def get_own_commitment(self) -> GetCommitmentResponse:
         """
         Retrieves the commitment for the authenticated identity's own wallet hotkey.
 
         Returns:
-            GetCommitmentResponse: containing the hotkey and its commitment data.
+            GetCommitmentResponse: containing a commitment.
+
+        Raises:
+            PylonNotFound: If a commitment could not be found.
         """
         return await self._send_authenticated_request(self._get_own_commitment_request)
+
+    async def get_own_revealed_commitments(self) -> GetRevealedCommitmentsResponse:
+        """
+        Retrieves revealed commitments for the authenticated identity's own wallet hotkey.
+
+        Returns:
+            GetRevealedCommitmentsResponse: containing a commitment list.
+
+        Raises:
+            PylonNotFound: If no commitments could be found.
+        """
+        return await self._send_authenticated_request(self._get_own_revealed_commitments_request)
 
     async def set_commitment(self, commitment: CommitmentDataBytes | CommitmentDataHex) -> SetCommitmentResponse:
         """
@@ -423,6 +527,27 @@ class AbstractAsyncIdentityApi(AbstractAsyncApi[LoginResponseT], ABC):
             SetCommitmentResponse indicating the commitment has been set successfully.
         """
         return await self._send_authenticated_request(partial(self._set_commitment_request, commitment))
+
+    async def set_revealed_commitment(
+        self, commitment: str, blocks_until_reveal: int = 360, block_time: int | float = 12
+    ) -> SetRevealedCommitmentResponse:
+        """
+        Sets a commitment (model metadata) on-chain for the authenticated identity's wallet hotkey.
+
+        The commitment is applied asynchronously by the Pylon service. The method returns immediately after
+        scheduling the commitment update, without waiting for blockchain confirmation.
+
+        Args:
+            commitment:
+            blocks_until_reveal: Number of blocks from now after which the commitment should be revealed. Defaults to 360 blocks.
+            block_time: Average block time in seconds. Defaults to 12 seconds.
+
+        Returns:
+            SetRevealedCommitmentResponse containing a reveal round number.
+        """
+        return await self._send_authenticated_request(
+            partial(self._set_revealed_commitment_request, commitment, blocks_until_reveal, block_time)
+        )
 
     async def get_validators(self, block_number: BlockNumber) -> GetValidatorsResponse:
         """
@@ -477,6 +602,17 @@ class AbstractAsyncIdentityApi(AbstractAsyncApi[LoginResponseT], ABC):
             partial(self._get_extrinsic_request, block_number, extrinsic_index)
         )
 
+    async def get_drand_last_stored_round(self) -> GetDrandLastStoredRoundResponse:
+        """
+        Retrieves the last stored drand round from the service.
+
+        This is a blockchain-level query that does not require subnet context.
+
+        Returns:
+            GetDrandLastStoredRoundRequest: containing the last stored round number.
+        """
+        return await self._send_authenticated_request(self._get_drand_last_stored_round_request)
+
     # Private API
 
     @abstractmethod
@@ -495,15 +631,29 @@ class AbstractAsyncIdentityApi(AbstractAsyncApi[LoginResponseT], ABC):
     async def _get_commitments_request(self) -> GetCommitmentsRequest: ...
 
     @abstractmethod
+    async def _get_all_revealed_commitments_request(self) -> GetAllRevealedCommitmentsRequest: ...
+
+    @abstractmethod
     async def _get_commitment_request(self, hotkey: Hotkey) -> GetCommitmentRequest: ...
+
+    @abstractmethod
+    async def _get_revealed_commitments_request(self, hotkey: Hotkey) -> GetRevealedCommitmentsRequest: ...
 
     @abstractmethod
     async def _get_own_commitment_request(self) -> GetOwnCommitmentRequest: ...
 
     @abstractmethod
+    async def _get_own_revealed_commitments_request(self) -> GetOwnRevealedCommitmentsRequest: ...
+
+    @abstractmethod
     async def _set_commitment_request(
         self, commitment: CommitmentDataBytes | CommitmentDataHex
     ) -> SetCommitmentRequest: ...
+
+    @abstractmethod
+    async def _set_revealed_commitment_request(
+        self, commitment: str, blocks_until_reveal: int = 360, block_time: int | float = 12
+    ) -> SetRevealedCommitmentRequest: ...
 
     @abstractmethod
     async def _get_validators_request(self, block_number: BlockNumber) -> GetValidatorsRequest: ...
@@ -518,3 +668,6 @@ class AbstractAsyncIdentityApi(AbstractAsyncApi[LoginResponseT], ABC):
     async def _get_extrinsic_request(
         self, block_number: BlockNumber, extrinsic_index: ExtrinsicIndex
     ) -> GetExtrinsicRequest: ...
+
+    @abstractmethod
+    async def _get_drand_last_stored_round_request(self) -> GetDrandLastStoredRoundRequest: ...

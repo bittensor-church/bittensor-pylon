@@ -48,6 +48,7 @@ from pylon_client._internal.pylon_commons.types import (
     PublicKey,
     PylonAuthToken,
     Rank,
+    RevealedCommitmentData,
     RevealRound,
     Stake,
     SubnetActive,

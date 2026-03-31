@@ -1,13 +1,11 @@
 from .._unstable.requests import (  # noqa: F401
     AuthenticatedPylonRequest,
     GenerateCertificateKeypairRequest,
-    GetCommitmentRequest,
     GetExtrinsicRequest,
     GetLatestBlockInfoRequest,
     GetLatestNeuronsRequest,
     GetLatestValidatorsRequest,
     GetNeuronsRequest,
-    GetOwnCommitmentRequest,
     GetRecentNeuronsRequest,
     GetValidatorsRequest,
     IdentityLoginRequest,
@@ -19,7 +17,7 @@ from .._unstable.requests import (  # noqa: F401
     SetCommitmentRequest,
     SetWeightsRequest,
 )
-from .responses import GetCommitmentsResponse
+from .responses import GetCommitmentResponse, GetCommitmentsResponse
 
 __all__ = [
     "AuthenticatedPylonRequest",
@@ -44,6 +42,8 @@ __all__ = [
     "SetWeightsRequest",
 ]
 
+from ..types import Hotkey
+
 
 class GetCommitmentsRequest(AuthenticatedPylonRequest[GetCommitmentsResponse]):
     """
@@ -51,3 +51,21 @@ class GetCommitmentsRequest(AuthenticatedPylonRequest[GetCommitmentsResponse]):
     """
 
     response_cls = GetCommitmentsResponse
+
+
+class GetCommitmentRequest(AuthenticatedPylonRequest[GetCommitmentResponse]):
+    """
+    V1 class used to fetch a commitment for a specific hotkey by the Pylon client.
+    """
+
+    response_cls = GetCommitmentResponse
+
+    hotkey: Hotkey
+
+
+class GetOwnCommitmentRequest(IdentityPylonRequest[GetCommitmentResponse]):
+    """
+    V1 class used to fetch the commitment for the identity's wallet by the Pylon client.
+    """
+
+    response_cls = GetCommitmentResponse
