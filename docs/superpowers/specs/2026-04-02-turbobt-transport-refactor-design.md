@@ -7,26 +7,35 @@ Move turbobt connection lifecycle and raw turbobt execution out of `TurboBtClien
 
 After the change:
 
-- `TurboBTtransport` owns `open`, `close`, client recreation, retry shielding, and all direct turbobt calls
+- `AbstractTurboBTtransport` defines the turbobt contact boundary
+- `TurboBTtransport` implements that boundary and owns `open`, `close`, client recreation, retry shielding, and all direct turbobt calls
+- a module-level factory function returns transport instances and becomes the patch point for future tests
 - `TurboBtClient` owns pylon-facing behavior: translating turbobt objects into pylon models, composing multiple raw
   transport calls, and applying higher-level business rules
+- `TurboBtClient` exposes the underlying `turbobt.Bittensor` client as a public attribute delegated from the transport
 - the public `AbstractBittensorClient` contract remains stable for the rest of the service
 
 ## Scope
 
 In scope:
 
+- adding `AbstractTurboBTtransport`
 - extracting a new `TurboBTtransport` class
+- adding a module-level transport factory function used by `TurboBtClient`
 - moving `open`, `close`, `_recreate_bt_client`, and `_protect_turbobt` into that class
 - moving direct turbobt operations behind typed transport methods
 - updating `TurboBtClient` to depend on the transport instead of directly on `turbobt.Bittensor`
-- updating turbobt-focused unit tests to target the new transport boundary where appropriate
+- exposing the raw `turbobt.Bittensor` instance through `TurboBtClient`
+- adding the external engineering standards document into this repository
 
 Out of scope:
 
 - changing public API endpoint behavior
 - changing `AbstractBittensorClient` method signatures
 - altering archive fallback behavior in `BittensorClient`
+- implementing a mock transport in this change
+- adding new tests for `TurboBTtransport`
+- adding or modifying existing `TurboBtClient` tests in this change
 - unrelated refactors in pooling, dependencies, or metrics behavior
 
 ## Current State
@@ -47,7 +56,8 @@ transport lifecycle behavior even though those behaviors live on `TurboBtClient`
 
 ## Selected Approach
 
-Introduce a dedicated `TurboBTtransport` class in the bittensor client module and make `TurboBtClient` compose it.
+Introduce a dedicated `AbstractTurboBTtransport` plus a concrete `TurboBTtransport` in the bittensor client module and
+make `TurboBtClient` compose the abstract transport through a module-level factory seam.
 
 `TurboBTtransport` is a thin, typed adapter over turbobt. It exposes raw methods with turbobt-native return types and
 parameters where possible. It does not translate into pylon models.
@@ -55,16 +65,39 @@ parameters where possible. It does not translate into pylon models.
 `TurboBtClient` remains the implementation of `AbstractBittensorClient`. It translates transport results into
 application models and handles any higher-level orchestration that needs more than one raw call.
 
-This approach matches the requested layering directly and keeps the rest of the service stable.
+`TurboBtClient` should not instantiate the concrete transport class directly. Instead, it calls a module-level factory
+function that returns `AbstractTurboBTtransport`. That factory is the intended patch point for future no-IO mock
+implementations.
+
+This approach matches the requested layering directly, creates a clean test seam without adding test work yet, and
+keeps the rest of the service stable.
 
 ## Architecture
 
-### 1. New `TurboBTtransport`
+### 1. New Transport Abstraction
 
-Add a new class:
+Add a new abstract boundary:
+
+- `class AbstractTurboBTtransport(ABC)`
+
+This abstract should define:
+
+- a public `bittensor` attribute or property exposing `Bittensor | None`
+- lifecycle methods:
+  - `open()`
+  - `close()`
+- typed raw turbobt operations needed by `TurboBtClient`
+
+This is the transport-oriented contact seam for turbobt access inside `pylon_service`.
+
+### 2. New `TurboBTtransport`
+
+Add a concrete class:
 
 - constructor: `__init__(wallet: Wallet | None, uri: BittensorNetwork)`
 - internal state: `_raw_client`, `_is_client_ready`
+- public raw-client exposure:
+  - `bittensor -> Bittensor | None`
 - lifecycle methods:
   - `open()`
   - `close()`
@@ -80,9 +113,14 @@ These methods are moved with behavior preserved. The current concurrency rules r
 - protected calls are shielded from task cancellation
 - `RuntimeError` during a turbobt operation triggers one client recreation and one retry
 
-### 2. Typed Raw Transport API
+`bittensor` should expose the current raw turbobt client instance held by the transport. `TurboBtClient` then exposes
+the same object publicly via delegation so current or future callers have an escape hatch without reintroducing raw
+construction in application code.
 
-`TurboBTtransport` should expose typed raw methods rather than generic callback-based access from outside.
+### 3. Typed Raw Transport API
+
+`AbstractTurboBTtransport` and `TurboBTtransport` should expose typed raw methods rather than generic callback-based
+access from outside.
 
 Representative method set:
 
@@ -105,7 +143,24 @@ These methods should use turbobt-facing parameter and return types. If a turbobt
 practice, the transport method should still annotate the narrowest honest Python type instead of returning `Any`
 unnecessarily.
 
-### 3. `TurboBtClient` as Mapper/Composer
+### 4. Factory Function
+
+Add a module-level factory function in the bittensor client module, for example:
+
+- `def get_turbobt_transport(wallet: Wallet | None, uri: BittensorNetwork) -> AbstractTurboBTtransport`
+
+Default behavior:
+
+- return `TurboBTtransport(wallet=wallet, uri=uri)`
+
+Usage rule:
+
+- `TurboBtClient` must call this function instead of instantiating `TurboBTtransport` directly
+- downstream tests can later patch this function to return a no-IO mock transport implementing the same abstract
+
+This is intentionally the main seam for substituting the transport without patching deep client internals.
+
+### 5. `TurboBtClient` as Mapper/Composer
 
 `TurboBtClient` continues to implement `AbstractBittensorClient`, but it no longer owns raw turbobt lifecycle.
 
@@ -122,18 +177,25 @@ Responsibilities kept in `TurboBtClient`:
 
 `TurboBtClient.open()` and `TurboBtClient.close()` become simple delegations to the transport.
 
-### 4. Construction and Encapsulation
+It also exposes a public raw-client attribute:
 
-`TurboBtClient` should create a `TurboBTtransport` by default:
+- `client.bittensor -> Bittensor | None`
 
-- `self._transport = transport or TurboBTtransport(wallet=wallet, uri=uri)`
+This should delegate to the transport's raw client reference rather than store a second copy.
 
-Optional transport injection is useful for focused unit tests and keeps the new dependency explicit.
+### 6. Construction and Encapsulation
+
+`TurboBtClient` should obtain its transport through the module-level factory:
+
+- `self._transport = transport or get_turbobt_transport(wallet=wallet, uri=uri)`
+
+Optional direct transport injection remains useful as a local override, but the normal code path should go through the
+factory function because that is the official patch point.
 
 The transport remains turbobt-specific and should not implement `AbstractBittensorClient`. It is a lower-level helper,
 not a second public client abstraction.
 
-### 5. Fallback Client Compatibility
+### 7. Fallback Client Compatibility
 
 `BittensorClient` continues to wrap `TurboBtClient` instances, not transports.
 
@@ -177,62 +239,37 @@ Client layer:
 - preserves current `ValueError` behavior when a hotkey is required but no wallet exists
 - preserves `None` handling for absent blocks, certificates, or commitments
 - continues to log missing hotkeys during weight translation
+- exposes the raw turbobt client as a convenience escape hatch, but higher-level code should continue to prefer the
+  public `AbstractBittensorClient` methods for normal behavior
 
 ## Testing
 
-### Transport Tests
+No new tests should be added in this change.
 
-Move or adapt current lifecycle/resiliency tests to target `TurboBTtransport` directly:
-
-- cancellation does not cancel in-flight turbobt call
-- `RuntimeError` triggers recreation and retry
-- retry failure propagates
-- non-`RuntimeError` does not trigger recreation
-- `_get_bt_client()` waits for readiness
-- concurrent recreation deduplicates
-- `open()` sets readiness
-- `close()` clears readiness
-- `close()` waits for recreation to finish
-- recreation waits for open to finish
-
-### Client Tests
-
-Keep `TurboBtClient` unit tests focused on mapping/composition:
-
-- block translation
-- neuron translation with stakes
-- hyperparameter translation
-- certificate translation
-- weight translation from hotkey to uid
-- commitment filtering by registered hotkeys
-- validator sorting
-- extrinsic translation
-
-When practical, client tests should mock the transport rather than the whole turbobt call chain.
-
-### Fallback Tests
-
-`BittensorClient` delegation tests should remain unchanged except for any constructor changes needed to instantiate
-`TurboBtClient` with an internal transport.
+Do not modify existing `TurboBtClient` tests or add new `TurboBTtransport` tests yet. The goal of this refactor is to
+establish the seam first, so later investigation can choose the right mock transport shape and testing strategy.
 
 ## Files Likely Affected
 
 - `pylon_service/pylon_service/bittensor/client.py`
-- `pylon_service/tests/unit/bittensor/turbobt/conftest.py`
-- `pylon_service/tests/unit/bittensor/turbobt/test_shielded.py`
-- selected turbobt unit tests under `pylon_service/tests/unit/bittensor/turbobt/`
+- `docs/engineering-standards.md`
 
 ## Risks
 
 - over-extracting too much into transport would blur the requested raw-transport boundary
 - under-typing transport methods would make the new layer less useful and harder to reason about
-- transport injection must not complicate normal `TurboBtClient` construction or fallback-client behavior
+- the public raw `bittensor` exposure can become a boundary leak if higher-level code starts bypassing `TurboBtClient`
+  methods routinely
+- the factory seam must remain the default construction path or tests will fall back to patching deep internals again
 
 ## Acceptance Criteria
 
+- `AbstractTurboBTtransport` defines the raw turbobt contact boundary used by `TurboBtClient`
 - `TurboBTtransport` owns `open`, `close`, `_recreate_bt_client`, and `_protect_turbobt`
+- `get_turbobt_transport()` is the default construction seam and returns `AbstractTurboBTtransport`
 - direct turbobt calls move behind typed `TurboBTtransport` methods
 - `TurboBtClient` no longer reaches into `turbobt.Bittensor` directly
+- `TurboBtClient` exposes the underlying `turbobt.Bittensor` instance as a public delegated attribute
 - `TurboBtClient` remains responsible for translation into pylon models and higher-level composition
 - public `AbstractBittensorClient` behavior remains unchanged for existing callers
-- existing lifecycle/retry behavior is covered by transport-focused tests
+- no new tests are added and no existing `TurboBtClient` tests are modified in this change
