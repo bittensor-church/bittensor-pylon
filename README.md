@@ -149,6 +149,9 @@ nox -s test                    # Run all tests
 nox -s test -- -k "test_name"  # Run specific test
 ```
 
+`pylon_service/new_tests/` follows a separate transport-seam testing convention with a shared
+in-memory blockchain seed. See [pylon_service/new_tests/README.md](/Users/junie/synced_p/bittensor-pylon/pylon_service/new_tests/README.md).
+
 ### Pact Tests
 
 Pact tests verify the contract between the client and service. The client tests generate pact files
