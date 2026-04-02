@@ -3,7 +3,9 @@ from __future__ import annotations
 import asyncio
 import logging
 from abc import ABC, abstractmethod
+from collections import defaultdict
 from collections.abc import Awaitable, Callable
+from dataclasses import dataclass
 from datetime import datetime
 from enum import StrEnum
 from typing import Any
@@ -367,6 +369,23 @@ class AbstractTurboBTtransport(ABC):
         """
 
 
+@dataclass(slots=True)
+class _BlockRange[T]:
+    start: int
+    end: int | None
+    value: T
+
+    def contains(self, block_number: int) -> bool:
+        if block_number < self.start:
+            return False
+        return self.end is None or block_number <= self.end
+
+
+@dataclass(slots=True)
+class _MockBlockRecord:
+    block: TurboBtBlock
+
+
 class TurboBTtransport(AbstractTurboBTtransport):
     """
     Raw turbobt transport.
@@ -494,6 +513,150 @@ class TurboBTtransport(AbstractTurboBTtransport):
 
     async def get_signed_block(self, block_hash: BlockHash) -> SignedBlock | None:
         return await self._protect_turbobt(lambda c: c.subtensor.chain.getBlock(block_hash))
+
+
+class MockTurboBTtransport(AbstractTurboBTtransport):
+    """
+    Declarative, no-IO transport for tests that exercise the TurboBtClient seam.
+    """
+
+    def __init__(self) -> None:
+        self._latest_block: TurboBtBlock | None = None
+        self._blocks_by_number: dict[int, _MockBlockRecord] = {}
+        self._blocks_by_hash: dict[BlockHash, _MockBlockRecord] = {}
+        self._neurons: dict[NetUid, list[_BlockRange[list[TurboBtNeuron]]]] = {}
+        self._subnet_states: dict[NetUid, list[_BlockRange[dict[str, Any]]]] = {}
+        self.calls: defaultdict[str, list[tuple[Any, ...]]] = defaultdict(list)
+
+    @property
+    def bittensor(self) -> Bittensor | None:
+        return None
+
+    def _record_block(self, block: TurboBtBlock) -> None:
+        assert block.number is not None, "MockTurboBTtransport requires blocks with a number."
+        assert block.hash is not None, "MockTurboBTtransport requires blocks with a hash."
+        record = _MockBlockRecord(block=block)
+        self._blocks_by_number[int(block.number)] = record
+        self._blocks_by_hash[BlockHash(block.hash)] = record
+
+    def _resolve_block_number(self, block_hash: BlockHash) -> int:
+        try:
+            return int(self._blocks_by_hash[block_hash].block.number)
+        except KeyError as exc:
+            raise LookupError(f"No mock block configured for hash {block_hash}") from exc
+
+    @staticmethod
+    def _resolve_range[T](ranges: list[_BlockRange[T]], *, block_number: int, what: str) -> T:
+        for block_range in reversed(ranges):
+            if block_range.contains(block_number):
+                return block_range.value
+        raise LookupError(f"No mock {what} configured for block {block_number}")
+
+    def set_latest_block(self, block: TurboBtBlock) -> None:
+        self._latest_block = block
+        self._record_block(block)
+
+    def add_block(self, block: TurboBtBlock) -> None:
+        self._record_block(block)
+
+    def add_neurons_range(
+        self, netuid: NetUid, start: int, end: int | None, neurons: list[TurboBtNeuron]
+    ) -> None:
+        self._neurons.setdefault(netuid, []).append(_BlockRange(start=start, end=end, value=neurons))
+
+    def add_subnet_state_range(self, netuid: NetUid, start: int, end: int | None, state: dict[str, Any]) -> None:
+        self._subnet_states.setdefault(netuid, []).append(_BlockRange(start=start, end=end, value=state))
+
+    def reset(self) -> None:
+        self._latest_block = None
+        self._blocks_by_number.clear()
+        self._blocks_by_hash.clear()
+        self._neurons.clear()
+        self._subnet_states.clear()
+        self.calls.clear()
+
+    async def open(self) -> None:
+        self.calls["open"].append(())
+
+    async def close(self) -> None:
+        self.calls["close"].append(())
+
+    async def get_block(self, number: BlockNumber) -> TurboBtBlock | None:
+        self.calls["get_block"].append((number,))
+        if number == BlockNumber(LATEST_BLOCK_MARK):
+            return self._latest_block
+        record = self._blocks_by_number.get(int(number))
+        return record and record.block
+
+    async def get_block_timestamp(self, block_number: BlockNumber) -> datetime:
+        self.calls["get_block_timestamp"].append((block_number,))
+        raise NotImplementedError("MockTurboBTtransport does not implement get_block_timestamp in this change")
+
+    async def list_neurons(self, netuid: NetUid, block_hash: BlockHash) -> list[TurboBtNeuron]:
+        self.calls["list_neurons"].append((netuid, block_hash))
+        try:
+            ranges = self._neurons[netuid]
+        except KeyError as exc:
+            raise LookupError(f"No mock neurons configured for subnet {netuid}") from exc
+        block_number = self._resolve_block_number(block_hash)
+        return self._resolve_range(ranges, block_number=block_number, what=f"neurons for subnet {netuid}")
+
+    async def get_hyperparameters(self, netuid: NetUid, block_hash: BlockHash) -> TurboBtSubnetHyperparams | None:
+        self.calls["get_hyperparameters"].append((netuid, block_hash))
+        raise NotImplementedError("MockTurboBTtransport does not implement get_hyperparameters in this change")
+
+    async def get_certificates(
+        self, netuid: NetUid, block_hash: BlockHash
+    ) -> dict[str, TurboBtNeuronCertificate] | None:
+        self.calls["get_certificates"].append((netuid, block_hash))
+        raise NotImplementedError("MockTurboBTtransport does not implement get_certificates in this change")
+
+    async def get_certificate(
+        self, netuid: NetUid, hotkey: Hotkey, block_hash: BlockHash
+    ) -> TurboBtNeuronCertificate | None:
+        self.calls["get_certificate"].append((netuid, hotkey, block_hash))
+        raise NotImplementedError("MockTurboBTtransport does not implement get_certificate in this change")
+
+    async def generate_certificate_keypair(
+        self, netuid: NetUid, algorithm: TurboBtCertificateAlgorithm
+    ) -> TurboBtNeuronCertificateKeypair | None:
+        self.calls["generate_certificate_keypair"].append((netuid, algorithm))
+        raise NotImplementedError("MockTurboBTtransport does not implement generate_certificate_keypair in this change")
+
+    async def get_subnet_state(self, netuid: NetUid, block_hash: BlockHash) -> dict[str, Any]:
+        self.calls["get_subnet_state"].append((netuid, block_hash))
+        try:
+            ranges = self._subnet_states[netuid]
+        except KeyError as exc:
+            raise LookupError(f"No mock subnet state configured for subnet {netuid}") from exc
+        block_number = self._resolve_block_number(block_hash)
+        return self._resolve_range(ranges, block_number=block_number, what=f"subnet state for subnet {netuid}")
+
+    async def commit_weights(self, netuid: NetUid, weights: dict[int, float]) -> int:
+        self.calls["commit_weights"].append((netuid, weights))
+        raise NotImplementedError("MockTurboBTtransport does not implement commit_weights in this change")
+
+    async def set_weights(self, netuid: NetUid, weights: dict[int, float]) -> None:
+        self.calls["set_weights"].append((netuid, weights))
+        raise NotImplementedError("MockTurboBTtransport does not implement set_weights in this change")
+
+    async def get_commitment(
+        self, netuid: NetUid, hotkey: Hotkey, block_hash: BlockHash
+    ) -> dict[str, Any] | None:
+        self.calls["get_commitment"].append((netuid, hotkey, block_hash))
+        raise NotImplementedError("MockTurboBTtransport does not implement get_commitment in this change")
+
+    async def fetch_commitments(self, netuid: NetUid, block_hash: BlockHash) -> dict[str, dict[str, Any]]:
+        self.calls["fetch_commitments"].append((netuid, block_hash))
+        raise NotImplementedError("MockTurboBTtransport does not implement fetch_commitments in this change")
+
+    async def set_commitment(self, netuid: NetUid, data: bytes) -> None:
+        self.calls["set_commitment"].append((netuid, data))
+        raise NotImplementedError("MockTurboBTtransport does not implement set_commitment in this change")
+
+    async def get_signed_block(self, block_hash: BlockHash) -> SignedBlock | None:
+        self.calls["get_signed_block"].append((block_hash,))
+        raise NotImplementedError("MockTurboBTtransport does not implement get_signed_block in this change")
 
 
 def get_turbobt_transport(wallet: Wallet | None, uri: BittensorNetwork) -> AbstractTurboBTtransport:
