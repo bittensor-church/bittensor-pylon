@@ -3,10 +3,10 @@
 ## Goal
 
 Add a no-IO mock implementation of `AbstractTurboBTtransport` in production code and use it to migrate two endpoint
-test modules away from `MockBittensorClient`:
+test modules away from `MockBittensorClient` into a new isolated test tree:
 
-- `pylon_service/tests/unit/open_access_endpoints/test_get_neurons_endpoint.py`
-- `pylon_service/tests/unit/open_access_endpoints/test_get_validators_endpoint.py`
+- `pylon_service/new_tests/open_access_endpoints/test_get_neurons_endpoint.py`
+- `pylon_service/new_tests/open_access_endpoints/test_get_validators_endpoint.py`
 
 The mock transport must:
 
@@ -20,7 +20,9 @@ In scope:
 - adding `MockTurboBTtransport` next to the real transport seam in production code
 - giving it declarative APIs for block- and subnet-scoped raw chain state
 - recording method calls on the mock transport
-- patching `get_turbobt_transport()` locally inside the two target test modules
+- patching `get_turbobt_transport()` locally inside the migrated test area
+- moving the two target endpoint modules into `pylon_service/new_tests/`
+- adding local fixtures in the new test tree so those tests do not inherit the old `MockBittensorClient` pool setup
 - refactoring those two modules to use the mock transport instead of `MockBittensorClient`
 
 Out of scope:
@@ -44,14 +46,21 @@ The two target endpoint modules currently:
 This keeps tests above an older client seam rather than the new transport seam. It also configures behavior in method
 terms instead of describing chain state.
 
+Anything under `pylon_service/tests/` inherits that shared `conftest.py`, so patching `get_turbobt_transport()`
+inside those modules would not be sufficient by itself. Those tests would still be driven through `MockBittensorClient`
+unless they move outside the old test tree.
+
 ## Selected Approach
 
-Add a production `MockTurboBTtransport(AbstractTurboBTtransport)` and patch `get_turbobt_transport()` only within the
-two target test modules.
+Add a production `MockTurboBTtransport(AbstractTurboBTtransport)` and patch `get_turbobt_transport()` only within a
+new isolated test tree under `pylon_service/new_tests/`.
 
-Those modules will continue to use the normal app and the normal `TurboBtClient`, but their local patch will cause the
-client to receive a no-IO transport instance instead of the real transport. This bypasses the shared
-`MockBittensorClient` fixture path for those modules without requiring a global test harness rewrite.
+Those modules will use the normal app and the normal `TurboBtClient`, but with local fixtures that construct an app
+state using the real `BittensorClient` path rather than the old `MockBittensorClient` pool seam. Their local patch
+will then cause `TurboBtClient` to receive a no-IO transport instance instead of the real transport.
+
+This bypasses the shared `MockBittensorClient` fixture path only for the migrated modules and avoids a global test
+harness rewrite.
 
 ## Architecture
 
@@ -108,22 +117,36 @@ Example:
 
 This keeps assertions at the contact boundary rather than on deeper internals.
 
-### 3. Targeted Test Patching
+### 3. New Isolated Test Tree
+
+Create a new directory:
+
+- `pylon_service/new_tests/open_access_endpoints/`
+
+Add a local `conftest.py` in the new test tree with only the fixtures needed by the migrated modules.
+
+This fixture duplication is intentional and should be documented with a comment explaining that these tests are the
+start of a gradual migration out of `pylon_service/tests/`, so they must not inherit the old
+`MockBittensorClient`-based pool fixture.
+
+### 4. Targeted Test Patching
 
 Do not modify the shared `pylon_service/tests/conftest.py` pool fixtures.
 
-Instead, in each target module:
+Instead, in the new test tree:
 
-- create a module-local `MockTurboBTtransport` fixture
+- create local fixtures for app/test-client construction
+- create a local `MockTurboBTtransport` fixture
 - patch `pylon_service.bittensor.client.get_turbobt_transport` to return that fixture
-- use the normal test app/client stack
+- construct the app so it uses the normal `BittensorClient` path, not `MockBittensorClient`
 
 The patch must apply before requests cause `TurboBtClient` instances to be created for that module’s tests.
 
-### 4. Test Refactor Shape
+### 5. Test Refactor Shape
 
 Refactor the two modules so they:
 
+- live under `pylon_service/new_tests/open_access_endpoints/`
 - stop depending on `open_access_mock_bt_client`
 - configure the mock transport using block/state/neuron datasets
 - assert `mock_turbobt_transport.calls[...]`
@@ -154,12 +177,15 @@ This is preferable to returning empty placeholders because it makes incorrect te
 ## Files Likely Affected
 
 - `pylon_service/pylon_service/bittensor/client.py`
-- `pylon_service/tests/unit/open_access_endpoints/test_get_neurons_endpoint.py`
-- `pylon_service/tests/unit/open_access_endpoints/test_get_validators_endpoint.py`
+- `pylon_service/new_tests/open_access_endpoints/conftest.py`
+- `pylon_service/new_tests/open_access_endpoints/test_get_neurons_endpoint.py`
+- `pylon_service/new_tests/open_access_endpoints/test_get_validators_endpoint.py`
 
 ## Risks
 
 - if the test-module patch is applied too late, the client pool may still create clients through the old seam
+- duplicating fixtures in the new test tree adds short-term maintenance cost, but that duplication is deliberate during
+  the migration off the old test seam
 - raw turbobt object construction in tests may be slightly verbose if helper builders are missing
 - over-building the mock now would recreate the same maintenance problem as `MockBittensorClient`
 
@@ -167,6 +193,8 @@ This is preferable to returning empty placeholders because it makes incorrect te
 
 - `MockTurboBTtransport` exists in production code and implements `AbstractTurboBTtransport`
 - the mock transport can express per-subnet datasets over block ranges and remember method calls
+- the two target endpoint modules live under `pylon_service/new_tests/open_access_endpoints/`
+- the new test tree includes a comment explaining the intentional fixture duplication during migration
 - the two target endpoint modules no longer use `open_access_mock_bt_client`
-- the two target endpoint modules patch `get_turbobt_transport()` locally
+- the migrated tests patch `get_turbobt_transport()` locally
 - no dedicated mock-transport tests are added in this change
