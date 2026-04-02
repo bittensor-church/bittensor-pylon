@@ -4,6 +4,7 @@ import asyncio
 import logging
 from abc import ABC, abstractmethod
 from collections.abc import Awaitable, Callable
+from datetime import datetime
 from enum import StrEnum
 from typing import Any
 
@@ -253,15 +254,133 @@ class AbstractBittensorClient(ABC):
         """
 
 
-class TurboBtClient(AbstractBittensorClient):
+class AbstractTurboBTtransport(ABC):
+    @property
+    @abstractmethod
+    def bittensor(self) -> Bittensor | None:
+        """
+        Returns the currently opened raw turbobt client instance, if any.
+        """
+
+    @abstractmethod
+    async def open(self) -> None:
+        """
+        Opens the transport and prepares it for work.
+        """
+
+    @abstractmethod
+    async def close(self) -> None:
+        """
+        Closes the transport and cleans up resources.
+        """
+
+    @abstractmethod
+    async def get_block(self, number: BlockNumber) -> TurboBtBlock | None:
+        """
+        Fetches a raw block from turbobt.
+        """
+
+    @abstractmethod
+    async def get_block_timestamp(self, block_number: BlockNumber) -> datetime:
+        """
+        Fetches a raw block timestamp from turbobt.
+        """
+
+    @abstractmethod
+    async def list_neurons(self, netuid: NetUid, block_hash: BlockHash) -> list[TurboBtNeuron]:
+        """
+        Fetches raw neurons from turbobt.
+        """
+
+    @abstractmethod
+    async def get_hyperparameters(self, netuid: NetUid, block_hash: BlockHash) -> TurboBtSubnetHyperparams | None:
+        """
+        Fetches raw subnet hyperparameters from turbobt.
+        """
+
+    @abstractmethod
+    async def get_certificates(
+        self, netuid: NetUid, block_hash: BlockHash
+    ) -> dict[str, TurboBtNeuronCertificate] | None:
+        """
+        Fetches raw certificates from turbobt.
+        """
+
+    @abstractmethod
+    async def get_certificate(
+        self, netuid: NetUid, hotkey: Hotkey, block_hash: BlockHash
+    ) -> TurboBtNeuronCertificate | None:
+        """
+        Fetches a raw certificate from turbobt.
+        """
+
+    @abstractmethod
+    async def generate_certificate_keypair(
+        self, netuid: NetUid, algorithm: TurboBtCertificateAlgorithm
+    ) -> TurboBtNeuronCertificateKeypair | None:
+        """
+        Generates a raw certificate keypair via turbobt.
+        """
+
+    @abstractmethod
+    async def get_subnet_state(self, netuid: NetUid, block_hash: BlockHash) -> dict[str, Any]:
+        """
+        Fetches raw subnet state from turbobt.
+        """
+
+    @abstractmethod
+    async def commit_weights(self, netuid: NetUid, weights: dict[int, float]) -> int:
+        """
+        Commits raw uid-indexed weights via turbobt.
+        """
+
+    @abstractmethod
+    async def set_weights(self, netuid: NetUid, weights: dict[int, float]) -> None:
+        """
+        Sets raw uid-indexed weights via turbobt.
+        """
+
+    @abstractmethod
+    async def get_commitment(
+        self, netuid: NetUid, hotkey: Hotkey, block_hash: BlockHash
+    ) -> dict[str, Any] | None:
+        """
+        Fetches a raw commitment from turbobt.
+        """
+
+    @abstractmethod
+    async def fetch_commitments(self, netuid: NetUid, block_hash: BlockHash) -> dict[str, dict[str, Any]]:
+        """
+        Fetches raw commitments for a subnet from turbobt.
+        """
+
+    @abstractmethod
+    async def set_commitment(self, netuid: NetUid, data: bytes) -> None:
+        """
+        Sets raw commitment bytes via turbobt.
+        """
+
+    @abstractmethod
+    async def get_signed_block(self, block_hash: BlockHash) -> SignedBlock | None:
+        """
+        Fetches a raw signed block from turbobt.
+        """
+
+
+class TurboBTtransport(AbstractTurboBTtransport):
     """
-    Adapter for turbobt client.
+    Raw turbobt transport.
     """
 
     def __init__(self, wallet: Wallet | None, uri: BittensorNetwork):
-        super().__init__(wallet, uri)
+        self.wallet = wallet
+        self.uri = uri
         self._raw_client: Bittensor | None = None
         self._is_client_ready = asyncio.Event()
+
+    @property
+    def bittensor(self) -> Bittensor | None:
+        return self._raw_client
 
     async def _get_bt_client(self) -> Bittensor:
         if self._raw_client is None:
@@ -274,13 +393,13 @@ class TurboBtClient(AbstractBittensorClient):
 
     async def open(self) -> None:
         assert self._raw_client is None, "The client is already open."
-        logger.info(f"Opening the TurboBtClient for {self.uri}")
+        logger.info(f"Opening the TurboBTtransport for {self.uri}")
         self._raw_client = Bittensor(wallet=self.wallet, uri=self.uri)
         await asyncio.shield(self._raw_client.__aenter__())
         self._is_client_ready.set()
 
     async def close(self) -> None:
-        logger.info(f"Closing the TurboBtClient for {self.uri}")
+        logger.info(f"Closing the TurboBTtransport for {self.uri}")
         assert self._raw_client is not None, "The client is already closed."
         async with asyncio.timeout(5):
             await self._is_client_ready.wait()
@@ -292,7 +411,6 @@ class TurboBtClient(AbstractBittensorClient):
     async def _recreate_bt_client(self) -> None:
         assert self._raw_client is not None, "The client is None so cannot be recreated."
         logger.warning(f"Recreating Bittensor client for {self.uri}")
-        # If _client_created is not set, that means another task is already in progress of (re)creating it.
         if not self._is_client_ready.is_set():
             async with asyncio.timeout(5):
                 await self._is_client_ready.wait()
@@ -307,7 +425,6 @@ class TurboBtClient(AbstractBittensorClient):
             self._raw_client = Bittensor(wallet=self.wallet, uri=self.uri)
             await asyncio.shield(self._raw_client.__aenter__())
         finally:
-            # Set the event back even on failure not to block other coroutines forever.
             self._is_client_ready.set()
 
     async def _protect_turbobt[T](self, coro_factory: Callable[[Bittensor], Awaitable[T]]) -> T:
@@ -319,6 +436,117 @@ class TurboBtClient(AbstractBittensorClient):
             await asyncio.shield(self._recreate_bt_client())
             bt_client = await self._get_bt_client()
             return await asyncio.shield(coro_factory(bt_client))
+
+    async def get_block(self, number: BlockNumber) -> TurboBtBlock | None:
+        return await self._protect_turbobt(lambda c: c.block(number).get())
+
+    async def get_block_timestamp(self, block_number: BlockNumber) -> datetime:
+        async def _get_timestamp(bt_client: Bittensor) -> datetime:
+            turbobt_block = await bt_client.block(block_number).get()
+            return await turbobt_block.get_timestamp()
+
+        return await self._protect_turbobt(_get_timestamp)
+
+    async def list_neurons(self, netuid: NetUid, block_hash: BlockHash) -> list[TurboBtNeuron]:
+        return await self._protect_turbobt(lambda c: c.subnet(netuid).list_neurons(block_hash=block_hash))
+
+    async def get_hyperparameters(self, netuid: NetUid, block_hash: BlockHash) -> TurboBtSubnetHyperparams | None:
+        return await self._protect_turbobt(lambda c: c.subnet(netuid).get_hyperparameters(block_hash=block_hash))
+
+    async def get_certificates(
+        self, netuid: NetUid, block_hash: BlockHash
+    ) -> dict[str, TurboBtNeuronCertificate] | None:
+        return await self._protect_turbobt(lambda c: c.subnet(netuid).neurons.get_certificates(block_hash=block_hash))
+
+    async def get_certificate(
+        self, netuid: NetUid, hotkey: Hotkey, block_hash: BlockHash
+    ) -> TurboBtNeuronCertificate | None:
+        return await self._protect_turbobt(
+            lambda c: c.subnet(netuid).neuron(hotkey=hotkey).get_certificate(block_hash=block_hash)
+        )
+
+    async def generate_certificate_keypair(
+        self, netuid: NetUid, algorithm: TurboBtCertificateAlgorithm
+    ) -> TurboBtNeuronCertificateKeypair | None:
+        return await self._protect_turbobt(
+            lambda c: c.subnet(netuid).neurons.generate_certificate_keypair(algorithm=algorithm)
+        )
+
+    async def get_subnet_state(self, netuid: NetUid, block_hash: BlockHash) -> dict[str, Any]:
+        return await self._protect_turbobt(lambda c: c.subnet(netuid).get_state(block_hash))
+
+    async def commit_weights(self, netuid: NetUid, weights: dict[int, float]) -> int:
+        return await self._protect_turbobt(lambda c: c.subnet(netuid).weights.commit(weights))
+
+    async def set_weights(self, netuid: NetUid, weights: dict[int, float]) -> None:
+        await self._protect_turbobt(lambda c: c.subnet(netuid).weights.set(weights))
+
+    async def get_commitment(
+        self, netuid: NetUid, hotkey: Hotkey, block_hash: BlockHash
+    ) -> dict[str, Any] | None:
+        return await self._protect_turbobt(lambda c: c.subnet(netuid).commitments.get(hotkey, block_hash=block_hash))
+
+    async def fetch_commitments(self, netuid: NetUid, block_hash: BlockHash) -> dict[str, dict[str, Any]]:
+        return await self._protect_turbobt(lambda c: c.subnet(netuid).commitments.fetch(block_hash=block_hash))
+
+    async def set_commitment(self, netuid: NetUid, data: bytes) -> None:
+        await self._protect_turbobt(lambda c: c.subnet(netuid).commitments.set(data))
+
+    async def get_signed_block(self, block_hash: BlockHash) -> SignedBlock | None:
+        return await self._protect_turbobt(lambda c: c.subtensor.chain.getBlock(block_hash))
+
+
+def get_turbobt_transport(wallet: Wallet | None, uri: BittensorNetwork) -> AbstractTurboBTtransport:
+    return TurboBTtransport(wallet=wallet, uri=uri)
+
+
+class TurboBtClient(AbstractBittensorClient):
+    """
+    Adapter for turbobt client.
+    """
+
+    def __init__(
+        self,
+        wallet: Wallet | None,
+        uri: BittensorNetwork,
+        transport: AbstractTurboBTtransport | None = None,
+    ):
+        super().__init__(wallet, uri)
+        self._transport = transport or get_turbobt_transport(wallet=wallet, uri=uri)
+
+    @property
+    def bittensor(self) -> Bittensor | None:
+        return self._transport.bittensor
+
+    @property
+    def _raw_client(self) -> Bittensor | None:
+        return self.bittensor
+
+    @property
+    def _is_client_ready(self) -> asyncio.Event:
+        if isinstance(self._transport, TurboBTtransport):
+            return self._transport._is_client_ready
+        raise AttributeError("Transport does not expose readiness event.")
+
+    def _require_concrete_transport(self) -> TurboBTtransport:
+        if isinstance(self._transport, TurboBTtransport):
+            return self._transport
+        raise AttributeError("Transport does not expose concrete turbobt internals.")
+
+    async def _get_bt_client(self) -> Bittensor:
+        return await self._require_concrete_transport()._get_bt_client()
+
+    async def open(self) -> None:
+        await self._transport.open()
+
+    async def close(self) -> None:
+        await self._transport.close()
+
+    async def _recreate_bt_client(self) -> None:
+        await self._require_concrete_transport()._recreate_bt_client()
+
+    async def _protect_turbobt[T](self, coro_factory: Callable[[Bittensor], Awaitable[T]]) -> T:
+        return await self._require_concrete_transport()._protect_turbobt(coro_factory)
 
     def _resolve_hotkey(self, hotkey: Hotkey | None) -> Hotkey:
         if hotkey:
@@ -336,7 +564,7 @@ class TurboBtClient(AbstractBittensorClient):
     )
     async def get_block(self, number: BlockNumber) -> Block | None:
         logger.debug(f"Fetching the block with number {number} from {self.uri}")
-        block_obj = await self._protect_turbobt(lambda c: c.block(number).get())
+        block_obj = await self._transport.get_block(number)
         if block_obj is None or block_obj.number is None or block_obj.hash is None:
             return None
         return Block(
@@ -358,11 +586,7 @@ class TurboBtClient(AbstractBittensorClient):
         return block
 
     async def get_block_timestamp(self, block: Block) -> Timestamp:
-        async def _get_timestamp(bt_client: Bittensor):
-            turbobt_block: TurboBtBlock = await bt_client.block(block.number).get()
-            return await turbobt_block.get_timestamp()
-
-        timestamp = await self._protect_turbobt(_get_timestamp)
+        timestamp = await self._transport.get_block_timestamp(block.number)
         return Timestamp(int(timestamp.timestamp()))
 
     @staticmethod
@@ -401,7 +625,7 @@ class TurboBtClient(AbstractBittensorClient):
     )
     async def get_neurons_list(self, netuid: NetUid, block: Block) -> list[Neuron]:
         logger.debug(f"Fetching neurons from subnet {netuid} at block {block.number}, {self.uri}")
-        neurons = await self._protect_turbobt(lambda c: c.subnet(netuid).list_neurons(block_hash=block.hash))
+        neurons = await self._transport.list_neurons(netuid, block.hash)
         # We need stakes fetched from subnet's state.
         state = await self.get_subnet_state(netuid, block)
         stakes = state.hotkeys_stakes
@@ -438,7 +662,7 @@ class TurboBtClient(AbstractBittensorClient):
     )
     async def get_hyperparams(self, netuid: NetUid, block: Block) -> SubnetHyperparams | None:
         logger.debug(f"Fetching hyperparams from subnet {netuid} at block {block.number}, {self.uri}")
-        params = await self._protect_turbobt(lambda c: c.subnet(netuid).get_hyperparameters(block_hash=block.hash))
+        params = await self._transport.get_hyperparameters(netuid, block.hash)
         if not params:
             return None
         return await self._translate_hyperparams(params)
@@ -460,9 +684,7 @@ class TurboBtClient(AbstractBittensorClient):
     )
     async def get_certificates(self, netuid: NetUid, block: Block) -> dict[Hotkey, NeuronCertificate]:
         logger.debug(f"Fetching certificates from subnet {netuid} at block {block.number}, {self.uri}")
-        certificates = await self._protect_turbobt(
-            lambda c: c.subnet(netuid).neurons.get_certificates(block_hash=block.hash)
-        )
+        certificates = await self._transport.get_certificates(netuid, block.hash)
         if not certificates:
             return {}
         return {
@@ -485,9 +707,7 @@ class TurboBtClient(AbstractBittensorClient):
         logger.debug(
             f"Fetching certificate of {hotkey} hotkey from subnet {netuid} at block {block.number}, {self.uri}"
         )
-        certificate = await self._protect_turbobt(
-            lambda c: c.subnet(netuid).neuron(hotkey=hotkey).get_certificate(block_hash=block.hash)
-        )
+        certificate = await self._transport.get_certificate(netuid, hotkey, block.hash)
         if certificate:
             certificate = await self._translate_certificate(certificate)
         return certificate
@@ -512,10 +732,9 @@ class TurboBtClient(AbstractBittensorClient):
         self, netuid: NetUid, algorithm: CertificateAlgorithm
     ) -> NeuronCertificateKeypair | None:
         logger.debug(f"Generating certificate on subnet {netuid} at {self.uri}")
-        keypair = await self._protect_turbobt(
-            lambda c: c.subnet(netuid).neurons.generate_certificate_keypair(
-                algorithm=TurboBtCertificateAlgorithm(algorithm)
-            )
+        keypair = await self._transport.generate_certificate_keypair(
+            netuid,
+            TurboBtCertificateAlgorithm(algorithm),
         )
         if keypair:
             keypair = await self._translate_certificate_keypair(keypair)
@@ -531,14 +750,14 @@ class TurboBtClient(AbstractBittensorClient):
     )
     async def get_subnet_state(self, netuid: NetUid, block: Block) -> SubnetState:
         logger.debug(f"Fetching subnet {netuid} state at block {block.number}, {self.uri}")
-        state = await self._protect_turbobt(lambda c: c.subnet(netuid).get_state(block.hash))
+        state = await self._transport.get_subnet_state(netuid, block.hash)
         return SubnetState(**state)  # type: ignore
 
     async def _translate_weights(self, netuid: NetUid, weights: dict[Hotkey, Weight]) -> dict[int, float]:
         translated_weights = {}
         missing = []
         latest_block = await self.get_latest_block()
-        neurons = await self._protect_turbobt(lambda c: c.subnet(netuid).list_neurons(block_hash=latest_block.hash))
+        neurons = await self._transport.list_neurons(netuid, latest_block.hash)
         hotkey_to_uid = {n.hotkey: n.uid for n in neurons}
         for hotkey, weight in weights.items():
             if hotkey in hotkey_to_uid:
@@ -563,7 +782,7 @@ class TurboBtClient(AbstractBittensorClient):
     async def commit_weights(self, netuid: NetUid, weights: dict[Hotkey, Weight]) -> RevealRound:
         logger.debug(f"Commiting weights on subnet {netuid} at {self.uri}")
         translated_weights = await self._translate_weights(netuid, weights)
-        reveal_round = await self._protect_turbobt(lambda c: c.subnet(netuid).weights.commit(translated_weights))
+        reveal_round = await self._transport.commit_weights(netuid, translated_weights)
         return RevealRound(reveal_round)
 
     @track_operation(
@@ -577,7 +796,7 @@ class TurboBtClient(AbstractBittensorClient):
     async def set_weights(self, netuid: NetUid, weights: dict[Hotkey, Weight]) -> None:
         logger.debug(f"Setting weights on subnet {netuid} at {self.uri}")
         translated_weights = await self._translate_weights(netuid, weights)
-        await self._protect_turbobt(lambda c: c.subnet(netuid).weights.set(translated_weights))
+        await self._transport.set_weights(netuid, translated_weights)
 
     @track_operation(
         bittensor_operation_duration,
@@ -590,7 +809,7 @@ class TurboBtClient(AbstractBittensorClient):
     async def get_commitment(self, netuid: NetUid, block: Block, hotkey: Hotkey | None = None) -> Commitment | None:
         hotkey = self._resolve_hotkey(hotkey)
         logger.debug(f"Fetching commitment for {hotkey} from subnet {netuid} at block {block.number}, {self.uri}")
-        result = await self._protect_turbobt(lambda c: c.subnet(netuid).commitments.get(hotkey, block_hash=block.hash))
+        result = await self._transport.get_commitment(netuid, hotkey, block.hash)
         if result is None:
             return None
         return Commitment(
@@ -610,7 +829,7 @@ class TurboBtClient(AbstractBittensorClient):
     async def get_commitments(self, netuid: NetUid, block: Block) -> SubnetCommitments:
         logger.debug(f"Fetching all commitments from subnet {netuid} at block {block.number}, {self.uri}")
         raw_commitments, state = await asyncio.gather(
-            self._protect_turbobt(lambda c: c.subnet(netuid).commitments.fetch(block_hash=block.hash)),
+            self._transport.fetch_commitments(netuid, block.hash),
             self.get_subnet_state(netuid, block),
         )
         registered_hotkeys = set(state.hotkeys)
@@ -638,7 +857,7 @@ class TurboBtClient(AbstractBittensorClient):
         logger.debug(f"Setting commitment on subnet {netuid} at {self.uri}")
         # Convert to plain bytes because scalecodec uses `type(value) is bytes` check
         # which fails for bytes subclasses like CommitmentDataBytes
-        await self._protect_turbobt(lambda c: c.subnet(netuid).commitments.set(bytes(data)))
+        await self._transport.set_commitment(netuid, bytes(data))
 
     @track_operation(
         bittensor_operation_duration,
@@ -657,7 +876,7 @@ class TurboBtClient(AbstractBittensorClient):
 
     async def get_signed_block(self, block: Block) -> SignedBlock | None:
         logger.debug(f"Fetching signed block {block.number} at {self.uri}")
-        return await self._protect_turbobt(lambda c: c.subtensor.chain.getBlock(block.hash))
+        return await self._transport.get_signed_block(block.hash)
 
     async def get_extrinsic(self, block: Block, extrinsic_index: ExtrinsicIndex) -> Extrinsic | None:
         logger.debug(f"Fetching extrinsic {extrinsic_index} from block {block.number} at {self.uri}")
