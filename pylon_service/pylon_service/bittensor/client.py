@@ -8,7 +8,7 @@ from collections.abc import Awaitable, Callable
 from dataclasses import dataclass
 from datetime import datetime
 from enum import StrEnum
-from typing import Any
+from typing import Any, cast
 
 from bittensor_wallet import Wallet
 from pylon_commons.constants import LATEST_BLOCK_MARK
@@ -67,6 +67,7 @@ from turbobt.block import Block as TurboBtBlock
 from turbobt.client import Bittensor
 from turbobt.neuron import Neuron as TurboBtNeuron
 from turbobt.subnet import CertificateAlgorithm as TurboBtCertificateAlgorithm
+from turbobt.subnet import Commitment as TurboBtCommitment
 from turbobt.subnet import (
     NeuronCertificate as TurboBtNeuronCertificate,
 )
@@ -76,6 +77,7 @@ from turbobt.subnet import (
 from turbobt.subnet import (
     SubnetHyperparams as TurboBtSubnetHyperparams,
 )
+from turbobt.subnet import SubnetState as TurboBtSubnetState
 from turbobt.substrate.exceptions import UnknownBlock
 from turbobt.substrate.pallets.chain import Extrinsic as TurboBtExtrinsic
 from turbobt.substrate.pallets.chain import SignedBlock
@@ -325,7 +327,7 @@ class AbstractTurboBTtransport(ABC):
         """
 
     @abstractmethod
-    async def get_subnet_state(self, netuid: NetUid, block_hash: BlockHash) -> dict[str, Any]:
+    async def get_subnet_state(self, netuid: NetUid, block_hash: BlockHash) -> TurboBtSubnetState | None:
         """
         Fetches raw subnet state from turbobt.
         """
@@ -343,15 +345,13 @@ class AbstractTurboBTtransport(ABC):
         """
 
     @abstractmethod
-    async def get_commitment(
-        self, netuid: NetUid, hotkey: Hotkey, block_hash: BlockHash
-    ) -> dict[str, Any] | None:
+    async def get_commitment(self, netuid: NetUid, hotkey: Hotkey, block_hash: BlockHash) -> TurboBtCommitment | None:
         """
         Fetches a raw commitment from turbobt.
         """
 
     @abstractmethod
-    async def fetch_commitments(self, netuid: NetUid, block_hash: BlockHash) -> dict[str, dict[str, Any]]:
+    async def fetch_commitments(self, netuid: NetUid, block_hash: BlockHash) -> dict[str, TurboBtCommitment]:
         """
         Fetches raw commitments for a subnet from turbobt.
         """
@@ -491,7 +491,7 @@ class TurboBTtransport(AbstractTurboBTtransport):
             lambda c: c.subnet(netuid).neurons.generate_certificate_keypair(algorithm=algorithm)
         )
 
-    async def get_subnet_state(self, netuid: NetUid, block_hash: BlockHash) -> dict[str, Any]:
+    async def get_subnet_state(self, netuid: NetUid, block_hash: BlockHash) -> TurboBtSubnetState | None:
         return await self._protect_turbobt(lambda c: c.subnet(netuid).get_state(block_hash))
 
     async def commit_weights(self, netuid: NetUid, weights: dict[int, float]) -> int:
@@ -500,12 +500,10 @@ class TurboBTtransport(AbstractTurboBTtransport):
     async def set_weights(self, netuid: NetUid, weights: dict[int, float]) -> None:
         await self._protect_turbobt(lambda c: c.subnet(netuid).weights.set(weights))
 
-    async def get_commitment(
-        self, netuid: NetUid, hotkey: Hotkey, block_hash: BlockHash
-    ) -> dict[str, Any] | None:
+    async def get_commitment(self, netuid: NetUid, hotkey: Hotkey, block_hash: BlockHash) -> TurboBtCommitment | None:
         return await self._protect_turbobt(lambda c: c.subnet(netuid).commitments.get(hotkey, block_hash=block_hash))
 
-    async def fetch_commitments(self, netuid: NetUid, block_hash: BlockHash) -> dict[str, dict[str, Any]]:
+    async def fetch_commitments(self, netuid: NetUid, block_hash: BlockHash) -> dict[str, TurboBtCommitment]:
         return await self._protect_turbobt(lambda c: c.subnet(netuid).commitments.fetch(block_hash=block_hash))
 
     async def set_commitment(self, netuid: NetUid, data: bytes) -> None:
@@ -525,7 +523,7 @@ class MockTurboBTtransport(AbstractTurboBTtransport):
         self._blocks_by_number: dict[int, _MockBlockRecord] = {}
         self._blocks_by_hash: dict[BlockHash, _MockBlockRecord] = {}
         self._neurons: dict[NetUid, list[_BlockRange[list[TurboBtNeuron]]]] = {}
-        self._subnet_states: dict[NetUid, list[_BlockRange[dict[str, Any]]]] = {}
+        self._subnet_states: dict[NetUid, list[_BlockRange[TurboBtSubnetState]]] = {}
         self.calls: defaultdict[str, list[tuple[Any, ...]]] = defaultdict(list)
 
     @property
@@ -541,7 +539,9 @@ class MockTurboBTtransport(AbstractTurboBTtransport):
 
     def _resolve_block_number(self, block_hash: BlockHash) -> int:
         try:
-            return int(self._blocks_by_hash[block_hash].block.number)
+            block_number = self._blocks_by_hash[block_hash].block.number
+            assert block_number is not None, "MockTurboBTtransport requires blocks with a number."
+            return int(block_number)
         except KeyError as exc:
             raise LookupError(f"No mock block configured for hash {block_hash}") from exc
 
@@ -559,12 +559,10 @@ class MockTurboBTtransport(AbstractTurboBTtransport):
     def add_block(self, block: TurboBtBlock) -> None:
         self._record_block(block)
 
-    def add_neurons_range(
-        self, netuid: NetUid, start: int, end: int | None, neurons: list[TurboBtNeuron]
-    ) -> None:
+    def add_neurons_range(self, netuid: NetUid, start: int, end: int | None, neurons: list[TurboBtNeuron]) -> None:
         self._neurons.setdefault(netuid, []).append(_BlockRange(start=start, end=end, value=neurons))
 
-    def add_subnet_state_range(self, netuid: NetUid, start: int, end: int | None, state: dict[str, Any]) -> None:
+    def add_subnet_state_range(self, netuid: NetUid, start: int, end: int | None, state: TurboBtSubnetState) -> None:
         self._subnet_states.setdefault(netuid, []).append(_BlockRange(start=start, end=end, value=state))
 
     def reset(self) -> None:
@@ -623,7 +621,7 @@ class MockTurboBTtransport(AbstractTurboBTtransport):
         self.calls["generate_certificate_keypair"].append((netuid, algorithm))
         raise NotImplementedError("MockTurboBTtransport does not implement generate_certificate_keypair in this change")
 
-    async def get_subnet_state(self, netuid: NetUid, block_hash: BlockHash) -> dict[str, Any]:
+    async def get_subnet_state(self, netuid: NetUid, block_hash: BlockHash) -> TurboBtSubnetState:
         self.calls["get_subnet_state"].append((netuid, block_hash))
         try:
             ranges = self._subnet_states[netuid]
@@ -640,13 +638,11 @@ class MockTurboBTtransport(AbstractTurboBTtransport):
         self.calls["set_weights"].append((netuid, weights))
         raise NotImplementedError("MockTurboBTtransport does not implement set_weights in this change")
 
-    async def get_commitment(
-        self, netuid: NetUid, hotkey: Hotkey, block_hash: BlockHash
-    ) -> dict[str, Any] | None:
+    async def get_commitment(self, netuid: NetUid, hotkey: Hotkey, block_hash: BlockHash) -> TurboBtCommitment | None:
         self.calls["get_commitment"].append((netuid, hotkey, block_hash))
         raise NotImplementedError("MockTurboBTtransport does not implement get_commitment in this change")
 
-    async def fetch_commitments(self, netuid: NetUid, block_hash: BlockHash) -> dict[str, dict[str, Any]]:
+    async def fetch_commitments(self, netuid: NetUid, block_hash: BlockHash) -> dict[str, TurboBtCommitment]:
         self.calls["fetch_commitments"].append((netuid, block_hash))
         raise NotImplementedError("MockTurboBTtransport does not implement fetch_commitments in this change")
 
@@ -911,7 +907,9 @@ class TurboBtClient(AbstractBittensorClient):
     async def get_subnet_state(self, netuid: NetUid, block: Block) -> SubnetState:
         logger.debug(f"Fetching subnet {netuid} state at block {block.number}, {self.uri}")
         state = await self._transport.get_subnet_state(netuid, block.hash)
-        return SubnetState(**state)  # type: ignore
+        if state is None:
+            raise LookupError(f"Subnet {netuid} state not found at block {block.number}.")
+        return SubnetState(**cast(dict[str, Any], state))
 
     async def _translate_weights(self, netuid: NetUid, weights: dict[Hotkey, Weight]) -> dict[int, float]:
         translated_weights = {}

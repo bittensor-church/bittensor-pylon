@@ -11,8 +11,8 @@ from unittest.mock import patch
 
 import pytest
 import pytest_asyncio
-from litestar.testing import AsyncTestClient
 from litestar.stores.base import Store
+from litestar.testing import AsyncTestClient
 from pylon_commons.currency import Currency, Token
 from pylon_commons.models import AxonInfo, AxonProtocol, Block, Neuron, Stakes, SubnetNeurons, SubnetValidators
 from pylon_commons.types import (
@@ -41,14 +41,15 @@ from pylon_commons.types import (
     ValidatorTrust,
 )
 from turbobt.block import Block as TurboBtBlock
+from turbobt.client import Bittensor
 from turbobt.neuron import Neuron as TurboBtNeuron
+from turbobt.subnet import SubnetState as TurboBtSubnetState
 
 from pylon_service import lifespans, main
 from pylon_service.bittensor.client import MockTurboBTtransport
 from pylon_service.bittensor.pool import BittensorClientPool
 from pylon_service.main import create_app
 from pylon_service.stores import StoreName
-
 
 # These fixtures intentionally duplicate a subset of the older test setup.
 # This directory is the start of a gradual migration away from pylon_service/tests/,
@@ -133,7 +134,7 @@ def _build_default_neuron(
 @pytest.fixture
 def turbobt_block_builder():
     def build(number: int, block_hash: str) -> TurboBtBlock:
-        return TurboBtBlock(block_hash, number, client=None)
+        return TurboBtBlock(block_hash, number, client=cast(Bittensor, None))
 
     return build
 
@@ -172,28 +173,33 @@ def turbobt_neuron_builder():
 
 @pytest.fixture
 def raw_subnet_state_builder():
-    def build(netuid: NetUid, subnet_state: SubnetNeurons | SubnetValidators) -> dict[str, object]:
-        items = list(subnet_state.neurons.values()) if isinstance(subnet_state, SubnetNeurons) else subnet_state.validators
-        return {
-            "netuid": netuid,
-            "hotkeys": [item.hotkey for item in items],
-            "coldkeys": [item.coldkey for item in items],
-            "active": [item.active for item in items],
-            "validator_permit": [item.validator_permit for item in items],
-            "pruning_score": [item.pruning_score for item in items],
-            "last_update": [item.last_update for item in items],
-            "emission": [Currency[Token.ALPHA](item.emission).as_rao() for item in items],
-            "dividends": [item.dividends for item in items],
-            "incentives": [item.incentive for item in items],
-            "consensus": [item.consensus for item in items],
-            "trust": [item.trust for item in items],
-            "rank": [item.rank for item in items],
-            "block_at_registration": [BlockNumber(0) for _ in items],
-            "alpha_stake": [Currency[Token.ALPHA](item.stakes.alpha).as_rao() for item in items],
-            "tao_stake": [Currency[Token.TAO](item.stakes.tao).as_rao() for item in items],
-            "total_stake": [Currency[Token.ALPHA](item.stakes.total).as_rao() for item in items],
-            "emission_history": [[Currency[Token.ALPHA](item.emission).as_rao()] for item in items],
-        }
+    def build(netuid: NetUid, subnet_state: SubnetNeurons | SubnetValidators) -> TurboBtSubnetState:
+        items = (
+            list(subnet_state.neurons.values()) if isinstance(subnet_state, SubnetNeurons) else subnet_state.validators
+        )
+        return cast(
+            TurboBtSubnetState,
+            {
+                "netuid": netuid,
+                "hotkeys": [item.hotkey for item in items],
+                "coldkeys": [item.coldkey for item in items],
+                "active": [item.active for item in items],
+                "validator_permit": [item.validator_permit for item in items],
+                "pruning_score": [item.pruning_score for item in items],
+                "last_update": [item.last_update for item in items],
+                "emission": [Currency[Token.ALPHA](item.emission).as_rao() for item in items],
+                "dividends": [item.dividends for item in items],
+                "incentives": [item.incentive for item in items],
+                "consensus": [item.consensus for item in items],
+                "trust": [item.trust for item in items],
+                "rank": [item.rank for item in items],
+                "block_at_registration": [BlockNumber(0) for _ in items],
+                "alpha_stake": [Currency[Token.ALPHA](item.stakes.alpha).as_rao() for item in items],
+                "tao_stake": [Currency[Token.TAO](item.stakes.tao).as_rao() for item in items],
+                "total_stake": [Currency[Token.ALPHA](item.stakes.total).as_rao() for item in items],
+                "emission_history": [[Currency[Token.ALPHA](item.emission).as_rao()] for item in items],
+            },
+        )
 
     return build
 
@@ -274,7 +280,7 @@ def default_raw_subnet_state(
     default_netuid: NetUid,
     default_subnet_neurons: SubnetNeurons,
     raw_subnet_state_builder,
-) -> dict[str, object]:
+) -> TurboBtSubnetState:
     return raw_subnet_state_builder(default_netuid, default_subnet_neurons)
 
 
@@ -295,8 +301,8 @@ def seed_mock_turbobt_transport(
     default_block: Block,
     default_raw_block: TurboBtBlock,
     default_raw_neurons: list[TurboBtNeuron],
-    default_raw_subnet_state: dict[str, object],
-    additional_transport_seed_instructions: list[tuple[NetUid, Block, list[TurboBtNeuron], dict[str, object]]],
+    default_raw_subnet_state: TurboBtSubnetState,
+    additional_transport_seed_instructions: list[tuple[NetUid, Block, list[TurboBtNeuron], TurboBtSubnetState]],
 ) -> None:
     mock_turbobt_transport.set_latest_block(default_raw_block)
     mock_turbobt_transport.add_block(default_raw_block)
@@ -308,7 +314,7 @@ def seed_mock_turbobt_transport(
         default_raw_subnet_state,
     )
     for netuid, block, raw_neurons, raw_subnet_state in additional_transport_seed_instructions:
-        raw_block = TurboBtBlock(str(block.hash), int(block.number), client=None)
+        raw_block = TurboBtBlock(str(block.hash), int(block.number), client=cast(Bittensor, None))
         mock_turbobt_transport.add_block(raw_block)
         mock_turbobt_transport.add_neurons_range(netuid, int(block.number), None, raw_neurons)
         mock_turbobt_transport.add_subnet_state_range(netuid, int(block.number), None, raw_subnet_state)

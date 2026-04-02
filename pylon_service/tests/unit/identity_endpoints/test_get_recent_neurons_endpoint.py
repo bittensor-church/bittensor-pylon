@@ -36,7 +36,6 @@ from pylon_commons.types import (
 from pylon_service.bittensor.recent.adapter import CacheKey, _CacheEntry
 from pylon_service.identities import identities
 
-
 _ENDPOINT = "/api/v1/identity/sn1/subnet/1/block/recent/neurons"
 
 
