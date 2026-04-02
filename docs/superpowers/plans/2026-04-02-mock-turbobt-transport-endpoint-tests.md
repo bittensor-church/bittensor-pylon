@@ -2,11 +2,11 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Add a production `MockTurboBTtransport` that models blockchain state and records calls, then migrate the open-access neurons and validators endpoint tests to patch the transport factory instead of using `MockBittensorClient`.
+**Goal:** Add a production `MockTurboBTtransport` that models blockchain state and records calls, then migrate the open-access neurons and validators endpoint tests into `pylon_service/new_tests/` so they use the transport seam instead of `MockBittensorClient`.
 
-**Architecture:** `pylon_service.bittensor.client` will gain a no-IO `MockTurboBTtransport` implementing `AbstractTurboBTtransport` with declarative range-based state configuration plus structured call recording. The two target test modules will patch `get_turbobt_transport()` locally so they exercise the normal `TurboBtClient` path while bypassing the shared `MockBittensorClient` fixture seam.
+**Architecture:** `pylon_service.bittensor.client` will gain a no-IO `MockTurboBTtransport` implementing `AbstractTurboBTtransport` with declarative range-based state configuration plus structured call recording. The migrated endpoint tests will live under `pylon_service/new_tests/open_access_endpoints/` with their own local fixtures so they do not inherit the old shared `MockBittensorClient` pool seam, and they will patch `get_turbobt_transport()` locally to exercise the normal `TurboBtClient` path.
 
-**Tech Stack:** Python 3.13, `pytest`, `litestar`, `turbobt`, `unittest.mock`, `pylon_commons`
+**Tech Stack:** Python 3.13, `pytest`, `pytest-asyncio`, `litestar`, `turbobt`, `unittest.mock`, `pylon_commons`
 
 ---
 
@@ -15,21 +15,21 @@
 **Files:**
 - Modify: `pylon_service/pylon_service/bittensor/client.py`
 
-- [ ] **Step 1: Inspect the concrete raw types already used by `TurboBtClient`**
+- [ ] **Step 1: Inspect the raw operations the migrated endpoint tests will need**
 
 Run:
 
 ```bash
-sed -n '240,620p' pylon_service/pylon_service/bittensor/client.py
+sed -n '240,860p' pylon_service/pylon_service/bittensor/client.py
 ```
 
 Expected:
-- confirm `TurboBtClient` only needs raw support for `get_block()`, `list_neurons()`, and `get_subnet_state()` in the two target endpoint modules
-- confirm remaining abstract methods can stay unimplemented in the mock for now
+- confirm the migrated endpoint paths only need `get_block()`, `list_neurons()`, and `get_subnet_state()` from the mock transport
+- confirm the remaining abstract methods can stay explicitly unimplemented in this change
 
-- [ ] **Step 2: Add block-range helper structures for the mock**
+- [ ] **Step 2: Add private helper structures for block-range lookup**
 
-Add small internal helper dataclasses above `MockTurboBTtransport`:
+Add small private dataclasses above `MockTurboBTtransport`:
 
 ```python
 @dataclass(slots=True)
@@ -44,7 +44,7 @@ class _BlockRange[T]:
         return self.end is None or block_number <= self.end
 ```
 
-And add a block-hash mapping helper shape:
+And:
 
 ```python
 @dataclass(slots=True)
@@ -53,19 +53,19 @@ class _MockBlockRecord:
 ```
 
 Constraints:
-- keep helpers private to the module
-- do not over-generalize beyond the current mock transport needs
+- keep them private to the module
+- do not add unnecessary generality beyond this mock’s needs
 
 - [ ] **Step 3: Add `MockTurboBTtransport(AbstractTurboBTtransport)`**
 
-Implement a new production mock transport near the real transport:
+Implement a new production mock transport near `TurboBTtransport`:
 
 ```python
 class MockTurboBTtransport(AbstractTurboBTtransport):
     def __init__(self) -> None:
         self._latest_block: TurboBtBlock | None = None
-        self._blocks_by_number: dict[int, TurboBtBlock] = {}
-        self._blocks_by_hash: dict[BlockHash, TurboBtBlock] = {}
+        self._blocks_by_number: dict[int, _MockBlockRecord] = {}
+        self._blocks_by_hash: dict[BlockHash, _MockBlockRecord] = {}
         self._neurons: dict[NetUid, list[_BlockRange[list[TurboBtNeuron]]]] = {}
         self._subnet_states: dict[NetUid, list[_BlockRange[dict[str, Any]]]] = {}
         self.calls: dict[str, list[tuple[Any, ...]]] = defaultdict(list)
@@ -100,7 +100,7 @@ Constraints:
 - no external IO
 - `bittensor` remains `None`
 
-- [ ] **Step 4: Implement only the raw methods needed by the target endpoint tests**
+- [ ] **Step 4: Implement the raw methods needed by the migrated endpoint tests**
 
 Implement these methods with real lookup logic:
 
@@ -116,7 +116,7 @@ Lookup behavior:
 - `list_neurons()` and `get_subnet_state()` resolve the block number from `block_hash`
 - if no configured range matches, raise `LookupError` with netuid and block details
 
-For the remaining abstract methods, add explicit `NotImplementedError` bodies:
+For the remaining abstract methods, add explicit `NotImplementedError` bodies such as:
 
 ```python
 raise NotImplementedError("MockTurboBTtransport does not implement get_certificates in this change")
@@ -140,17 +140,91 @@ git add pylon_service/pylon_service/bittensor/client.py
 git commit -m "Add mock TurboBT transport"
 ```
 
-### Task 2: Migrate Open-Access Neurons Endpoint Tests
+### Task 2: Create The Isolated `new_tests` Fixture Layer
 
 **Files:**
-- Modify: `pylon_service/tests/unit/open_access_endpoints/test_get_neurons_endpoint.py`
+- Create: `pylon_service/new_tests/open_access_endpoints/conftest.py`
 
-- [ ] **Step 1: Replace `MockBittensorClient` imports and fixtures with transport-level imports**
+- [ ] **Step 1: Add a local fixture module for the new test tree**
+
+Create `pylon_service/new_tests/open_access_endpoints/conftest.py` with only the fixtures needed by the migrated
+endpoint tests.
+
+It should include a comment like:
+
+```python
+# These fixtures intentionally duplicate a subset of the older test setup.
+# This directory is the start of a gradual migration away from pylon_service/tests/,
+# so these tests must not inherit the shared MockBittensorClient-based pool seam.
+```
+
+- [ ] **Step 2: Recreate the minimal app/test-client fixture stack without `MockBittensorClient`**
+
+Build local fixtures for:
+
+- `mock_stores`
+- `reset_mock_stores`
+- `test_app`
+- `test_client`
+
+Use the same Litestar app construction pattern as the existing tests, but set:
+
+```python
+app.state.bittensor_client_pool = BittensorClientPool(
+    uri=BittensorNetwork("ws://localhost:8000"),
+    archive_uri=BittensorNetwork("ws://localhost:8001"),
+)
+```
+
+Also:
+- patch the scheduler lifespan to a no-op
+- patch stores the same way as the old test app
+- disable response cache
+- keep `app.debug = True`
+
+- [ ] **Step 3: Run a smoke syntax check for the new fixture module**
+
+Run:
+
+```bash
+cd pylon_service && uv run python -m py_compile new_tests/open_access_endpoints/conftest.py
+```
+
+Expected:
+- no syntax errors
+
+- [ ] **Step 4: Commit the isolated fixture layer**
+
+```bash
+git add pylon_service/new_tests/open_access_endpoints/conftest.py
+git commit -m "Add isolated fixtures for new transport tests"
+```
+
+### Task 3: Migrate Open-Access Neurons Endpoint Tests
+
+**Files:**
+- Create: `pylon_service/new_tests/open_access_endpoints/test_get_neurons_endpoint.py`
+- Delete: `pylon_service/tests/unit/open_access_endpoints/test_get_neurons_endpoint.py`
+
+- [ ] **Step 1: Copy the existing neurons endpoint tests into the new tree**
+
+Start by copying the current module into the new location:
+
+```bash
+cp pylon_service/tests/unit/open_access_endpoints/test_get_neurons_endpoint.py \
+  pylon_service/new_tests/open_access_endpoints/test_get_neurons_endpoint.py
+```
+
+Then edit only the new file.
+
+- [ ] **Step 2: Replace `MockBittensorClient` usage with transport-level imports and fixtures**
 
 Update imports to use:
 
 ```python
 from collections.abc import AsyncIterator
+from types import SimpleNamespace
+from typing import cast
 from unittest.mock import patch
 
 import pytest_asyncio
@@ -166,9 +240,7 @@ Remove:
 from tests.mock_bittensor_client import MockBittensorClient
 ```
 
-- [ ] **Step 2: Add module-local patch fixture that bypasses `MockBittensorClient`**
-
-Add a fixture in the test module:
+Add local fixtures:
 
 ```python
 @pytest.fixture
@@ -187,47 +259,23 @@ async def patched_test_client(
         yield test_client
 ```
 
-Use this fixture in the migrated tests instead of `test_client` directly.
+- [ ] **Step 3: Add raw builders and raw subnet-state fixtures**
 
-- [ ] **Step 3: Add raw turbobt builders for block and neurons**
-
-Add helper builders in the module:
+Add a raw block builder:
 
 ```python
 def _build_turbobt_block(number: int, block_hash: str) -> TurboBtBlock:
     return TurboBtBlock(block_hash, number, client=None)
 ```
 
-And a neuron builder that mirrors the existing pylon neuron fixture values but returns `TurboBtNeuron`-compatible mock
-objects. Prefer `types.SimpleNamespace` for the raw neuron/axon shape if constructing the actual turbobt class is
-impractical:
+Add a raw neuron builder using `SimpleNamespace` and `cast(TurboBtNeuron, ...)`.
 
-```python
-def _build_turbobt_neuron(... ) -> TurboBtNeuron:
-    return cast(
-        TurboBtNeuron,
-        SimpleNamespace(
-            uid=uid,
-            coldkey=coldkey,
-            hotkey=hotkey,
-            active=active,
-            axon_info=SimpleNamespace(ip=IPv4Address(ip), port=port, protocol=protocol),
-            stake=stake,
-            rank=rank,
-            emission=emission,
-            incentive=incentive,
-            consensus=consensus,
-            trust=trust,
-            validator_trust=validator_trust,
-            dividends=dividends,
-            last_update=last_update,
-            validator_permit=validator_permit,
-            pruning_score=pruning_score,
-        ),
-    )
-```
+Add a raw subnet-state builder returning a dict with:
 
-Also add a raw subnet state fixture carrying `hotkeys_stakes` and `hotkeys` for the configured neurons.
+- `hotkeys`
+- `hotkeys_stakes`
+
+The `hotkeys_stakes` values must produce the same stakes the existing HTTP assertions expect.
 
 - [ ] **Step 4: Refactor the explicit-block neurons test to use the transport mock**
 
@@ -235,15 +283,102 @@ Rewrite `test_get_neurons_open_access_success()` so it:
 - uses `patched_test_client`
 - uses `mock_turbobt_transport`
 - configures:
-  - `set_latest_block()` if needed
   - `add_block(...)`
   - `add_neurons_range(...)`
   - `add_subnet_state_range(...)`
 
-Example configuration:
+Then assert:
 
 ```python
-raw_block = _build_turbobt_block(123, "0xabc123")
+assert mock_turbobt_transport.calls["get_block"] == [(BlockNumber(123),)]
+assert mock_turbobt_transport.calls["list_neurons"] == [(NetUid(1), BlockHash("0xabc123"))]
+assert mock_turbobt_transport.calls["get_subnet_state"] == [(NetUid(1), BlockHash("0xabc123"))]
+```
+
+Keep the HTTP response assertion functionally unchanged.
+
+- [ ] **Step 5: Refactor the latest-block neurons test the same way**
+
+Rewrite `test_get_latest_neurons_open_access_success()` to configure:
+
+```python
+mock_turbobt_transport.set_latest_block(raw_block)
+mock_turbobt_transport.add_block(raw_block)
+mock_turbobt_transport.add_neurons_range(NetUid(1), 123, None, raw_neurons)
+mock_turbobt_transport.add_subnet_state_range(NetUid(1), 123, None, raw_state)
+```
+
+Then assert:
+
+```python
+assert mock_turbobt_transport.calls["get_block"] == [(BlockNumber(-1),)]
+```
+
+- [ ] **Step 6: Remove the old neurons endpoint test module**
+
+Delete:
+
+```bash
+rm pylon_service/tests/unit/open_access_endpoints/test_get_neurons_endpoint.py
+```
+
+- [ ] **Step 7: Run the migrated neurons endpoint test module**
+
+Run:
+
+```bash
+cd pylon_service && uv run pytest new_tests/open_access_endpoints/test_get_neurons_endpoint.py -q
+```
+
+Expected:
+- the new module passes
+- it does not depend on `open_access_mock_bt_client`
+
+- [ ] **Step 8: Commit the neurons endpoint migration**
+
+```bash
+git add pylon_service/new_tests/open_access_endpoints/test_get_neurons_endpoint.py \
+  pylon_service/tests/unit/open_access_endpoints/test_get_neurons_endpoint.py
+git commit -m "Migrate neurons endpoint tests to new transport seam"
+```
+
+### Task 4: Migrate Open-Access Validators Endpoint Tests
+
+**Files:**
+- Create: `pylon_service/new_tests/open_access_endpoints/test_get_validators_endpoint.py`
+- Delete: `pylon_service/tests/unit/open_access_endpoints/test_get_validators_endpoint.py`
+
+- [ ] **Step 1: Copy the existing validators endpoint tests into the new tree**
+
+Start by copying the current module into the new location:
+
+```bash
+cp pylon_service/tests/unit/open_access_endpoints/test_get_validators_endpoint.py \
+  pylon_service/new_tests/open_access_endpoints/test_get_validators_endpoint.py
+```
+
+- [ ] **Step 2: Mirror the transport patch setup and raw builders**
+
+Add the same local imports and fixtures pattern as the new neurons module:
+
+```python
+from unittest.mock import patch
+import pytest_asyncio
+from pylon_service.bittensor.client import MockTurboBTtransport
+```
+
+Also add:
+- `mock_turbobt_transport`
+- `patched_test_client`
+- raw block builder
+- raw neuron builder
+- raw subnet-state builder
+
+- [ ] **Step 3: Refactor the explicit-block validators test**
+
+Rewrite `test_get_validators_open_access_success()` so it configures:
+
+```python
 mock_turbobt_transport.add_block(raw_block)
 mock_turbobt_transport.add_neurons_range(NetUid(1), 123, 123, raw_neurons)
 mock_turbobt_transport.add_subnet_state_range(NetUid(1), 123, 123, raw_state)
@@ -257,97 +392,7 @@ assert mock_turbobt_transport.calls["list_neurons"] == [(NetUid(1), BlockHash("0
 assert mock_turbobt_transport.calls["get_subnet_state"] == [(NetUid(1), BlockHash("0xabc123"))]
 ```
 
-- [ ] **Step 5: Refactor the latest-block neurons test the same way**
-
-Rewrite `test_get_latest_neurons_open_access_success()` to configure:
-
-```python
-raw_block = _build_turbobt_block(123, "0xabc123")
-mock_turbobt_transport.set_latest_block(raw_block)
-mock_turbobt_transport.add_block(raw_block)
-mock_turbobt_transport.add_neurons_range(NetUid(1), 123, None, raw_neurons)
-mock_turbobt_transport.add_subnet_state_range(NetUid(1), 123, None, raw_state)
-```
-
-Then assert:
-
-```python
-assert mock_turbobt_transport.calls["get_block"] == [(BlockNumber(-1),)]
-```
-
-Keep the HTTP body assertions unchanged.
-
-- [ ] **Step 6: Run the neurons endpoint test module**
-
-Run:
-
-```bash
-cd pylon_service && uv run pytest tests/unit/open_access_endpoints/test_get_neurons_endpoint.py -q
-```
-
-Expected:
-- the module passes
-- no test in this module depends on `open_access_mock_bt_client`
-
-- [ ] **Step 7: Commit the neurons endpoint migration**
-
-```bash
-git add pylon_service/tests/unit/open_access_endpoints/test_get_neurons_endpoint.py
-git commit -m "Migrate neurons endpoint tests to mock transport"
-```
-
-### Task 3: Migrate Open-Access Validators Endpoint Tests
-
-**Files:**
-- Modify: `pylon_service/tests/unit/open_access_endpoints/test_get_validators_endpoint.py`
-
-- [ ] **Step 1: Mirror the module-local transport patch setup**
-
-Add the same local imports and fixtures pattern used in the neurons endpoint module:
-
-```python
-from unittest.mock import patch
-import pytest_asyncio
-from pylon_service.bittensor.client import MockTurboBTtransport
-```
-
-And:
-
-```python
-@pytest.fixture
-def mock_turbobt_transport() -> MockTurboBTtransport: ...
-
-@pytest_asyncio.fixture
-async def patched_test_client(...): ...
-```
-
-- [ ] **Step 2: Add raw neuron/block/state builders needed for validator derivation**
-
-Use the same raw turbobt block builder and raw neuron/state helpers as in the neurons module, duplicated locally if
-needed to keep the change isolated.
-
-The configured raw state must include stakes so `TurboBtClient.get_neurons_list()` can translate neurons and
-`get_validators()` can sort/filter them normally.
-
-- [ ] **Step 3: Refactor the explicit-block validators test**
-
-Rewrite `test_get_validators_open_access_success()` so it configures the transport with:
-
-```python
-mock_turbobt_transport.add_block(raw_block)
-mock_turbobt_transport.add_neurons_range(NetUid(1), 123, 123, raw_validators)
-mock_turbobt_transport.add_subnet_state_range(NetUid(1), 123, 123, raw_state)
-```
-
-Then assert transport calls:
-
-```python
-assert mock_turbobt_transport.calls["get_block"] == [(BlockNumber(123),)]
-assert mock_turbobt_transport.calls["list_neurons"] == [(NetUid(1), BlockHash("0xabc123"))]
-assert mock_turbobt_transport.calls["get_subnet_state"] == [(NetUid(1), BlockHash("0xabc123"))]
-```
-
-The HTTP body assertion should remain unchanged.
+Keep the HTTP response assertion functionally unchanged.
 
 - [ ] **Step 4: Refactor the latest-block validators test**
 
@@ -358,45 +403,56 @@ assert:
 assert mock_turbobt_transport.calls["get_block"] == [(BlockNumber(-1),)]
 ```
 
-- [ ] **Step 5: Run the validators endpoint test module**
+- [ ] **Step 5: Remove the old validators endpoint test module**
+
+Delete:
+
+```bash
+rm pylon_service/tests/unit/open_access_endpoints/test_get_validators_endpoint.py
+```
+
+- [ ] **Step 6: Run the migrated validators endpoint test module**
 
 Run:
 
 ```bash
-cd pylon_service && uv run pytest tests/unit/open_access_endpoints/test_get_validators_endpoint.py -q
+cd pylon_service && uv run pytest new_tests/open_access_endpoints/test_get_validators_endpoint.py -q
 ```
 
 Expected:
-- the module passes
-- no test in this module depends on `open_access_mock_bt_client`
+- the new module passes
+- it does not depend on `open_access_mock_bt_client`
 
-- [ ] **Step 6: Commit the validators endpoint migration**
+- [ ] **Step 7: Commit the validators endpoint migration**
 
 ```bash
-git add pylon_service/tests/unit/open_access_endpoints/test_get_validators_endpoint.py
-git commit -m "Migrate validators endpoint tests to mock transport"
+git add pylon_service/new_tests/open_access_endpoints/test_get_validators_endpoint.py \
+  pylon_service/tests/unit/open_access_endpoints/test_get_validators_endpoint.py
+git commit -m "Migrate validators endpoint tests to new transport seam"
 ```
 
-### Task 4: Final Verification
+### Task 5: Final Verification
 
 **Files:**
 - Modify: `pylon_service/pylon_service/bittensor/client.py`
-- Modify: `pylon_service/tests/unit/open_access_endpoints/test_get_neurons_endpoint.py`
-- Modify: `pylon_service/tests/unit/open_access_endpoints/test_get_validators_endpoint.py`
+- Create: `pylon_service/new_tests/open_access_endpoints/conftest.py`
+- Create: `pylon_service/new_tests/open_access_endpoints/test_get_neurons_endpoint.py`
+- Create: `pylon_service/new_tests/open_access_endpoints/test_get_validators_endpoint.py`
 
 - [ ] **Step 1: Check the final diff stays in scope**
 
 Run:
 
 ```bash
-git diff --stat HEAD~3..HEAD
+git diff --stat HEAD~4..HEAD
 git diff -- pylon_service/pylon_service/bittensor/client.py \
-  pylon_service/tests/unit/open_access_endpoints/test_get_neurons_endpoint.py \
-  pylon_service/tests/unit/open_access_endpoints/test_get_validators_endpoint.py
+  pylon_service/new_tests/open_access_endpoints/conftest.py \
+  pylon_service/new_tests/open_access_endpoints/test_get_neurons_endpoint.py \
+  pylon_service/new_tests/open_access_endpoints/test_get_validators_endpoint.py
 ```
 
 Expected:
-- only the production transport module and the two target endpoint modules changed for the functional work
+- the functional changes are limited to the production transport module and the new isolated test tree
 - no dedicated mock-transport test files were added
 
 - [ ] **Step 2: Run final verification**
@@ -406,24 +462,28 @@ Run:
 ```bash
 cd pylon_service && uv run python -m py_compile \
   pylon_service/bittensor/client.py \
-  tests/unit/open_access_endpoints/test_get_neurons_endpoint.py \
-  tests/unit/open_access_endpoints/test_get_validators_endpoint.py
+  new_tests/open_access_endpoints/conftest.py \
+  new_tests/open_access_endpoints/test_get_neurons_endpoint.py \
+  new_tests/open_access_endpoints/test_get_validators_endpoint.py
 cd pylon_service && uv run pytest \
-  tests/unit/open_access_endpoints/test_get_neurons_endpoint.py \
-  tests/unit/open_access_endpoints/test_get_validators_endpoint.py -q
+  new_tests/open_access_endpoints/test_get_neurons_endpoint.py \
+  new_tests/open_access_endpoints/test_get_validators_endpoint.py -q
 ```
 
 Expected:
-- all three files compile
-- both endpoint modules pass
+- all files compile
+- both migrated endpoint modules pass
 
 - [ ] **Step 3: Create the final commit**
 
 ```bash
 git add pylon_service/pylon_service/bittensor/client.py \
+  pylon_service/new_tests/open_access_endpoints/conftest.py \
+  pylon_service/new_tests/open_access_endpoints/test_get_neurons_endpoint.py \
+  pylon_service/new_tests/open_access_endpoints/test_get_validators_endpoint.py \
   pylon_service/tests/unit/open_access_endpoints/test_get_neurons_endpoint.py \
   pylon_service/tests/unit/open_access_endpoints/test_get_validators_endpoint.py
-git commit -m "Add mock transport for endpoint tests"
+git commit -m "Add mock transport for migrated endpoint tests"
 ```
 
 ## Self-Review
@@ -431,13 +491,14 @@ git commit -m "Add mock transport for endpoint tests"
 Spec coverage:
 - production `MockTurboBTtransport`: covered in Task 1
 - declarative block-range state and call recording: covered in Task 1
-- local factory patching in target modules: covered in Tasks 2 and 3
-- migration away from `open_access_mock_bt_client` in the two endpoint modules: covered in Tasks 2 and 3
-- no dedicated mock-transport tests: enforced in Task 4
+- isolated `new_tests` fixture layer and migration comment: covered in Task 2
+- local factory patching in migrated modules: covered in Tasks 3 and 4
+- migration away from `open_access_mock_bt_client` in the two endpoint modules: covered in Tasks 3 and 4
+- no dedicated mock-transport tests: enforced in Task 5
 
 Placeholder scan:
 - no `TODO`, `TBD`, or deferred implementation markers remain
 
 Type consistency:
 - the plan consistently uses `MockTurboBTtransport`, `AbstractTurboBTtransport`, and `get_turbobt_transport()`
-- the configured raw methods match the currently needed `TurboBtClient` transport calls for these endpoint paths
+- the migrated test paths consistently use `pylon_service/new_tests/open_access_endpoints/`
