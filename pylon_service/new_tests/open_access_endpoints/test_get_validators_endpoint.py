@@ -2,14 +2,9 @@
 Tests for the GET /subnet/{netuid}/block/{block_number}/validators endpoint.
 """
 
-from collections.abc import AsyncIterator
 from ipaddress import IPv4Address
-from types import SimpleNamespace
-from typing import cast
-from unittest.mock import patch
 
 import pytest
-import pytest_asyncio
 from litestar.status_codes import HTTP_200_OK, HTTP_404_NOT_FOUND
 from litestar.testing import AsyncTestClient
 from pylon_commons.currency import Currency, Token
@@ -42,6 +37,8 @@ from turbobt.block import Block as TurboBtBlock
 from turbobt.neuron import Neuron as TurboBtNeuron
 
 from pylon_service.bittensor.client import MockTurboBTtransport
+
+TEST_NETUID = NetUid(2)
 
 
 def _build_neuron(
@@ -91,86 +88,14 @@ def _build_neuron(
     )
 
 
-def _build_turbobt_block(number: int, block_hash: str) -> TurboBtBlock:
-    return TurboBtBlock(block_hash, number, client=None)
-
-
-def _build_turbobt_neuron(neuron: Neuron) -> TurboBtNeuron:
-    return cast(
-        TurboBtNeuron,
-        SimpleNamespace(
-            uid=neuron.uid,
-            coldkey=neuron.coldkey,
-            hotkey=neuron.hotkey,
-            active=neuron.active,
-            axon_info=SimpleNamespace(
-                ip=neuron.axon_info.ip,
-                port=neuron.axon_info.port,
-                protocol=neuron.axon_info.protocol,
-            ),
-            stake=neuron.stake,
-            rank=neuron.rank,
-            emission=neuron.emission,
-            incentive=neuron.incentive,
-            consensus=neuron.consensus,
-            trust=neuron.trust,
-            validator_trust=neuron.validator_trust,
-            dividends=neuron.dividends,
-            last_update=neuron.last_update,
-            validator_permit=neuron.validator_permit,
-            pruning_score=neuron.pruning_score,
-        ),
-    )
-
-
-def _build_raw_subnet_state(netuid: NetUid, subnet_validators: SubnetValidators) -> dict[str, object]:
-    validators = subnet_validators.validators
-    return {
-        "netuid": netuid,
-        "hotkeys": [validator.hotkey for validator in validators],
-        "coldkeys": [validator.coldkey for validator in validators],
-        "active": [validator.active for validator in validators],
-        "validator_permit": [validator.validator_permit for validator in validators],
-        "pruning_score": [validator.pruning_score for validator in validators],
-        "last_update": [validator.last_update for validator in validators],
-        "emission": [Currency[Token.ALPHA](validator.emission).as_rao() for validator in validators],
-        "dividends": [validator.dividends for validator in validators],
-        "incentives": [validator.incentive for validator in validators],
-        "consensus": [validator.consensus for validator in validators],
-        "trust": [validator.trust for validator in validators],
-        "rank": [validator.rank for validator in validators],
-        "block_at_registration": [BlockNumber(0) for _ in validators],
-        "alpha_stake": [Currency[Token.ALPHA](validator.stakes.alpha).as_rao() for validator in validators],
-        "tao_stake": [Currency[Token.TAO](validator.stakes.tao).as_rao() for validator in validators],
-        "total_stake": [Currency[Token.ALPHA](validator.stakes.total).as_rao() for validator in validators],
-        "emission_history": [[Currency[Token.ALPHA](validator.emission).as_rao()] for validator in validators],
-    }
-
-
-@pytest.fixture
-def mock_turbobt_transport() -> MockTurboBTtransport:
-    return MockTurboBTtransport()
-
-
-@pytest_asyncio.fixture
-async def patched_test_client(
-    test_client: AsyncTestClient, mock_turbobt_transport: MockTurboBTtransport
-) -> AsyncIterator[AsyncTestClient]:
-    with patch(
-        "pylon_service.bittensor.client.get_turbobt_transport",
-        return_value=mock_turbobt_transport,
-    ):
-        yield test_client
-
-
 @pytest.fixture
 def block() -> Block:
     return Block(number=BlockNumber(123), hash=BlockHash("0xabc123"))
 
 
 @pytest.fixture
-def raw_block(block: Block) -> TurboBtBlock:
-    return _build_turbobt_block(int(block.number), str(block.hash))
+def raw_block(block: Block, turbobt_block_builder) -> TurboBtBlock:
+    return turbobt_block_builder(int(block.number), str(block.hash))
 
 
 @pytest.fixture
@@ -225,18 +150,18 @@ def subnet_validators(block: Block) -> SubnetValidators:
 
 
 @pytest.fixture
-def raw_validators(subnet_validators: SubnetValidators) -> list[TurboBtNeuron]:
-    return [_build_turbobt_neuron(validator) for validator in subnet_validators.validators]
+def raw_validators(subnet_validators: SubnetValidators, turbobt_neuron_builder) -> list[TurboBtNeuron]:
+    return [turbobt_neuron_builder(validator) for validator in subnet_validators.validators]
 
 
 @pytest.fixture
-def raw_subnet_state(subnet_validators: SubnetValidators) -> dict[str, object]:
-    return _build_raw_subnet_state(NetUid(1), subnet_validators)
+def raw_subnet_state(subnet_validators: SubnetValidators, raw_subnet_state_builder) -> dict[str, object]:
+    return raw_subnet_state_builder(TEST_NETUID, subnet_validators)
 
 
 @pytest.mark.asyncio
 async def test_get_validators_open_access_success(
-    patched_test_client: AsyncTestClient,
+    test_client: AsyncTestClient,
     mock_turbobt_transport: MockTurboBTtransport,
     block: Block,
     raw_block: TurboBtBlock,
@@ -245,10 +170,10 @@ async def test_get_validators_open_access_success(
 ):
     mock_turbobt_transport.set_latest_block(raw_block)
     mock_turbobt_transport.add_block(raw_block)
-    mock_turbobt_transport.add_neurons_range(NetUid(1), int(block.number), int(block.number), raw_validators)
-    mock_turbobt_transport.add_subnet_state_range(NetUid(1), int(block.number), int(block.number), raw_subnet_state)
+    mock_turbobt_transport.add_neurons_range(TEST_NETUID, int(block.number), int(block.number), raw_validators)
+    mock_turbobt_transport.add_subnet_state_range(TEST_NETUID, int(block.number), int(block.number), raw_subnet_state)
 
-    response = await patched_test_client.get(f"/api/v1/subnet/1/block/{block.number}/validators")
+    response = await test_client.get(f"/api/v1/subnet/{int(TEST_NETUID)}/block/{block.number}/validators")
 
     assert response.status_code == HTTP_200_OK
     assert response.json() == {
@@ -296,13 +221,13 @@ async def test_get_validators_open_access_success(
         }
 
     assert mock_turbobt_transport.calls["get_block"] == [(block.number,), (BlockNumber(-1),)]
-    assert mock_turbobt_transport.calls["list_neurons"] == [(NetUid(1), block.hash)]
-    assert mock_turbobt_transport.calls["get_subnet_state"] == [(NetUid(1), block.hash)]
+    assert mock_turbobt_transport.calls["list_neurons"] == [(TEST_NETUID, block.hash)]
+    assert mock_turbobt_transport.calls["get_subnet_state"] == [(TEST_NETUID, block.hash)]
 
 
 @pytest.mark.asyncio
 async def test_get_latest_validators_open_access_success(
-    patched_test_client: AsyncTestClient,
+    test_client: AsyncTestClient,
     mock_turbobt_transport: MockTurboBTtransport,
     block: Block,
     raw_block: TurboBtBlock,
@@ -311,10 +236,10 @@ async def test_get_latest_validators_open_access_success(
 ):
     mock_turbobt_transport.set_latest_block(raw_block)
     mock_turbobt_transport.add_block(raw_block)
-    mock_turbobt_transport.add_neurons_range(NetUid(1), int(block.number), None, raw_validators)
-    mock_turbobt_transport.add_subnet_state_range(NetUid(1), int(block.number), None, raw_subnet_state)
+    mock_turbobt_transport.add_neurons_range(TEST_NETUID, int(block.number), None, raw_validators)
+    mock_turbobt_transport.add_subnet_state_range(TEST_NETUID, int(block.number), None, raw_subnet_state)
 
-    response = await patched_test_client.get("/api/v1/subnet/1/block/latest/validators")
+    response = await test_client.get(f"/api/v1/subnet/{int(TEST_NETUID)}/block/latest/validators")
 
     assert response.status_code == HTTP_200_OK
     assert response.json() == {
@@ -362,16 +287,16 @@ async def test_get_latest_validators_open_access_success(
         }
 
     assert mock_turbobt_transport.calls["get_block"] == [(BlockNumber(-1),), (BlockNumber(-1),)]
-    assert mock_turbobt_transport.calls["list_neurons"] == [(NetUid(1), block.hash)]
-    assert mock_turbobt_transport.calls["get_subnet_state"] == [(NetUid(1), block.hash)]
+    assert mock_turbobt_transport.calls["list_neurons"] == [(TEST_NETUID, block.hash)]
+    assert mock_turbobt_transport.calls["get_subnet_state"] == [(TEST_NETUID, block.hash)]
 
 
 @pytest.mark.asyncio
 async def test_get_validators_open_access_block_not_found(
-    patched_test_client: AsyncTestClient,
+    test_client: AsyncTestClient,
     mock_turbobt_transport: MockTurboBTtransport,
 ):
-    response = await patched_test_client.get("/api/v1/subnet/1/block/999999/validators")
+    response = await test_client.get(f"/api/v1/subnet/{int(TEST_NETUID)}/block/999999/validators")
 
     assert response.status_code == HTTP_404_NOT_FOUND
     assert response.json() == {"detail": "Block 999999 not found.", "status_code": 404}
@@ -390,7 +315,7 @@ async def test_get_validators_open_access_block_not_found(
 async def test_get_validators_open_access_invalid_block_number_type(
     test_client: AsyncTestClient, invalid_block_number: str
 ):
-    response = await test_client.get(f"/api/v1/subnet/1/block/{invalid_block_number}/validators")
+    response = await test_client.get(f"/api/v1/subnet/{int(TEST_NETUID)}/block/{invalid_block_number}/validators")
 
     assert response.status_code == HTTP_404_NOT_FOUND, response.content
     assert response.json() == {"status_code": HTTP_404_NOT_FOUND, "detail": "Not Found"}
