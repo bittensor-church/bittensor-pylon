@@ -47,6 +47,10 @@ class MockBittensorClient(AbstractBittensorClient):
     This client uses the Behave to configure method behaviors and track calls.
     Each method maintains a queue of behaviors that are consumed in order.
 
+    This mock is now a compatibility layer for the older client-facing seam. It is
+    effectively deprecated, but we are keeping it so we do not have to refactor all
+    existing tests at once.
+
     Example usage:
         mock_client = MockBittensorClient()
         async with mock_client.mock_behavior(

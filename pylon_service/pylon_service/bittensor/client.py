@@ -545,9 +545,6 @@ class TurboBtClient(AbstractBittensorClient):
     async def _recreate_bt_client(self) -> None:
         await self._require_concrete_transport()._recreate_bt_client()
 
-    async def _protect_turbobt[T](self, coro_factory: Callable[[Bittensor], Awaitable[T]]) -> T:
-        return await self._require_concrete_transport()._protect_turbobt(coro_factory)
-
     def _resolve_hotkey(self, hotkey: Hotkey | None) -> Hotkey:
         if hotkey:
             return hotkey
