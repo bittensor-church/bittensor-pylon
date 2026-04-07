@@ -5,10 +5,8 @@ Tests for the GET /identity/{identity_name}/subnet/{netuid}/block/{block_number}
 import pytest
 from litestar.status_codes import HTTP_200_OK, HTTP_404_NOT_FOUND
 from litestar.testing import AsyncTestClient
-from pylon_commons.models import Block
-from pylon_commons.types import BlockHash, BlockNumber
 
-from tests.mock_bittensor_client import MockBittensorClient
+from pylon_service.bittensor.contact import MockBittensorContact
 
 
 @pytest.mark.asyncio
@@ -33,9 +31,7 @@ async def test_get_neurons_identity_invalid_block_number_type(
 
 
 @pytest.mark.asyncio
-async def test_v1_identity_get_neurons_returns_block_neurons(
-    test_client: AsyncTestClient, snapshot_json
-):
+async def test_v1_identity_get_neurons_returns_block_neurons(test_client: AsyncTestClient, snapshot_json):
     response = await test_client.get("/api/v1/identity/sn1/subnet/1/block/123/neurons")
 
     assert response.status_code == HTTP_200_OK
@@ -43,9 +39,7 @@ async def test_v1_identity_get_neurons_returns_block_neurons(
 
 
 @pytest.mark.asyncio
-async def test_v1_identity_get_latest_neurons_returns_latest_neurons(
-    test_client: AsyncTestClient, snapshot_json
-):
+async def test_v1_identity_get_latest_neurons_returns_latest_neurons(test_client: AsyncTestClient, snapshot_json):
     response = await test_client.get("/api/v1/identity/sn1/subnet/1/block/latest/neurons")
 
     assert response.status_code == HTTP_200_OK
@@ -54,7 +48,7 @@ async def test_v1_identity_get_latest_neurons_returns_latest_neurons(
 
 @pytest.mark.asyncio
 async def test_get_neurons_identity_block_not_found(
-    test_client: AsyncTestClient, sn1_mock_bt_client: MockBittensorClient, snapshot_json
+    test_client: AsyncTestClient, sn1_mock_bt_client: MockBittensorContact, snapshot_json
 ):
     """
     Test that non-existent block returns 404.

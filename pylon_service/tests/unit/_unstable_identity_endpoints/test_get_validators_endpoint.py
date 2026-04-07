@@ -1,8 +1,7 @@
 import pytest
 from litestar.status_codes import HTTP_200_OK, HTTP_404_NOT_FOUND
-from pylon_commons.types import BlockNumber
 
-from tests.mock_bittensor_client import MockBittensorClient
+from pylon_service.bittensor.contact import MockBittensorContact
 from tests.world import VALIDATORS_NETUID
 
 
@@ -28,7 +27,7 @@ async def test_unstable_identity_get_latest_validators_returns_only_validator_pe
 
 @pytest.mark.asyncio
 async def test_unstable_identity_get_validators_missing_block_returns_404(
-    test_client, sn1_mock_bt_client: MockBittensorClient, snapshot_json
+    test_client, sn1_mock_bt_client: MockBittensorContact, snapshot_json
 ):
     async with sn1_mock_bt_client.mock_behavior(get_block=[None]):
         response = await test_client.get("/api/_unstable/identity/sn1/subnet/1/block/999999/validators")

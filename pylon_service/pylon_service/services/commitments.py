@@ -12,9 +12,7 @@ class CommitmentService:
         state = await router.get_subnet_state(netuid, block)
         registered_hotkeys = set(state.hotkeys)
         filtered = {
-            hotkey: commitment
-            for hotkey, commitment in commitments.commitments.items()
-            if hotkey in registered_hotkeys
+            hotkey: commitment for hotkey, commitment in commitments.commitments.items() if hotkey in registered_hotkeys
         }
         return SubnetCommitments(block=commitments.block, commitments=filtered)
 

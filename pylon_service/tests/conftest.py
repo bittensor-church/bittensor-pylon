@@ -2,6 +2,7 @@
 Shared fixtures for all service tests (unit and pact).
 """
 
+from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 from unittest.mock import patch
 
@@ -9,20 +10,18 @@ import pytest
 import pytest_asyncio
 from bittensor_wallet import Wallet
 from polyfactory.pytest_plugin import register_fixture
-from pylon_commons.types import ArchiveBlocksCutoff
-from pylon_commons.types import IdentityName
+from pylon_commons.types import ArchiveBlocksCutoff, IdentityName
 from syrupy.extensions.json import JSONSnapshotExtension
 from syrupy.matchers import path_type
 
-from pylon_service import lifespans, main
-from pylon_service import dependencies, identities as identities_module
-from pylon_service.bittensor.contact import ContactFactory
+from pylon_service import dependencies, lifespans, main
+from pylon_service import identities as identities_module
+from pylon_service.bittensor.contact import ContactFactory, MockBittensorContact
 from pylon_service.bittensor.pool import BittensorClientPool
 from pylon_service.bittensor.router import BittensorRouter
 from pylon_service.main import create_app
 from pylon_service.stores import StoreName
 from tests.factories import BlockFactory, NeuronFactory
-from tests.mock_bittensor_client import MockBittensorClient
 from tests.mock_store import MockStore
 from tests.world import (
     SharedWorld,
@@ -65,7 +64,7 @@ async def mock_bt_client_pool():
     """
     async with BittensorClientPool(
         router_cls=BittensorRouter,
-        contact_factory=ContactFactory(contact_cls=MockBittensorClient),
+        contact_factory=ContactFactory(contact_cls=MockBittensorContact),
         uri="mock://main",
         archive_uri="mock://archive",
         archive_blocks_cutoff=ArchiveBlocksCutoff(10_000_000),
@@ -152,7 +151,7 @@ async def sn2_mock_bt_client(mock_bt_client_pool):
 
 
 @pytest_asyncio.fixture(scope="session")
-async def shared_world(mock_bt_client_pool) -> SharedWorld:
+async def shared_world(mock_bt_client_pool) -> AsyncGenerator[SharedWorld]:
     async with mock_bt_client_pool.acquire(wallet=None) as open_access_router:
         async with mock_bt_client_pool.acquire(wallet=TEST_IDENTITIES[IdentityName("sn1")].wallet) as sn1_router:
             async with mock_bt_client_pool.acquire(wallet=TEST_IDENTITIES[IdentityName("sn2")].wallet) as sn2_router:

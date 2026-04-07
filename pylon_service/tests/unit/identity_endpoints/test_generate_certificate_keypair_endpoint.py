@@ -12,12 +12,12 @@ from pylon_commons.models import (
     PublicKey,
 )
 
-from tests.mock_bittensor_client import MockBittensorClient
+from pylon_service.bittensor.contact import MockBittensorContact
 
 
 @pytest.mark.asyncio
 async def test_generate_certificate_keypair_identity_success(
-    test_client: AsyncTestClient, sn1_mock_bt_client: MockBittensorClient, snapshot_json
+    test_client: AsyncTestClient, sn1_mock_bt_client: MockBittensorContact, snapshot_json
 ):
     """
     Test generating a certificate keypair successfully.
@@ -42,7 +42,7 @@ async def test_generate_certificate_keypair_identity_success(
 
 @pytest.mark.asyncio
 async def test_generate_certificate_keypair_identity_default_algorithm(
-    test_client: AsyncTestClient, sn2_mock_bt_client: MockBittensorClient, snapshot_json
+    test_client: AsyncTestClient, sn2_mock_bt_client: MockBittensorContact, snapshot_json
 ):
     """
     Test generating a certificate keypair with default algorithm.
@@ -67,7 +67,7 @@ async def test_generate_certificate_keypair_identity_default_algorithm(
 
 @pytest.mark.asyncio
 async def test_generate_certificate_keypair_identity_failure(
-    test_client: AsyncTestClient, sn1_mock_bt_client: MockBittensorClient, snapshot_json
+    test_client: AsyncTestClient, sn1_mock_bt_client: MockBittensorContact, snapshot_json
 ):
     """
     Test generating a certificate keypair when generation fails.

@@ -1,18 +1,18 @@
 import pytest
 from litestar.status_codes import HTTP_200_OK, HTTP_404_NOT_FOUND
 from litestar.testing import AsyncTestClient
-from pylon_commons.models import Block, Commitment
-from pylon_commons.types import BlockHash, BlockNumber, Hotkey
+from pylon_commons.models import Block
+from pylon_commons.types import BlockHash, BlockNumber
 
-from tests.mock_bittensor_client import MockBittensorClient
+from pylon_service.bittensor.contact import MockBittensorContact
 from tests.world import OWN_COMMITMENT_NETUID
 
 
 @pytest.mark.asyncio
-async def test_v1_identity_get_own_commitment_returns_v1_commitment_shape(
-    test_client: AsyncTestClient, snapshot_json
-):
-    response = await test_client.get(f"/api/v1/identity/sn2/subnet/{OWN_COMMITMENT_NETUID}/block/latest/commitments/self")
+async def test_v1_identity_get_own_commitment_returns_v1_commitment_shape(test_client: AsyncTestClient, snapshot_json):
+    response = await test_client.get(
+        f"/api/v1/identity/sn2/subnet/{OWN_COMMITMENT_NETUID}/block/latest/commitments/self"
+    )
 
     assert response.status_code == HTTP_200_OK
     assert response.json() == snapshot_json
@@ -20,7 +20,7 @@ async def test_v1_identity_get_own_commitment_returns_v1_commitment_shape(
 
 @pytest.mark.asyncio
 async def test_get_own_commitment_identity_not_found(
-    test_client: AsyncTestClient, sn2_mock_bt_client: MockBittensorClient, snapshot_json
+    test_client: AsyncTestClient, sn2_mock_bt_client: MockBittensorContact, snapshot_json
 ):
     latest_block = Block(number=BlockNumber(1000), hash=BlockHash("0xabc123"))
 

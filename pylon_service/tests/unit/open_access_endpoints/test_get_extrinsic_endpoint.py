@@ -8,13 +8,13 @@ from litestar.testing import AsyncTestClient
 from pylon_commons.models import Block, Extrinsic, ExtrinsicCall
 from pylon_commons.types import BlockHash, BlockNumber, ExtrinsicHash, ExtrinsicIndex, ExtrinsicLength
 
-from tests.mock_bittensor_client import MockBittensorClient
+from pylon_service.bittensor.contact import MockBittensorContact
 
 
 @pytest.mark.asyncio
 async def test_get_extrinsic_not_found(
     test_client: AsyncTestClient,
-    open_access_mock_bt_client: MockBittensorClient,
+    open_access_mock_bt_client: MockBittensorContact,
     snapshot_json,
 ):
     """
@@ -34,7 +34,7 @@ async def test_get_extrinsic_not_found(
 @pytest.mark.asyncio
 async def test_get_extrinsic_block_not_found(
     test_client: AsyncTestClient,
-    open_access_mock_bt_client: MockBittensorClient,
+    open_access_mock_bt_client: MockBittensorContact,
     snapshot_json,
 ):
     """
@@ -98,7 +98,7 @@ async def test_get_extrinsic_invalid_extrinsic_index_type(
 @pytest.mark.asyncio
 async def test_get_extrinsic_different_indices(
     test_client: AsyncTestClient,
-    open_access_mock_bt_client: MockBittensorClient,
+    open_access_mock_bt_client: MockBittensorContact,
     snapshot_json,
 ):
     """

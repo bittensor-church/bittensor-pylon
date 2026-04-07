@@ -1,7 +1,7 @@
 from pylon_commons.types import NetUid
 
 from pylon_service.bittensor.contact import BittensorPort
-from pylon_service.bittensor.models import Block, CertificateAlgorithm, NeuronCertificate, NeuronCertificateKeypair
+from pylon_service.bittensor.models import CertificateAlgorithm, NeuronCertificate, NeuronCertificateKeypair
 
 from .errors import CertificateGenerationFailedError, CertificateNotFoundError
 

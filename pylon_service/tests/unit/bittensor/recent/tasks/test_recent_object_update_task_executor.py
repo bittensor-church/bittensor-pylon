@@ -6,10 +6,10 @@ from tenacity import AsyncRetrying, stop_after_attempt
 
 from pylon_service.bittensor.contact import BittensorPort
 from pylon_service.bittensor.pool import BittensorClientPool
-from pylon_service.bittensor.router import BittensorRouter
 from pylon_service.bittensor.recent import AbstractContext, RecentObjectUpdateTaskExecutor, SubnetContext
 from pylon_service.bittensor.recent.adapter import CacheKey, _CacheEntry
 from pylon_service.bittensor.recent.tasks import UpdateRecentObject
+from pylon_service.bittensor.router import BittensorRouter
 from tests.behave import Behave
 
 

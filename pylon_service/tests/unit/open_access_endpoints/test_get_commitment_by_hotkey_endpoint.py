@@ -5,10 +5,10 @@ Tests for the GET /subnet/{netuid}/block/latest/commitments/{hotkey} endpoint.
 import pytest
 from litestar.status_codes import HTTP_200_OK, HTTP_404_NOT_FOUND
 from litestar.testing import AsyncTestClient
-from pylon_commons.models import Block, Commitment
-from pylon_commons.types import BlockHash, BlockNumber, Hotkey
+from pylon_commons.models import Block
+from pylon_commons.types import BlockHash, BlockNumber
 
-from tests.mock_bittensor_client import MockBittensorClient
+from pylon_service.bittensor.contact import MockBittensorContact
 from tests.world import COMMITMENTS_ALL_NETUID
 
 
@@ -24,7 +24,7 @@ async def test_v1_open_access_get_commitment_by_hotkey_returns_v1_commitment_sha
 
 @pytest.mark.asyncio
 async def test_get_commitment_open_access_not_found(
-    test_client: AsyncTestClient, open_access_mock_bt_client: MockBittensorClient, snapshot_json
+    test_client: AsyncTestClient, open_access_mock_bt_client: MockBittensorContact, snapshot_json
 ):
     """
     Test getting a commitment that doesn't exist.

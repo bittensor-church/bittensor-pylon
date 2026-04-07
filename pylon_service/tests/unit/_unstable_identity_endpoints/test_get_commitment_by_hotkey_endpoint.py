@@ -5,10 +5,10 @@ Tests for the GET identity/{id}/subnet/{netuid}/block/latest/commitments/{hotkey
 import pytest
 from litestar.status_codes import HTTP_200_OK, HTTP_404_NOT_FOUND
 from litestar.testing import AsyncTestClient
-from pylon_commons.models import Block, Commitment
-from pylon_commons.types import BlockHash, BlockNumber, Hotkey
+from pylon_commons.models import Block
+from pylon_commons.types import BlockHash, BlockNumber
 
-from tests.mock_bittensor_client import MockBittensorClient
+from pylon_service.bittensor.contact import MockBittensorContact
 from tests.world import COMMITMENTS_ALL_NETUID
 
 
@@ -26,7 +26,7 @@ async def test_unstable_identity_get_commitment_by_hotkey_returns_commitment_obj
 
 @pytest.mark.asyncio
 async def test_get_commitment_identity_not_found(
-    test_client: AsyncTestClient, sn1_mock_bt_client: MockBittensorClient, snapshot_json
+    test_client: AsyncTestClient, sn1_mock_bt_client: MockBittensorContact, snapshot_json
 ):
     """
     Test getting a commitment that doesn't exist.

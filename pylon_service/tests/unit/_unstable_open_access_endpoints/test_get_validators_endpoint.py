@@ -5,9 +5,8 @@ Tests for the GET /subnet/{netuid}/block/{block_number}/validators endpoint.
 import pytest
 from litestar.status_codes import HTTP_200_OK, HTTP_404_NOT_FOUND
 from litestar.testing import AsyncTestClient
-from pylon_commons.types import NetUid
 
-from tests.mock_bittensor_client import MockBittensorClient
+from pylon_service.bittensor.contact import MockBittensorContact
 from tests.world import VALIDATORS_NETUID
 
 
@@ -34,7 +33,7 @@ async def test_unstable_open_access_get_latest_validators_returns_only_validator
 @pytest.mark.asyncio
 async def test_get_validators_open_access_block_not_found(
     test_client: AsyncTestClient,
-    open_access_mock_bt_client: MockBittensorClient,
+    open_access_mock_bt_client: MockBittensorContact,
     snapshot_json,
 ):
     async with open_access_mock_bt_client.mock_behavior(

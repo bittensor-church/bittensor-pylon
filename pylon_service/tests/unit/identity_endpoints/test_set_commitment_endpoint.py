@@ -6,12 +6,12 @@ import pytest
 from litestar.status_codes import HTTP_201_CREATED, HTTP_400_BAD_REQUEST, HTTP_404_NOT_FOUND, HTTP_502_BAD_GATEWAY
 from litestar.testing import AsyncTestClient
 
-from tests.mock_bittensor_client import MockBittensorClient
+from pylon_service.bittensor.contact import MockBittensorContact
 
 
 @pytest.mark.asyncio
 async def test_set_commitment_identity_with_0x_prefix(
-    test_client: AsyncTestClient, sn2_mock_bt_client: MockBittensorClient, snapshot_json
+    test_client: AsyncTestClient, sn2_mock_bt_client: MockBittensorContact, snapshot_json
 ):
     """
     Test setting a commitment with 0x prefix.
@@ -35,7 +35,7 @@ async def test_set_commitment_identity_with_0x_prefix(
 
 @pytest.mark.asyncio
 async def test_set_commitment_identity_blockchain_error(
-    test_client: AsyncTestClient, sn1_mock_bt_client: MockBittensorClient, monkeypatch, snapshot_json
+    test_client: AsyncTestClient, sn1_mock_bt_client: MockBittensorContact, monkeypatch, snapshot_json
 ):
     """
     Test that blockchain errors return 502 Bad Gateway after retries exhausted.
@@ -59,7 +59,7 @@ async def test_set_commitment_identity_blockchain_error(
 
 @pytest.mark.asyncio
 async def test_set_commitment_identity_retries_on_failure(
-    test_client: AsyncTestClient, sn1_mock_bt_client: MockBittensorClient, monkeypatch, snapshot_json
+    test_client: AsyncTestClient, sn1_mock_bt_client: MockBittensorContact, monkeypatch, snapshot_json
 ):
     """
     Test that set_commitment retries on transient failures and succeeds when blockchain recovers.

@@ -16,7 +16,7 @@ from tests.mock_store import MockStore
 if TYPE_CHECKING:
     from pytest import MonkeyPatch
 
-    from tests.mock_bittensor_client import MockBittensorClient
+    from pylon_service.bittensor.contact import MockBittensorContact
 
 _registry: dict[str, type["StateHandler"]] = {}
 
@@ -36,9 +36,9 @@ class StateHandler(ABC):
 
     def __init__(
         self,
-        open_access_client: "MockBittensorClient",
-        sn1_client: "MockBittensorClient",
-        sn2_client: "MockBittensorClient",
+        open_access_client: "MockBittensorContact",
+        sn1_client: "MockBittensorContact",
+        sn2_client: "MockBittensorContact",
         mock_stores: dict[StoreName, MockStore],
         monkeypatch: "MonkeyPatch",
     ) -> None:
@@ -67,7 +67,7 @@ class StateHandler(ABC):
         elif action == "teardown":
             self.teardown(parameters)
 
-    def _get_client(self, parameters: dict[str, Any]) -> "MockBittensorClient":
+    def _get_client(self, parameters: dict[str, Any]) -> "MockBittensorContact":
         identity_name = parameters.get("identity_name")
         return self._clients[identity_name]
 
@@ -85,9 +85,9 @@ class StateHandler(ABC):
     @classmethod
     def create_all(
         cls,
-        open_access_client: "MockBittensorClient",
-        sn1_client: "MockBittensorClient",
-        sn2_client: "MockBittensorClient",
+        open_access_client: "MockBittensorContact",
+        sn1_client: "MockBittensorContact",
+        sn2_client: "MockBittensorContact",
         mock_stores: dict[StoreName, MockStore],
         monkeypatch: "MonkeyPatch",
     ) -> dict[str, "StateHandler"]:

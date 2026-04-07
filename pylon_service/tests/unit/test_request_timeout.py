@@ -4,8 +4,8 @@ import pytest
 from litestar.status_codes import HTTP_400_BAD_REQUEST, HTTP_504_GATEWAY_TIMEOUT
 from litestar.testing import AsyncTestClient
 
+from pylon_service.bittensor.contact import MockBittensorContact
 from pylon_service.middleware import request_timeout
-from tests.mock_bittensor_client import MockBittensorClient
 
 _ENDPOINT = "/api/v1/subnet/1/block/latest/neurons"
 
@@ -16,7 +16,7 @@ async def _slow_response(*args, **kwargs):
 
 @pytest.mark.asyncio
 async def test_request_times_out_with_header(
-    test_client: AsyncTestClient, open_access_mock_bt_client: MockBittensorClient, snapshot_json
+    test_client: AsyncTestClient, open_access_mock_bt_client: MockBittensorContact, snapshot_json
 ):
     async with open_access_mock_bt_client.mock_behavior(get_latest_block=[_slow_response]):
         response = await test_client.get(_ENDPOINT, headers={"x-pylon-timeout": "0.1"})
@@ -27,7 +27,7 @@ async def test_request_times_out_with_header(
 
 @pytest.mark.asyncio
 async def test_request_times_out_with_default(
-    test_client: AsyncTestClient, open_access_mock_bt_client: MockBittensorClient, monkeypatch, snapshot_json
+    test_client: AsyncTestClient, open_access_mock_bt_client: MockBittensorContact, monkeypatch, snapshot_json
 ):
     monkeypatch.setattr(request_timeout.settings, "default_request_timeout_seconds", 0.1)
 
@@ -40,7 +40,7 @@ async def test_request_times_out_with_default(
 
 @pytest.mark.asyncio
 async def test_timeout_capped_at_max(
-    test_client: AsyncTestClient, open_access_mock_bt_client: MockBittensorClient, monkeypatch, snapshot_json
+    test_client: AsyncTestClient, open_access_mock_bt_client: MockBittensorContact, monkeypatch, snapshot_json
 ):
     monkeypatch.setattr(request_timeout.settings, "max_request_timeout_seconds", 0.1)
 

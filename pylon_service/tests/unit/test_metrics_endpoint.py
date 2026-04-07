@@ -50,9 +50,7 @@ class TestMetricsEndpoint:
         assert response.json() == snapshot_json
 
     @pytest.mark.asyncio
-    async def test_metrics_with_wrong_token_returns_403(
-        self, test_client: AsyncTestClient, monkeypatch, snapshot_json
-    ):
+    async def test_metrics_with_wrong_token_returns_403(self, test_client: AsyncTestClient, monkeypatch, snapshot_json):
         monkeypatch.setattr(settings, "metrics_token", "correct-token")
 
         response = await test_client.get("/metrics", headers={"Authorization": "Bearer wrong-token"})

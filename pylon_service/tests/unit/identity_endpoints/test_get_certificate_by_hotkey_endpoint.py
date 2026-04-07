@@ -8,12 +8,12 @@ from litestar.testing import AsyncTestClient
 from pylon_commons.models import Block, CertificateAlgorithm, NeuronCertificate
 from pylon_commons.types import BlockHash, BlockNumber, PublicKey
 
-from tests.mock_bittensor_client import MockBittensorClient
+from pylon_service.bittensor.contact import MockBittensorContact
 
 
 @pytest.mark.asyncio
 async def test_get_certificate_identity_success(
-    test_client: AsyncTestClient, sn1_mock_bt_client: MockBittensorClient, snapshot_json
+    test_client: AsyncTestClient, sn1_mock_bt_client: MockBittensorContact, snapshot_json
 ):
     """
     Test getting a specific certificate successfully.
@@ -37,7 +37,7 @@ async def test_get_certificate_identity_success(
 
 @pytest.mark.asyncio
 async def test_get_certificate_identity_not_found(
-    test_client: AsyncTestClient, sn2_mock_bt_client: MockBittensorClient, snapshot_json
+    test_client: AsyncTestClient, sn2_mock_bt_client: MockBittensorContact, snapshot_json
 ):
     """
     Test getting a certificate that doesn't exist.

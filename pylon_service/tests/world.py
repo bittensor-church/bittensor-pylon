@@ -2,25 +2,41 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from bittensor_wallet import Wallet
-from pylon_commons.currency import Currency, Token
+from pylon_commons.currency import Currency, CurrencyRao, Token
 from pylon_commons.models import Block, Commitment, Neuron, Stakes, SubnetCommitments, SubnetNeurons, SubnetState
 from pylon_commons.types import (
+    AlphaStake,
+    AlphaStakeRao,
     BlockHash,
     BlockNumber,
     Coldkey,
+    CommitmentDataHex,
+    Consensus,
+    Dividends,
+    EmissionRao,
     Hotkey,
     HotkeyName,
     IdentityName,
+    Incentive,
     NetUid,
     NeuronUid,
+    PruningScore,
     PylonAuthToken,
+    Rank,
+    SubnetActive,
+    TaoStake,
+    TaoStakeRao,
+    Timestamp,
+    TotalStake,
+    TotalStakeRao,
+    Trust,
+    ValidatorPermit,
     WalletName,
 )
 
+from pylon_service.bittensor.contact import MockBittensorContact
 from pylon_service.identities import Identity
 from tests.factories import NeuronFactory
-from tests.mock_bittensor_client import MockBittensorClient
 
 VALIDATORS_NETUID = NetUid(11)
 COMMITMENTS_ALL_NETUID = NetUid(21)
@@ -31,12 +47,12 @@ OWN_COMMITMENT_NETUID = NetUid(24)
 
 @dataclass(frozen=True)
 class SharedWorld:
-    open_access_main: MockBittensorClient
-    open_access_archive: MockBittensorClient
-    sn1_main: MockBittensorClient
-    sn1_archive: MockBittensorClient
-    sn2_main: MockBittensorClient
-    sn2_archive: MockBittensorClient
+    open_access_main: MockBittensorContact
+    open_access_archive: MockBittensorContact
+    sn1_main: MockBittensorContact
+    sn1_archive: MockBittensorContact
+    sn2_main: MockBittensorContact
+    sn2_archive: MockBittensorContact
     identities: dict[IdentityName, Identity]
     default_latest_block: Block
     default_neurons: dict[NetUid, list[Neuron]]
@@ -44,7 +60,7 @@ class SharedWorld:
     default_commitments: dict[NetUid, dict[Hotkey, Commitment]]
 
     @property
-    def contacts(self) -> tuple[MockBittensorClient, ...]:
+    def contacts(self) -> tuple[MockBittensorContact, ...]:
         return (
             self.open_access_main,
             self.open_access_archive,
@@ -70,7 +86,9 @@ class SharedWorld:
                     neurons={neuron.hotkey: neuron for neuron in neurons[netuid]},
                 ),
             )
-            contact.set_default("get_subnet_state", lambda netuid, block, states=self.default_subnet_states: states[netuid])
+            contact.set_default(
+                "get_subnet_state", lambda netuid, block, states=self.default_subnet_states: states[netuid]
+            )
             contact.set_default(
                 "get_commitments",
                 lambda netuid, block, commitments=self.default_commitments: SubnetCommitments(
@@ -80,7 +98,11 @@ class SharedWorld:
             )
             contact.set_default(
                 "get_commitment",
-                lambda netuid, block, hotkey=None, commitments=self.default_commitments, wallet_hotkey=contact.hotkey: _resolve_commitment(
+                lambda netuid,
+                block,
+                hotkey=None,
+                commitments=self.default_commitments,
+                wallet_hotkey=contact.hotkey: _resolve_commitment(
                     netuid,
                     hotkey or wallet_hotkey,
                     commitments,
@@ -136,18 +158,30 @@ def default_neurons() -> dict[NetUid, list[Neuron]]:
     ]
     validator_high = NeuronFactory.build(
         hotkey=Hotkey("validator-high"),
-        validator_permit=True,
-        stakes=Stakes(alpha=Currency[Token.ALPHA](1), tao=Currency[Token.TAO](1), total=Currency[Token.ALPHA](9)),
+        validator_permit=ValidatorPermit(True),
+        stakes=Stakes(
+            alpha=AlphaStake(Currency[Token.ALPHA](1)),
+            tao=TaoStake(Currency[Token.TAO](1)),
+            total=TotalStake(Currency[Token.ALPHA](9)),
+        ),
     )
     validator_low = NeuronFactory.build(
         hotkey=Hotkey("validator-low"),
-        validator_permit=True,
-        stakes=Stakes(alpha=Currency[Token.ALPHA](1), tao=Currency[Token.TAO](1), total=Currency[Token.ALPHA](3)),
+        validator_permit=ValidatorPermit(True),
+        stakes=Stakes(
+            alpha=AlphaStake(Currency[Token.ALPHA](1)),
+            tao=TaoStake(Currency[Token.TAO](1)),
+            total=TotalStake(Currency[Token.ALPHA](3)),
+        ),
     )
     validator_hidden = NeuronFactory.build(
         hotkey=Hotkey("non-validator"),
-        validator_permit=False,
-        stakes=Stakes(alpha=Currency[Token.ALPHA](1), tao=Currency[Token.TAO](1), total=Currency[Token.ALPHA](99)),
+        validator_permit=ValidatorPermit(False),
+        stakes=Stakes(
+            alpha=AlphaStake(Currency[Token.ALPHA](1)),
+            tao=TaoStake(Currency[Token.TAO](1)),
+            total=TotalStake(Currency[Token.ALPHA](99)),
+        ),
     )
 
     return {
@@ -178,21 +212,21 @@ def _build_subnet_state(netuid: NetUid, registered_hotkeys: list[str]) -> Subnet
         netuid=netuid,
         hotkeys=[Hotkey(hotkey) for hotkey in registered_hotkeys],
         coldkeys=[Coldkey(f"coldkey-{i}") for i in range(count)],
-        active=[True] * count,
-        validator_permit=[True] * count,
-        pruning_score=[0] * count,
-        last_update=[0] * count,
-        emission=[0] * count,
-        dividends=[0] * count,
-        incentives=[0] * count,
-        consensus=[0] * count,
-        trust=[0] * count,
-        rank=[0] * count,
+        active=[SubnetActive(True)] * count,
+        validator_permit=[ValidatorPermit(True)] * count,
+        pruning_score=[PruningScore(0)] * count,
+        last_update=[Timestamp(0)] * count,
+        emission=[EmissionRao(CurrencyRao[Token.ALPHA](0))] * count,
+        dividends=[Dividends(0)] * count,
+        incentives=[Incentive(0)] * count,
+        consensus=[Consensus(0)] * count,
+        trust=[Trust(0)] * count,
+        rank=[Rank(0)] * count,
         block_at_registration=[BlockNumber(1)] * count,
-        alpha_stake=[0] * count,
-        tao_stake=[0] * count,
-        total_stake=[0] * count,
-        emission_history=[[0] for _ in range(count)],
+        alpha_stake=[AlphaStakeRao(CurrencyRao[Token.ALPHA](0))] * count,
+        tao_stake=[TaoStakeRao(CurrencyRao[Token.TAO](0))] * count,
+        total_stake=[TotalStakeRao(CurrencyRao[Token.ALPHA](0))] * count,
+        emission_history=[[EmissionRao(CurrencyRao[Token.ALPHA](0))] for _ in range(count)],
     )
 
 
@@ -217,24 +251,24 @@ def default_commitments() -> dict[NetUid, dict[Hotkey, Commitment]]:
             Hotkey("hotkey1"): Commitment(
                 commitment_block_number=BlockNumber(699),
                 hotkey=Hotkey("hotkey1"),
-                commitment="0xaaaa",
+                commitment=CommitmentDataHex("0xaaaa"),
             ),
             Hotkey("hotkey2"): Commitment(
                 commitment_block_number=BlockNumber(699),
                 hotkey=Hotkey("hotkey2"),
-                commitment="0xbbbb",
+                commitment=CommitmentDataHex("0xbbbb"),
             ),
         },
         COMMITMENTS_FILTERED_NETUID: {
             Hotkey("hotkey1"): Commitment(
                 commitment_block_number=BlockNumber(700),
                 hotkey=Hotkey("hotkey1"),
-                commitment="0xaaaa",
+                commitment=CommitmentDataHex("0xaaaa"),
             ),
             Hotkey("foreign-hotkey"): Commitment(
                 commitment_block_number=BlockNumber(700),
                 hotkey=Hotkey("foreign-hotkey"),
-                commitment="0xffff",
+                commitment=CommitmentDataHex("0xffff"),
             ),
         },
         COMMITMENTS_EMPTY_NETUID: {},
@@ -251,6 +285,6 @@ def _resolve_commitment(
         return Commitment(
             commitment_block_number=BlockNumber(999),
             hotkey=hotkey,
-            commitment="0x0f0e0d0c",
+            commitment=CommitmentDataHex("0x0f0e0d0c"),
         )
     return commitments.get(netuid, {}).get(hotkey)

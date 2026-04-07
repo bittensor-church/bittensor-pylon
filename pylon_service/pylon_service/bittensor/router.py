@@ -23,12 +23,16 @@ from pylon_service.bittensor.models import (
     SubnetNeurons,
     SubnetState,
 )
-from pylon_service.metrics import Attr, bittensor_fallback_total
+from pylon_service.metrics import bittensor_fallback_total
 
 logger = logging.getLogger(__name__)
 
 
 class BittensorRouter:
+    """
+    Wallet-bound facade that exposes the contact interface while routing stale-block reads to archive.
+    """
+
     def __init__(
         self,
         wallet: Wallet | None,
@@ -87,10 +91,12 @@ class BittensorRouter:
 
         try:
             return await main_call()
-        except UnknownBlock as exc:
+        except UnknownBlock:
             if block is None:
                 raise
-            logger.warning("Block %s unknown on main contact, falling back to archive %s", block.number, self.archive_uri)
+            logger.warning(
+                "Block %s unknown on main contact, falling back to archive %s", block.number, self.archive_uri
+            )
             bittensor_fallback_total.labels(
                 reason="unknown_block",
                 operation=operation_name,
@@ -149,9 +155,7 @@ class BittensorRouter:
             block=block,
         )
 
-    async def get_certificate(
-        self, netuid: NetUid, block: Block, hotkey=None
-    ) -> NeuronCertificate | None:
+    async def get_certificate(self, netuid: NetUid, block: Block, hotkey=None) -> NeuronCertificate | None:
         return await self._delegate(
             "get_certificate",
             main_call=lambda: self._main_contact.get_certificate(netuid, block, hotkey),

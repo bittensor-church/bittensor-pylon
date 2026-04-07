@@ -4,7 +4,7 @@ from abc import ABC, abstractmethod
 from typing import ClassVar
 
 from prometheus_client import Histogram
-from pylon_commons.models import Block, CommitReveal
+from pylon_commons.models import Block
 from pylon_commons.types import CommitmentDataBytes, Hotkey, NetUid, Weight
 from tenacity import (
     AsyncRetrying,

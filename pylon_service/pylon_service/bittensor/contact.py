@@ -1,9 +1,9 @@
 from __future__ import annotations
 
 import asyncio
+import inspect
 import logging
 from abc import ABC, abstractmethod
-from collections import defaultdict
 from collections.abc import Awaitable, Callable
 from contextlib import asynccontextmanager
 from dataclasses import dataclass
@@ -417,7 +417,8 @@ class TurboBtContact(AbstractBittensorContact):
         labels={"uri": Attr("uri"), "netuid": Param("netuid"), "hotkey": Attr("hotkey")},
     )
     async def commit_weights(self, netuid: NetUid, weights: dict[NeuronUid, Weight]) -> RevealRound:
-        reveal_round = await self._protect_turbobt(lambda c: c.subnet(netuid).weights.commit(weights))
+        normalized_weights = {int(uid): float(weight) for uid, weight in weights.items()}
+        reveal_round = await self._protect_turbobt(lambda c: c.subnet(netuid).weights.commit(normalized_weights))
         return RevealRound(reveal_round)
 
     @track_operation(
@@ -425,7 +426,8 @@ class TurboBtContact(AbstractBittensorContact):
         labels={"uri": Attr("uri"), "netuid": Param("netuid"), "hotkey": Attr("hotkey")},
     )
     async def set_weights(self, netuid: NetUid, weights: dict[NeuronUid, Weight]) -> None:
-        await self._protect_turbobt(lambda c: c.subnet(netuid).weights.set(weights))
+        normalized_weights = {int(uid): float(weight) for uid, weight in weights.items()}
+        await self._protect_turbobt(lambda c: c.subnet(netuid).weights.set(normalized_weights))
 
     @track_operation(
         bittensor_operation_duration,
@@ -449,7 +451,9 @@ class TurboBtContact(AbstractBittensorContact):
         labels={"uri": Attr("uri"), "netuid": Param("netuid"), "hotkey": Attr("hotkey")},
     )
     async def get_commitments(self, netuid: NetUid, block: Block) -> SubnetCommitments:
-        raw_commitments = await self._protect_turbobt(lambda c: c.subnet(netuid).commitments.fetch(block_hash=block.hash))
+        raw_commitments = await self._protect_turbobt(
+            lambda c: c.subnet(netuid).commitments.fetch(block_hash=block.hash)
+        )
         commitments = {
             Hotkey(hotkey): Commitment(
                 commitment_block_number=BlockNumber(result["block"]),
@@ -514,6 +518,7 @@ class MockBittensorContact(AbstractBittensorContact):
         super().__init__(wallet=wallet, uri=uri)
         self._behave = Behave()
         self._is_open = False
+        self._defaults: dict[str, Behavior] = {}
 
     async def open(self) -> None:
         self._is_open = True
@@ -529,8 +534,12 @@ class MockBittensorContact(AbstractBittensorContact):
     def add_behavior(self, method_name: str, behavior: Behavior) -> None:
         self._behave.add_behavior(method_name, behavior)
 
+    def set_default(self, method_name: str, behavior: Behavior) -> None:
+        self._defaults[method_name] = behavior
+
     def reset(self) -> None:
         self._behave.reset()
+        self._defaults.clear()
 
     @property
     def calls(self):
@@ -538,7 +547,21 @@ class MockBittensorContact(AbstractBittensorContact):
 
     async def _execute_behavior(self, method_name: str, *args, **kwargs) -> Any:
         self._behave.track(method_name, *args, **kwargs)
-        return await self._behave.execute(method_name, *args, **kwargs)
+        try:
+            return await self._behave.execute(method_name, *args, **kwargs)
+        except NotImplementedError:
+            if method_name not in self._defaults:
+                raise
+
+        behavior = self._defaults[method_name]
+        if isinstance(behavior, Exception):
+            raise behavior
+        if callable(behavior):
+            result = behavior(*args, **kwargs)
+            if inspect.iscoroutine(result):
+                return await result
+            return result
+        return behavior
 
     async def get_block(self, number: BlockNumber) -> Block | None:
         return await self._execute_behavior("get_block", number)

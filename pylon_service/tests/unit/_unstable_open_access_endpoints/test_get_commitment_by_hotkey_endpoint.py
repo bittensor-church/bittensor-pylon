@@ -5,10 +5,10 @@ Tests for the GET /subnet/{netuid}/block/latest/commitments/{hotkey} endpoint.
 import pytest
 from litestar.status_codes import HTTP_200_OK, HTTP_404_NOT_FOUND
 from litestar.testing import AsyncTestClient
-from pylon_commons.models import Block, Commitment
-from pylon_commons.types import BlockHash, BlockNumber, Hotkey
+from pylon_commons.models import Block
+from pylon_commons.types import BlockHash, BlockNumber
 
-from tests.mock_bittensor_client import MockBittensorClient
+from pylon_service.bittensor.contact import MockBittensorContact
 from tests.world import COMMITMENTS_ALL_NETUID
 
 
@@ -16,9 +16,7 @@ from tests.world import COMMITMENTS_ALL_NETUID
 async def test_unstable_open_access_get_commitment_by_hotkey_returns_commitment_object(
     test_client: AsyncTestClient, snapshot_json
 ):
-    response = await test_client.get(
-        f"/api/_unstable/subnet/{COMMITMENTS_ALL_NETUID}/block/latest/commitments/hotkey1"
-    )
+    response = await test_client.get(f"/api/_unstable/subnet/{COMMITMENTS_ALL_NETUID}/block/latest/commitments/hotkey1")
 
     assert response.status_code == HTTP_200_OK
     assert response.json() == snapshot_json
@@ -26,7 +24,7 @@ async def test_unstable_open_access_get_commitment_by_hotkey_returns_commitment_
 
 @pytest.mark.asyncio
 async def test_get_commitment_open_access_not_found(
-    test_client: AsyncTestClient, open_access_mock_bt_client: MockBittensorClient, snapshot_json
+    test_client: AsyncTestClient, open_access_mock_bt_client: MockBittensorContact, snapshot_json
 ):
     """
     Test getting a commitment that doesn't exist.

@@ -69,7 +69,9 @@ async def test_get_recent_neurons_cache_expired(
 
 
 @pytest.mark.asyncio
-async def test_get_recent_neurons_success(test_client, mock_recent_objects_store, subnet_neurons, wallet, snapshot_json):
+async def test_get_recent_neurons_success(
+    test_client, mock_recent_objects_store, subnet_neurons, wallet, snapshot_json
+):
     timestamp = Timestamp(int(dt.datetime.now().timestamp()))
     cache_entry = _CacheEntry(data=subnet_neurons.model_dump_json(), timestamp=timestamp)
     async with mock_recent_objects_store.behave.mock(get=[cache_entry.model_dump_json().encode()]):

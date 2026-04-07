@@ -7,8 +7,7 @@ from typing import Self
 
 from bittensor_wallet import Wallet
 from pydantic import BaseModel, ConfigDict
-from pylon_commons.types import ArchiveBlocksCutoff
-from pylon_commons.types import HotkeyName, WalletName
+from pylon_commons.types import ArchiveBlocksCutoff, HotkeyName, WalletName
 
 from pylon_service.bittensor.contact import ContactFactory
 from pylon_service.bittensor.router import BittensorRouter

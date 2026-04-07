@@ -5,6 +5,7 @@ import pytest_asyncio
 from bittensor_wallet import Wallet
 from pylon_commons.types import HotkeyName, WalletName
 
+from pylon_service.bittensor.contact import TurboBtContact
 from pylon_service.bittensor.pool import (
     BittensorClientPool,
     BittensorClientPoolInvalidState,
@@ -74,6 +75,8 @@ async def test_bittensor_client_pool_proper_use(barrier_factory):
         assert client_wallet.uri == pool.client_kwargs["uri"]
         assert client_wallet.archive_uri == pool.client_kwargs["archive_uri"]
         # Check if the client is open
+        assert isinstance(client_wallet._main_contact, TurboBtContact)
+        assert isinstance(client_wallet._archive_contact, TurboBtContact)
         assert client_wallet._main_contact._raw_client is not None
         assert client_wallet._archive_contact._raw_client is not None
     assert pool._acquire_counter == 5
@@ -103,6 +106,8 @@ async def test_bittensor_client_pool_proper_use(barrier_factory):
     assert pool.state == BittensorClientPool.State.CLOSED
     assert pool._pool == {}
     # Check if the client is closed properly.
+    assert isinstance(client_wallet._main_contact, TurboBtContact)
+    assert isinstance(client_wallet._archive_contact, TurboBtContact)
     assert client_wallet._main_contact._raw_client is None
     assert client_wallet._archive_contact._raw_client is None
 
@@ -234,5 +239,7 @@ async def test_bittensor_client_pool_close_timeout(barrier_factory):
     await task
     # Check if the client is closed.
     client = task.result()
+    assert isinstance(client._main_contact, TurboBtContact)
+    assert isinstance(client._archive_contact, TurboBtContact)
     assert client._main_contact._raw_client is None
     assert client._archive_contact._raw_client is None

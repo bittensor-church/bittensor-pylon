@@ -1,10 +1,10 @@
 import pytest
 from litestar.status_codes import HTTP_200_OK, HTTP_404_NOT_FOUND
 from litestar.testing import AsyncTestClient
-from pylon_commons.models import Block, Commitment
-from pylon_commons.types import BlockHash, BlockNumber, Hotkey
+from pylon_commons.models import Block
+from pylon_commons.types import BlockHash, BlockNumber
 
-from tests.mock_bittensor_client import MockBittensorClient
+from pylon_service.bittensor.contact import MockBittensorContact
 from tests.world import OWN_COMMITMENT_NETUID
 
 
@@ -22,7 +22,7 @@ async def test_unstable_identity_get_own_commitment_returns_commitment_object(
 
 @pytest.mark.asyncio
 async def test_get_own_commitment_identity_not_found(
-    test_client: AsyncTestClient, sn2_mock_bt_client: MockBittensorClient, snapshot_json
+    test_client: AsyncTestClient, sn2_mock_bt_client: MockBittensorContact, snapshot_json
 ):
     latest_block = Block(number=BlockNumber(1000), hash=BlockHash("0xabc123"))
 

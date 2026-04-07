@@ -9,13 +9,13 @@ from pylon_commons.models import Block, CommitReveal, SubnetHyperparams
 from pylon_commons.types import BlockHash, BlockNumber, NeuronUid, RevealRound
 
 from pylon_service.api._unstable.tasks import ApplyWeights
+from pylon_service.bittensor.contact import MockBittensorContact
 from tests.helpers import wait_for_background_tasks
-from tests.mock_bittensor_client import MockBittensorClient
 
 
 @pytest.mark.asyncio
 async def test_put_weights_commit_reveal_enabled(
-    test_client: AsyncTestClient, sn1_mock_bt_client: MockBittensorClient, snapshot_json
+    test_client: AsyncTestClient, sn1_mock_bt_client: MockBittensorContact, snapshot_json
 ):
     """
     Test setting weights when commit-reveal is enabled.
@@ -62,7 +62,7 @@ async def test_put_weights_commit_reveal_enabled(
 
 @pytest.mark.asyncio
 async def test_put_weights_commit_reveal_disabled(
-    test_client: AsyncTestClient, sn2_mock_bt_client: MockBittensorClient, snapshot_json
+    test_client: AsyncTestClient, sn2_mock_bt_client: MockBittensorContact, snapshot_json
 ):
     """
     Test setting weights when commit-reveal is disabled.
@@ -107,7 +107,7 @@ async def test_put_weights_commit_reveal_disabled(
 @pytest.mark.asyncio
 async def test_put_weights_retries_when_prepare_fails(
     test_client: AsyncTestClient,
-    sn1_mock_bt_client: MockBittensorClient,
+    sn1_mock_bt_client: MockBittensorContact,
     monkeypatch: pytest.MonkeyPatch,
     snapshot_json,
 ):

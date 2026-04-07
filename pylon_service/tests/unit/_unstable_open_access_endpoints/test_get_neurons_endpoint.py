@@ -5,10 +5,8 @@ Tests for the GET /subnet/{netuid}/block/{block_number}/neurons endpoint.
 import pytest
 from litestar.status_codes import HTTP_200_OK, HTTP_404_NOT_FOUND
 from litestar.testing import AsyncTestClient
-from pylon_commons.models import Block
-from pylon_commons.types import BlockHash, BlockNumber
 
-from tests.mock_bittensor_client import MockBittensorClient
+from pylon_service.bittensor.contact import MockBittensorContact
 
 
 @pytest.mark.asyncio
@@ -33,9 +31,7 @@ async def test_get_neurons_open_access_invalid_block_number_type(
 
 
 @pytest.mark.asyncio
-async def test_unstable_open_access_get_neurons_returns_block_neurons(
-    test_client: AsyncTestClient, snapshot_json
-):
+async def test_unstable_open_access_get_neurons_returns_block_neurons(test_client: AsyncTestClient, snapshot_json):
     response = await test_client.get("/api/_unstable/subnet/1/block/123/neurons")
 
     assert response.status_code == HTTP_200_OK
@@ -54,7 +50,7 @@ async def test_unstable_open_access_get_latest_neurons_returns_latest_neurons(
 
 @pytest.mark.asyncio
 async def test_get_neurons_open_access_block_not_found(
-    test_client: AsyncTestClient, open_access_mock_bt_client: MockBittensorClient, snapshot_json
+    test_client: AsyncTestClient, open_access_mock_bt_client: MockBittensorContact, snapshot_json
 ):
     """
     Test that non-existent block returns 404.

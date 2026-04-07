@@ -5,7 +5,12 @@ from pylon_commons._unstable.requests import GenerateCertificateKeypairRequest
 from pylon_commons.models import Hotkey, NeuronCertificate
 from pylon_commons.types import BlockNumber, NetUid
 from pylon_commons.v1.endpoints import Endpoint
-from pylon_commons.v1.responses import GetCommitmentResponse, GetCommitmentsResponse, GetNeuronsResponse, GetValidatorsResponse
+from pylon_commons.v1.responses import (
+    GetCommitmentResponse,
+    GetCommitmentsResponse,
+    GetNeuronsResponse,
+    GetValidatorsResponse,
+)
 
 from pylon_service.api._unstable.api import (
     _raise_http_error,
@@ -45,7 +50,9 @@ class OpenAccessController(Controller):
     }
 
     @handler(Endpoint.NEURONS)
-    async def get_neurons(self, bt_client: BittensorRouter, block_number: BlockNumber, netuid: NetUid) -> GetNeuronsResponse:
+    async def get_neurons(
+        self, bt_client: BittensorRouter, block_number: BlockNumber, netuid: NetUid
+    ) -> GetNeuronsResponse:
         try:
             return await neuron_service.get_neurons(bt_client, netuid, block_number)
         except Exception as exc:
@@ -76,7 +83,9 @@ class OpenAccessController(Controller):
         return await neuron_service.get_latest_validators(bt_client, netuid)
 
     @handler(Endpoint.CERTIFICATES)
-    async def get_certificates_endpoint(self, bt_client: BittensorRouter, netuid: NetUid) -> dict[Hotkey, NeuronCertificate]:
+    async def get_certificates_endpoint(
+        self, bt_client: BittensorRouter, netuid: NetUid
+    ) -> dict[Hotkey, NeuronCertificate]:
         return await certificate_service.get_certificates(bt_client, netuid)
 
     @handler(Endpoint.CERTIFICATES_HOTKEY)
@@ -111,7 +120,9 @@ class IdentityController(Controller):
     }
 
     @identity_handler(Endpoint.NEURONS)
-    async def get_neurons(self, bt_client: BittensorRouter, block_number: BlockNumber, netuid: NetUid) -> GetNeuronsResponse:
+    async def get_neurons(
+        self, bt_client: BittensorRouter, block_number: BlockNumber, netuid: NetUid
+    ) -> GetNeuronsResponse:
         try:
             return await neuron_service.get_neurons(bt_client, netuid, block_number)
         except Exception as exc:
@@ -142,7 +153,9 @@ class IdentityController(Controller):
         return await neuron_service.get_latest_validators(bt_client, netuid)
 
     @identity_handler(Endpoint.CERTIFICATES)
-    async def get_certificates_endpoint(self, bt_client: BittensorRouter, netuid: NetUid) -> dict[Hotkey, NeuronCertificate]:
+    async def get_certificates_endpoint(
+        self, bt_client: BittensorRouter, netuid: NetUid
+    ) -> dict[Hotkey, NeuronCertificate]:
         return await certificate_service.get_certificates(bt_client, netuid)
 
     @identity_handler(Endpoint.CERTIFICATES_HOTKEY)
@@ -167,7 +180,9 @@ class IdentityController(Controller):
         self, bt_client: BittensorRouter, data: GenerateCertificateKeypairRequest, netuid: NetUid
     ) -> Response:
         try:
-            certificate_keypair = await certificate_service.generate_certificate_keypair(bt_client, netuid, data.algorithm)
+            certificate_keypair = await certificate_service.generate_certificate_keypair(
+                bt_client, netuid, data.algorithm
+            )
         except Exception as exc:
             _raise_http_error(exc)
         return Response(certificate_keypair, status_code=status_codes.HTTP_201_CREATED)
@@ -195,10 +210,14 @@ class IdentityController(Controller):
     @identity_handler(Endpoint.SUBNET_WEIGHTS)
     async def put_weights_endpoint(self, data: SetWeightsBody, bt_client: BittensorRouter, netuid: NetUid) -> Response:
         ApplyWeights(bt_client, data.weights, netuid).schedule()
-        return Response({"detail": "weights update scheduled", "count": len(data.weights)}, status_code=status_codes.HTTP_200_OK)
+        return Response(
+            {"detail": "weights update scheduled", "count": len(data.weights)}, status_code=status_codes.HTTP_200_OK
+        )
 
     @identity_handler(Endpoint.COMMITMENTS)
-    async def set_commitment_endpoint(self, bt_client: BittensorRouter, data: SetCommitmentBody, netuid: NetUid) -> Response:
+    async def set_commitment_endpoint(
+        self, bt_client: BittensorRouter, data: SetCommitmentBody, netuid: NetUid
+    ) -> Response:
         try:
             await SetCommitment(bt_client, netuid, data.commitment)()
         except Exception as exc:

@@ -8,7 +8,7 @@ from litestar.testing import AsyncTestClient
 from pylon_commons.models import Block, CertificateAlgorithm, NeuronCertificate
 from pylon_commons.types import BlockHash, BlockNumber, PublicKey
 
-from tests.mock_bittensor_client import MockBittensorClient
+from pylon_service.bittensor.contact import MockBittensorContact
 
 
 @pytest.mark.asyncio
@@ -36,7 +36,7 @@ from tests.mock_bittensor_client import MockBittensorClient
 )
 async def test_get_certificates_identity(
     test_client: AsyncTestClient,
-    sn1_mock_bt_client: MockBittensorClient,
+    sn1_mock_bt_client: MockBittensorContact,
     certificates_input: dict,
     snapshot_json,
 ):
