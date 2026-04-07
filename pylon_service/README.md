@@ -6,6 +6,9 @@ This README defines the intended internal structure of `pylon_service` and the A
 and agents should follow while modifying it. It is a design and maintenance guide, not just an overview of the current
 implementation.
 
+Pylon exposes its public HTTP API obeying semver and apiver. While semver is straightforward to follow in HTTP APIs, apiver may be tricky, especially when optimizing the number of model classes and compatibility layers. And matters get even trickier when you consider that some of the models used by pylon are also used by pylon_client (which also uses apiver). This is why, in the rest of this document, apiver considerations are a first-class problem.
+
+
 ## Imported standards
 
 `pylon_service` follows the engineering standards from:
@@ -130,12 +133,12 @@ contact so services can use either without caring about transport details.
 
 ### Contact
 
-The contact is the only layer that talks to turbobt.
+The contact is the only layer that talks to turbobt (subtensor). The underlying communication lib might change one day.
 
 It:
 
 - opens and closes connections
-- shields turbobt calls
+- shields turbobt calls (asyncio.shield, an internal quirk fix)
 - recreates connections when needed
 - translates turbobt objects into Pylon contact-internal models
 - translates write inputs from Pylon models into turbobt calls
@@ -184,24 +187,12 @@ The contact must not return unstable DTOs directly if doing so would destroy inf
 
 API versioning is explicit and layered.
 
-This diagram shows data dependency and transformation flow, not a package tree:
-
 ```text
 contact models
-    -> router + latest internal service logic
-    -> unstable services + unstable DTOs
-    -> stable services + stable DTOs
+    -> latest internal behavior
+    -> unstable services / DTOs
+    -> stable services / DTOs
 ```
-
-Meaning:
-
-- contacts return rich internal models
-- the router and latest internal services operate on those models directly
-- unstable services map those models into the latest public DTOs
-- stable services like `v1` may build on the same lower-layer data while preserving older public behavior
-
-The important rule is that older stable APIs must not depend on unstable DTOs as their source of truth. They depend on
-the lower-layer contact data and convert it into their own DTOs.
 
 Rules:
 
@@ -385,7 +376,6 @@ Meaning:
 
 Before merging changes in `pylon_service`, verify:
 
-- no handler inherits from another API version's handler
 - no code outside the contact talks to turbobt directly
 - archive selection logic lives in the router
 - business logic lives in services, not contacts
