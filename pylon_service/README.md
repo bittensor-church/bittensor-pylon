@@ -13,7 +13,7 @@ Pylon exposes its public HTTP API obeying semver and apiver. While semver is str
 
 `pylon_service` follows the engineering standards from:
 
-- `/Users/junie/synced_p/new_bittensor_ddos_shield/docs/engineering-standards.md`
+- `./engineering-standards.md`
 
 The most important imported rules are:
 
