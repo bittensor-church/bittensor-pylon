@@ -6,7 +6,7 @@ import pytest
 from litestar.status_codes import HTTP_200_OK, HTTP_400_BAD_REQUEST
 from litestar.testing import AsyncTestClient
 from pylon_commons.models import Block, CommitReveal, SubnetHyperparams
-from pylon_commons.types import BlockHash, BlockNumber, RevealRound
+from pylon_commons.types import BlockHash, BlockNumber, NeuronUid, RevealRound
 
 from pylon_service.api._unstable.tasks import ApplyWeights
 from tests.helpers import wait_for_background_tasks
@@ -50,7 +50,14 @@ async def test_put_weights_commit_reveal_enabled(test_client: AsyncTestClient, s
 
     # Verify the commit_weights was called with correct arguments
     assert sn1_mock_bt_client.calls["commit_weights"] == [
-        (1, weights),
+        (
+            1,
+            {
+                NeuronUid(1): 0.5,
+                NeuronUid(2): 0.3,
+                NeuronUid(3): 0.2,
+            },
+        ),
     ]
 
 
@@ -91,7 +98,13 @@ async def test_put_weights_commit_reveal_disabled(
 
     # Verify set_weights was called with correct arguments
     assert sn2_mock_bt_client.calls["set_weights"] == [
-        (2, weights),
+        (
+            2,
+            {
+                NeuronUid(1): 0.7,
+                NeuronUid(2): 0.3,
+            },
+        ),
     ]
 
 
@@ -127,8 +140,16 @@ async def test_put_weights_retries_when_prepare_fails(
 
         await wait_for_background_tasks(ApplyWeights.tasks_running)
 
-    assert len(sn1_mock_bt_client.calls["get_latest_block"]) == 4
-    assert sn1_mock_bt_client.calls["set_weights"] == [(1, weights)]
+    assert len(sn1_mock_bt_client.calls["get_latest_block"]) == 8
+    assert sn1_mock_bt_client.calls["set_weights"] == [
+        (
+            1,
+            {
+                NeuronUid(1): 0.5,
+                NeuronUid(2): 0.5,
+            },
+        )
+    ]
 
 
 @pytest.mark.asyncio

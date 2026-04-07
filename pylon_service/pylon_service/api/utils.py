@@ -12,4 +12,5 @@ def handler(endpoint: Endpoint, **kwargs):
     other kwargs may be set by passing them to this decorator.
     """
     method = getattr(http_decorators, endpoint.method.lower())
-    return method(endpoint.url, name=endpoint.reverse, **kwargs)
+    name = kwargs.pop("name", endpoint.reverse)
+    return method(endpoint.url, name=name, **kwargs)

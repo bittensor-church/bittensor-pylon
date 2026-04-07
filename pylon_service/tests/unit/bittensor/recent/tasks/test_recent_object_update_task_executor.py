@@ -4,8 +4,9 @@ from pylon_commons.models import BittensorModel
 from pylon_commons.types import NetUid, Timestamp
 from tenacity import AsyncRetrying, stop_after_attempt
 
-from pylon_service.bittensor.client import AbstractBittensorClient
+from pylon_service.bittensor.contact import BittensorPort
 from pylon_service.bittensor.pool import BittensorClientPool
+from pylon_service.bittensor.router import BittensorRouter
 from pylon_service.bittensor.recent import AbstractContext, RecentObjectUpdateTaskExecutor, SubnetContext
 from pylon_service.bittensor.recent.adapter import CacheKey, _CacheEntry
 from pylon_service.bittensor.recent.tasks import UpdateRecentObject
@@ -26,9 +27,7 @@ class Task(UpdateRecentObject[AnObjectModel, SubnetContext]):
     def _model(self) -> type[AnObjectModel]:
         return AnObjectModel
 
-    async def _get_object(
-        self, context: SubnetContext, client: AbstractBittensorClient
-    ) -> tuple[Timestamp, AnObjectModel]:
+    async def _get_object(self, context: SubnetContext, client: BittensorPort) -> tuple[Timestamp, AnObjectModel]:
         self.behave.track("_get_object", context, client)
         return await self.behave.execute("_get_object", context, client)
 
@@ -54,7 +53,11 @@ async def test_executor_failed(executor, update_task, open_access_mock_bt_client
     async with update_task.behave.mock(_get_object=[Exception("error"), Exception("error"), Exception("error")]):
         await executor.run()
 
-    assert update_task.behave.calls["_get_object"] == [(context, open_access_mock_bt_client)] * 3
+    calls = update_task.behave.calls["_get_object"]
+    assert len(calls) == 3
+    assert [call[0] for call in calls] == [context] * 3
+    assert all(isinstance(call[1], BittensorRouter) for call in calls)
+    assert all(call[1]._main_contact is open_access_mock_bt_client for call in calls)
 
 
 @pytest.mark.asyncio
@@ -75,5 +78,9 @@ async def test_executor_success_after_attempt(
 
     data = _CacheEntry(data=object_.model_dump_json(), timestamp=Timestamp(123123123)).model_dump_json()
 
-    assert update_task.behave.calls["_get_object"] == [(context, open_access_mock_bt_client)] * 2
+    calls = update_task.behave.calls["_get_object"]
+    assert len(calls) == 2
+    assert [call[0] for call in calls] == [context] * 2
+    assert all(isinstance(call[1], BittensorRouter) for call in calls)
+    assert all(call[1]._main_contact is open_access_mock_bt_client for call in calls)
     assert mock_recent_objects_store.behave.calls["set"] == [(CacheKey(AnObjectModel, NetUid(1), None), data, None)]

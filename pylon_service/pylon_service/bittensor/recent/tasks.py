@@ -7,13 +7,15 @@ from pylon_commons.models import BittensorModel, SubnetNeurons
 from pylon_commons.types import Timestamp
 from tenacity import AsyncRetrying, stop_before_delay, wait_exponential
 
-from pylon_service.bittensor.client import AbstractBittensorClient
+from pylon_service.bittensor.contact import BittensorPort
 from pylon_service.bittensor.pool import BittensorClientPool
+from pylon_service.services import NeuronService
 
 from .adapter import RecentCacheAdapter
 from .context import AbstractContext, SubnetContext
 
 logger = logging.getLogger(__name__)
+neuron_service = NeuronService()
 
 
 class UpdateRecentObject[ModelT: BittensorModel, ContextT: AbstractContext](ABC):
@@ -31,7 +33,7 @@ class UpdateRecentObject[ModelT: BittensorModel, ContextT: AbstractContext](ABC)
         pass
 
     @abstractmethod
-    async def _get_object(self, context: ContextT, client: AbstractBittensorClient) -> tuple[Timestamp, ModelT]:
+    async def _get_object(self, context: ContextT, client: BittensorPort) -> tuple[Timestamp, ModelT]:
         pass
 
     async def execute(self, context: ContextT) -> None:
@@ -61,11 +63,10 @@ class UpdateRecentNeurons(UpdateRecentObject[SubnetNeurons, SubnetContext]):
     async def _get_object(
         self,
         context: SubnetContext,
-        client: AbstractBittensorClient,
+        client: BittensorPort,
     ) -> tuple[Timestamp, SubnetNeurons]:
-        block = await client.get_latest_block()
-        timestamp = await client.get_block_timestamp(block)
-        neurons = await client.get_neurons(context.netuid, block)
+        neurons = await neuron_service.get_latest_neurons(client, context.netuid)
+        timestamp = await client.get_block_timestamp(neurons.block)
         return timestamp, neurons
 
 

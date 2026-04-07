@@ -3,7 +3,7 @@ from litestar.stores.base import Store
 from pylon_commons.models import BittensorModel
 from pylon_commons.types import NetUid, Timestamp
 
-from pylon_service.bittensor.client import AbstractBittensorClient
+from pylon_service.bittensor.contact import BittensorPort
 from pylon_service.bittensor.pool import BittensorClientPool
 from pylon_service.bittensor.recent import SubnetContext
 from pylon_service.bittensor.recent.adapter import CacheKey, _CacheEntry
@@ -24,9 +24,7 @@ class Task(UpdateRecentObject[AnObjectModel, SubnetContext]):
     def _model(self) -> type[AnObjectModel]:
         return AnObjectModel
 
-    async def _get_object(
-        self, context: SubnetContext, client: AbstractBittensorClient
-    ) -> tuple[Timestamp, AnObjectModel]:
+    async def _get_object(self, context: SubnetContext, client: BittensorPort) -> tuple[Timestamp, AnObjectModel]:
         return Timestamp(123123123), self._object
 
     @classmethod

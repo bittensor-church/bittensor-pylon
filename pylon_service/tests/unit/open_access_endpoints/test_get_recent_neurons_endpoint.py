@@ -7,6 +7,7 @@ from pylon_commons.models import Block, Neuron, SubnetNeurons
 from pylon_commons.types import NetUid, Timestamp
 
 from pylon_service.bittensor.recent.adapter import CacheKey, _CacheEntry
+from pylon_service.settings import recent_objects_settings
 from tests.factories import BlockFactory, NeuronFactory
 
 
@@ -45,7 +46,8 @@ async def test_get_recent_neurons_cache_missing(test_client, mock_recent_objects
 
 @pytest.mark.asyncio
 async def test_get_recent_neurons_cache_expired(test_client, mock_recent_objects_store, subnet_neurons):
-    timestamp = Timestamp(int(dt.datetime.now().timestamp()) - BLOCK_PROCESSING_TIME * 50)  # 40 BLOCK hard limit set.
+    stale_blocks = recent_objects_settings.hard_limit_blocks + 1
+    timestamp = Timestamp(int(dt.datetime.now().timestamp()) - BLOCK_PROCESSING_TIME * stale_blocks)
     cache_entry = _CacheEntry(data=subnet_neurons.model_dump_json(), timestamp=timestamp)
     async with mock_recent_objects_store.behave.mock(get=[cache_entry.model_dump_json().encode()]):
         response = await test_client.get(_ENDPOINT)

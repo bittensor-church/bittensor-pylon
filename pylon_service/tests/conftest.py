@@ -9,21 +9,30 @@ import pytest
 import pytest_asyncio
 from bittensor_wallet import Wallet
 from polyfactory.pytest_plugin import register_fixture
+from pylon_commons.types import ArchiveBlocksCutoff
 from pylon_commons.types import IdentityName
 from syrupy.extensions.json import JSONSnapshotExtension
 from syrupy.matchers import path_type
 
 from pylon_service import lifespans, main
+from pylon_service import dependencies, identities as identities_module
+from pylon_service.bittensor.contact import ContactFactory
 from pylon_service.bittensor.pool import BittensorClientPool
-from pylon_service.identities import identities
+from pylon_service.bittensor.router import BittensorRouter
 from pylon_service.main import create_app
 from pylon_service.stores import StoreName
 from tests.factories import BlockFactory, NeuronFactory
 from tests.mock_bittensor_client import MockBittensorClient
 from tests.mock_store import MockStore
+from tests.world import SharedWorld, build_test_identities, default_latest_block, default_neurons
 
 register_fixture(BlockFactory)
 register_fixture(NeuronFactory)
+
+TEST_IDENTITIES = build_test_identities()
+identities_module.identities.clear()
+identities_module.identities.update(TEST_IDENTITIES)
+dependencies.identities = identities_module.identities
 
 
 @pytest.fixture
@@ -47,7 +56,13 @@ async def mock_bt_client_pool():
     """
     Create a mock Bittensor client pool.
     """
-    async with BittensorClientPool(client_cls=MockBittensorClient, uri="ws://localhost:8000") as pool:
+    async with BittensorClientPool(
+        router_cls=BittensorRouter,
+        contact_factory=ContactFactory(contact_cls=MockBittensorClient),
+        uri="mock://main",
+        archive_uri="mock://archive",
+        archive_blocks_cutoff=ArchiveBlocksCutoff(10_000_000),
+    ) as pool:
         yield pool
 
 
@@ -107,20 +122,48 @@ def wallet():
 
 @pytest_asyncio.fixture
 async def open_access_mock_bt_client(mock_bt_client_pool):
-    async with mock_bt_client_pool.acquire(wallet=None) as client:
-        yield client
-        client.reset()
+    async with mock_bt_client_pool.acquire(wallet=None) as router:
+        yield router._main_contact
+        router._main_contact.reset()
+        router._archive_contact.reset()
 
 
 @pytest_asyncio.fixture
 async def sn1_mock_bt_client(mock_bt_client_pool):
-    async with mock_bt_client_pool.acquire(wallet=identities[IdentityName("sn1")].wallet) as client:
-        yield client
-        client.reset()
+    async with mock_bt_client_pool.acquire(wallet=TEST_IDENTITIES[IdentityName("sn1")].wallet) as router:
+        yield router._main_contact
+        router._main_contact.reset()
+        router._archive_contact.reset()
 
 
 @pytest_asyncio.fixture
 async def sn2_mock_bt_client(mock_bt_client_pool):
-    async with mock_bt_client_pool.acquire(wallet=identities[IdentityName("sn2")].wallet) as client:
-        yield client
-        client.reset()
+    async with mock_bt_client_pool.acquire(wallet=TEST_IDENTITIES[IdentityName("sn2")].wallet) as router:
+        yield router._main_contact
+        router._main_contact.reset()
+        router._archive_contact.reset()
+
+
+@pytest_asyncio.fixture(scope="session")
+async def shared_world(mock_bt_client_pool) -> SharedWorld:
+    async with mock_bt_client_pool.acquire(wallet=None) as open_access_router:
+        async with mock_bt_client_pool.acquire(wallet=TEST_IDENTITIES[IdentityName("sn1")].wallet) as sn1_router:
+            async with mock_bt_client_pool.acquire(wallet=TEST_IDENTITIES[IdentityName("sn2")].wallet) as sn2_router:
+                yield SharedWorld(
+                    open_access_main=open_access_router._main_contact,
+                    open_access_archive=open_access_router._archive_contact,
+                    sn1_main=sn1_router._main_contact,
+                    sn1_archive=sn1_router._archive_contact,
+                    sn2_main=sn2_router._main_contact,
+                    sn2_archive=sn2_router._archive_contact,
+                    identities=TEST_IDENTITIES,
+                    default_latest_block=default_latest_block(),
+                    default_neurons=default_neurons(),
+                )
+
+
+@pytest.fixture(autouse=True)
+def reset_shared_world(shared_world: SharedWorld):
+    shared_world.reset()
+    shared_world.seed_defaults()
+    yield

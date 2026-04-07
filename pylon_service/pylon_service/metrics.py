@@ -135,7 +135,7 @@ bittensor_fallback_total = Counter(
 
     Labels:
         reason: Reason for fallback (e.g., "unknown_block", "stale_block").
-              See pylon_service.bittensor.client.FallbackReason for details.
+              See pylon_service.bittensor.router.BittensorRouter for fallback behavior details.
         operation: Name of the operation that triggered fallback.
         hotkey: Wallet hotkey (ss58) performing the operation.
     """,
