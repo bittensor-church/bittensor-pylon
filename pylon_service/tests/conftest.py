@@ -10,6 +10,8 @@ import pytest_asyncio
 from bittensor_wallet import Wallet
 from polyfactory.pytest_plugin import register_fixture
 from pylon_commons.types import IdentityName
+from syrupy.extensions.json import JSONSnapshotExtension
+from syrupy.matchers import path_type
 
 from pylon_service import lifespans, main
 from pylon_service.bittensor.pool import BittensorClientPool
@@ -22,6 +24,22 @@ from tests.mock_store import MockStore
 
 register_fixture(BlockFactory)
 register_fixture(NeuronFactory)
+
+
+@pytest.fixture
+def snapshot_json(snapshot):
+    return snapshot.use_extension(JSONSnapshotExtension)
+
+
+@pytest.fixture
+def response_matchers():
+    def factory(*, timestamp_paths: tuple[str, ...] = (), regex_paths: dict[str, tuple[type, ...]] | None = None):
+        mapping: dict[str, tuple[type, ...]] = {path: (int,) for path in timestamp_paths}
+        if regex_paths:
+            mapping.update(regex_paths)
+        return path_type(mapping, regex=True)
+
+    return factory
 
 
 @pytest_asyncio.fixture(scope="session", loop_scope="session")

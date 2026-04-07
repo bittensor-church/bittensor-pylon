@@ -27,6 +27,7 @@ dev = [
     "ruff",
     "pyright",
     "nox",
+    "syrupy>=4,<5",
 ]
 
 [project.urls]
