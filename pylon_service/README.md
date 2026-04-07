@@ -66,7 +66,9 @@ They:
 
 - read request data
 - obtain the wallet-bound router from the pool through dependencies
+- obtain cache-facing collaborators such as recent-object providers through dependencies when the endpoint uses cache
 - call the appropriate versioned service
+- translate domain exceptions into HTTP exceptions and status codes
 - return versioned DTO models or explicit endpoint-specific responses
 
 Handlers do not:
@@ -86,9 +88,13 @@ They:
 
 - implement endpoint behavior
 - compose multiple router calls
+- access cache collaborators when the endpoint semantics require cached data
 - apply filtering, sorting, reshaping, and compatibility logic
 - convert between contact-internal models and versioned DTO models
 - are used by both HTTP handlers and background tasks
+
+Domain grouping should stay meaningful. For example, validator reads are part of neuron-related behavior and belong in
+the neuron service layer rather than in a separate `validators` service module.
 
 Services may inherit across versions because they are internal and not directly exposed to clients.
 
@@ -114,6 +120,15 @@ class NeuronService(UnstableNeuronService):
 ```
 
 If a stable version must preserve older behavior, subclass and override only what differs.
+
+Services are not HTTP-aware.
+
+That means:
+
+- service exceptions must describe domain failure, not HTTP status
+- services do not raise `NotFoundException`, `BadGatewayException`, `ServiceUnavailableException`, or other HTTP-layer
+  exceptions
+- handlers map domain exceptions into HTTP responses
 
 ### Router
 
@@ -189,10 +204,22 @@ API versioning is explicit and layered.
 
 ```text
 contact models
-    -> latest internal behavior
-    -> unstable services / DTOs
-    -> stable services / DTOs
+    -> router + latest internal service logic
+    -> unstable services + unstable DTOs
+    -> stable services + stable DTOs
 ```
+
+This diagram shows data dependency and transformation flow, not a package tree.
+
+Meaning:
+
+- contacts return rich internal models
+- the router and latest internal services operate on those models directly
+- unstable services map those models into the latest public DTOs
+- stable services like `v1` may build on the same lower-layer data while preserving older public behavior
+
+Stable APIs must not use unstable DTOs as their source of truth. They depend on the lower-layer contact data and map
+it into their own DTOs.
 
 Rules:
 
@@ -298,7 +325,84 @@ In tests:
 - use real services
 - use real handlers
 - use real in-process stores and cache logic when practical
+- use an `autouse=True` shared-world fixture that preconfigures a consistent default chain view for all tests
 - patch the contact factory to return a mock contact implementation
+- assert HTTP status codes inline
+- assert full response bodies via checked-in `syrupy` snapshots
+
+The shared world is the default testing topology. Tests should not rebuild the whole neuron / subnet world from
+scratch unless they are exercising a genuinely different scenario. If two tests need incompatible default state, use
+different `netuid`s inside the shared world instead of fighting over one subnet.
+
+Tests may still configure the mock contact directly when needed, for example:
+
+- to simulate a state change between two public API calls
+- to simulate a transport failure on one call and recovery on the next
+- to override one part of the shared world for a focused scenario
+
+Do not add durable tests whose only purpose is verifying that `MockBittensorContact` records calls or otherwise
+implements obvious mock mechanics. The mock contact should be validated by the public-path tests that use it. A
+temporary migration test is acceptable only if it is removed once the surrounding test seam is stable.
+
+Recent-object cache access should be exercised through services, not by having handlers read cache directly. The cache
+must return the same model shapes as router/contact reads so cached and uncached paths share service logic cleanly.
+
+### Snapshot convention
+
+Use `syrupy` for response body snapshots.
+
+Recommended pattern:
+
+```python
+assert response.status_code == 200
+assert snapshot_json == response.json()
+```
+
+If a response contains values that are hard to freeze, use a `syrupy` matcher sparingly, for example for:
+
+- timestamps
+- generated ids
+- hashes or similar opaque transport values
+
+Prefer snapshotting the full JSON body after minimal normalization rather than asserting a few selected fields.
+
+Recommended fixture:
+
+```python
+from syrupy.extensions.json import JSONSnapshotExtension
+
+
+@pytest.fixture
+def snapshot_json(snapshot):
+    return snapshot.use_extension(JSONSnapshotExtension)
+```
+
+Recommended matcher usage:
+
+```python
+from syrupy.matchers import path_type
+
+matcher = path_type(
+    {
+        "timestamp": (int,),
+        r".*hash$": (str,),
+    },
+    regex=True,
+)
+
+assert response.status_code == 200
+assert snapshot_json(matcher=matcher) == response.json()
+```
+
+Update procedure:
+
+- normal verification: run `pytest` without snapshot update flags
+- intentional snapshot refresh: run `pytest --snapshot-update`
+- review the changed snapshot files before committing
+
+The required public-API scenario checklist lives in:
+
+- [tests/SCENARIOS.md](/Users/junie/synced_p/bittensor-pylon/pylon_service/tests/SCENARIOS.md)
 
 Do not mock:
 
