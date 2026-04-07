@@ -5,24 +5,16 @@ from pylon_commons.models import Block, Commitment
 from pylon_commons.types import BlockHash, BlockNumber, Hotkey
 
 from tests.mock_bittensor_client import MockBittensorClient
+from tests.world import OWN_COMMITMENT_NETUID
 
 
 @pytest.mark.asyncio
 async def test_unstable_identity_get_own_commitment_returns_commitment_object(
-    test_client: AsyncTestClient, sn2_mock_bt_client: MockBittensorClient, snapshot_json
+    test_client: AsyncTestClient, snapshot_json
 ):
-    latest_block = Block(number=BlockNumber(1000), hash=BlockHash("0xabc123"))
-    commitment = Commitment(
-        commitment_block_number=BlockNumber(999),
-        hotkey=Hotkey("hotkey_sn2"),
-        commitment="0x0f0e0d0c",
+    response = await test_client.get(
+        f"/api/_unstable/identity/sn2/subnet/{OWN_COMMITMENT_NETUID}/block/latest/commitments/self"
     )
-
-    async with sn2_mock_bt_client.mock_behavior(
-        get_latest_block=[latest_block],
-        get_commitment=[commitment],
-    ):
-        response = await test_client.get("/api/_unstable/identity/sn2/subnet/2/block/latest/commitments/self")
 
     assert response.status_code == HTTP_200_OK
     assert response.json() == snapshot_json

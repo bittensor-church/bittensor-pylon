@@ -1,7 +1,7 @@
 {
   "block": {
-    "hash": "0xblock700",
-    "number": 700
+    "hash": "0xshared-latest-block",
+    "number": 1000
   },
   "commitments": {
     "hotkey1": {

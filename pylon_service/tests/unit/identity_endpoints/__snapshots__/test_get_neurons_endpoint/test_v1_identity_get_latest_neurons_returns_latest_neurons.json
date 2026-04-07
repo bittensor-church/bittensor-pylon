@@ -1,7 +1,7 @@
 {
   "block": {
-    "hash": "0xlatest456",
-    "number": 456
+    "hash": "0xshared-latest-block",
+    "number": 1000
   },
   "neurons": {
     "hotkey1": {

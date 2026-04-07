@@ -334,6 +334,10 @@ The shared world is the default testing topology. Tests should not rebuild the w
 scratch unless they are exercising a genuinely different scenario. If two tests need incompatible default state, use
 different `netuid`s inside the shared world instead of fighting over one subnet.
 
+Ordinary subnet scenarios belong in the shared world too. For example, validator-ordering and commitment-filtering
+cases should use dedicated shared-world `netuid`s rather than inline per-test neuron or subnet-state builders. Per-test
+transport overrides are for focused deltas, not for reconstructing normal subnet data from scratch.
+
 Tests may still configure the mock contact directly when needed, for example:
 
 - to simulate a state change between two public API calls

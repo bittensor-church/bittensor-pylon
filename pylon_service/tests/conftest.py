@@ -24,7 +24,14 @@ from pylon_service.stores import StoreName
 from tests.factories import BlockFactory, NeuronFactory
 from tests.mock_bittensor_client import MockBittensorClient
 from tests.mock_store import MockStore
-from tests.world import SharedWorld, build_test_identities, default_latest_block, default_neurons
+from tests.world import (
+    SharedWorld,
+    build_test_identities,
+    default_commitments,
+    default_latest_block,
+    default_neurons,
+    default_subnet_states,
+)
 
 register_fixture(BlockFactory)
 register_fixture(NeuronFactory)
@@ -159,6 +166,8 @@ async def shared_world(mock_bt_client_pool) -> SharedWorld:
                     identities=TEST_IDENTITIES,
                     default_latest_block=default_latest_block(),
                     default_neurons=default_neurons(),
+                    default_subnet_states=default_subnet_states(),
+                    default_commitments=default_commitments(),
                 )
 
 

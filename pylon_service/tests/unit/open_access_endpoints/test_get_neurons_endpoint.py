@@ -5,11 +5,9 @@ Tests for the GET /subnet/{netuid}/block/{block_number}/neurons endpoint.
 import pytest
 from litestar.status_codes import HTTP_200_OK, HTTP_404_NOT_FOUND
 from litestar.testing import AsyncTestClient
-from pylon_commons.models import Block, SubnetNeurons
-from pylon_commons.types import BlockHash, BlockNumber, NetUid
+from pylon_commons.models import Block
+from pylon_commons.types import BlockHash, BlockNumber
 
-from tests.factories import NeuronFactory
-from tests.world import default_neurons
 from tests.mock_bittensor_client import MockBittensorClient
 
 
@@ -36,20 +34,9 @@ async def test_get_neurons_open_access_invalid_block_number_type(
 
 @pytest.mark.asyncio
 async def test_v1_open_access_get_neurons_returns_block_neurons(
-    test_client: AsyncTestClient, open_access_mock_bt_client: MockBittensorClient, snapshot_json
+    test_client: AsyncTestClient, snapshot_json
 ):
-    block = Block(number=BlockNumber(123), hash=BlockHash("0xblock123"))
-    NeuronFactory.seed_random(1)
-    subnet_neurons = SubnetNeurons(
-        block=block,
-        neurons={neuron.hotkey: neuron for neuron in default_neurons()[NetUid(1)]},
-    )
-
-    async with open_access_mock_bt_client.mock_behavior(
-        get_block=[block],
-        get_neurons=[subnet_neurons],
-    ):
-        response = await test_client.get("/api/v1/subnet/1/block/123/neurons")
+    response = await test_client.get("/api/v1/subnet/1/block/123/neurons")
 
     assert response.status_code == HTTP_200_OK
     assert response.json() == snapshot_json
@@ -57,20 +44,9 @@ async def test_v1_open_access_get_neurons_returns_block_neurons(
 
 @pytest.mark.asyncio
 async def test_v1_open_access_get_latest_neurons_returns_latest_neurons(
-    test_client: AsyncTestClient, open_access_mock_bt_client: MockBittensorClient, snapshot_json
+    test_client: AsyncTestClient, snapshot_json
 ):
-    block = Block(number=BlockNumber(456), hash=BlockHash("0xlatest456"))
-    NeuronFactory.seed_random(1)
-    subnet_neurons = SubnetNeurons(
-        block=block,
-        neurons={neuron.hotkey: neuron for neuron in default_neurons()[NetUid(1)]},
-    )
-
-    async with open_access_mock_bt_client.mock_behavior(
-        get_latest_block=[block],
-        get_neurons=[subnet_neurons],
-    ):
-        response = await test_client.get("/api/v1/subnet/1/block/latest/neurons")
+    response = await test_client.get("/api/v1/subnet/1/block/latest/neurons")
 
     assert response.status_code == HTTP_200_OK
     assert response.json() == snapshot_json
