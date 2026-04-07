@@ -28,7 +28,8 @@ This leaves the real `turbobt` translation layer largely unverified on a live ch
 
 Use three separate local-chain lifecycles:
 
-1. The existing `pylon_service/tests/integration/` suite keeps its current chain fixture and behavior.
+1. The existing end-to-end service/client integration tests move under
+   `pylon_service/tests/integration/client_service_e2e/` and keep their current chain fixture and behavior there.
 2. The new contact read suite uses one separate pre-prepared snapshot chain shared across a single read-test module.
 3. The new contact write suite uses one separate chain configured specifically for contact write scenarios.
 
@@ -40,7 +41,15 @@ This separation keeps:
 
 ## Test Layout
 
-Add a new directory:
+Restructure integration tests into sibling directories:
+
+- `pylon_service/tests/integration/client_service_e2e/`
+- `pylon_service/tests/integration/contact/`
+
+Move the current integration `conftest.py` into `client_service_e2e/` together with the existing end-to-end tests so
+the old suite remains self-contained and does not implicitly configure the new contact suite.
+
+Add the new contact files:
 
 - `pylon_service/tests/integration/contact/conftest.py`
 - `pylon_service/tests/integration/contact/test_reads.py`
@@ -163,5 +172,5 @@ The work is complete when:
 - writes run on a dedicated write chain with separate direct and commit-reveal subnets
 - mistargeted direct and commit-reveal writes assert concrete exceptions
 - `cd pylon_service && PYLON_ENV_FILE=tests/.test-env uv run pytest -s -vv tests/integration/contact/` passes
-- the existing `cd pylon_service && PYLON_ENV_FILE=tests/.test-env uv run pytest -s -vv tests/integration/` suite
+- `cd pylon_service && PYLON_ENV_FILE=tests/.test-env uv run pytest -s -vv tests/integration/client_service_e2e/`
   still passes
