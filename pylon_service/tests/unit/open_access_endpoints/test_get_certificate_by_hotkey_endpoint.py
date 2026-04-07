@@ -13,7 +13,7 @@ from tests.mock_bittensor_client import MockBittensorClient
 
 @pytest.mark.asyncio
 async def test_get_certificate_open_access_success(
-    test_client: AsyncTestClient, open_access_mock_bt_client: MockBittensorClient
+    test_client: AsyncTestClient, open_access_mock_bt_client: MockBittensorClient, snapshot_json
 ):
     """
     Test getting a specific certificate successfully.
@@ -32,15 +32,12 @@ async def test_get_certificate_open_access_success(
         response = await test_client.get(f"/api/v1/subnet/1/block/latest/certificates/{hotkey}")
 
         assert response.status_code == HTTP_200_OK
-        assert response.json() == {
-            "algorithm": 1,
-            "public_key": "0x1234567890abcdef",
-        }
+        assert response.json() == snapshot_json
 
 
 @pytest.mark.asyncio
 async def test_get_certificate_open_access_not_found(
-    test_client: AsyncTestClient, open_access_mock_bt_client: MockBittensorClient
+    test_client: AsyncTestClient, open_access_mock_bt_client: MockBittensorClient, snapshot_json
 ):
     """
     Test getting a certificate that doesn't exist.
@@ -55,7 +52,4 @@ async def test_get_certificate_open_access_not_found(
         response = await test_client.get(f"/api/v1/subnet/1/block/latest/certificates/{hotkey}")
 
         assert response.status_code == HTTP_404_NOT_FOUND
-        assert response.json() == {
-            "detail": "Certificate not found or error fetching.",
-            "status_code": HTTP_404_NOT_FOUND,
-        }
+        assert response.json() == snapshot_json

@@ -1,0 +1,4 @@
+{
+  "detail": "Invalid X-Pylon-Timeout header value: not-a-number",
+  "status_code": 400
+}

@@ -12,7 +12,9 @@ from tests.mock_bittensor_client import MockBittensorClient
 
 
 @pytest.mark.asyncio
-async def test_get_commitment_identity_not_found(test_client: AsyncTestClient, sn1_mock_bt_client: MockBittensorClient):
+async def test_get_commitment_identity_not_found(
+    test_client: AsyncTestClient, sn1_mock_bt_client: MockBittensorClient, snapshot_json
+):
     """
     Test getting a commitment that doesn't exist.
     """
@@ -22,7 +24,4 @@ async def test_get_commitment_identity_not_found(test_client: AsyncTestClient, s
     ):
         response = await test_client.get("/api/v1/identity/sn1/subnet/1/block/latest/commitments/hotkey1")
     assert response.status_code == HTTP_404_NOT_FOUND
-    assert response.json() == {
-        "detail": "Commitment not found.",
-        "status_code": HTTP_404_NOT_FOUND,
-    }
+    assert response.json() == snapshot_json

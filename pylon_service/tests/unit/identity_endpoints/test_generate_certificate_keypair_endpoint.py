@@ -17,7 +17,7 @@ from tests.mock_bittensor_client import MockBittensorClient
 
 @pytest.mark.asyncio
 async def test_generate_certificate_keypair_identity_success(
-    test_client: AsyncTestClient, sn1_mock_bt_client: MockBittensorClient
+    test_client: AsyncTestClient, sn1_mock_bt_client: MockBittensorClient, snapshot_json
 ):
     """
     Test generating a certificate keypair successfully.
@@ -37,16 +37,12 @@ async def test_generate_certificate_keypair_identity_success(
         )
 
         assert response.status_code == HTTP_201_CREATED
-        assert response.json() == {
-            "algorithm": 1,
-            "public_key": "0xpublic123456789",
-            "private_key": "0xprivate987654321",
-        }
+        assert response.json() == snapshot_json
 
 
 @pytest.mark.asyncio
 async def test_generate_certificate_keypair_identity_default_algorithm(
-    test_client: AsyncTestClient, sn2_mock_bt_client: MockBittensorClient
+    test_client: AsyncTestClient, sn2_mock_bt_client: MockBittensorClient, snapshot_json
 ):
     """
     Test generating a certificate keypair with default algorithm.
@@ -66,16 +62,12 @@ async def test_generate_certificate_keypair_identity_default_algorithm(
         )
 
         assert response.status_code == HTTP_201_CREATED
-        assert response.json() == {
-            "algorithm": 1,
-            "public_key": "0xpublic_default",
-            "private_key": "0xprivate_default",
-        }
+        assert response.json() == snapshot_json
 
 
 @pytest.mark.asyncio
 async def test_generate_certificate_keypair_identity_failure(
-    test_client: AsyncTestClient, sn1_mock_bt_client: MockBittensorClient
+    test_client: AsyncTestClient, sn1_mock_bt_client: MockBittensorClient, snapshot_json
 ):
     """
     Test generating a certificate keypair when generation fails.
@@ -89,10 +81,7 @@ async def test_generate_certificate_keypair_identity_failure(
         )
 
         assert response.status_code == HTTP_502_BAD_GATEWAY
-        assert response.json() == {
-            "detail": "Could not generate certificate pair.",
-            "status_code": HTTP_502_BAD_GATEWAY,
-        }
+        assert response.json() == snapshot_json
 
 
 @pytest.mark.asyncio
@@ -104,7 +93,9 @@ async def test_generate_certificate_keypair_identity_failure(
         pytest.param("invalid", id="invalid_type"),
     ],
 )
-async def test_generate_certificate_keypair_identity_invalid_algorithm(test_client: AsyncTestClient, algorithm):
+async def test_generate_certificate_keypair_identity_invalid_algorithm(
+    test_client: AsyncTestClient, algorithm, snapshot_json
+):
     """
     Test generating a certificate keypair with invalid algorithm.
     """
@@ -114,13 +105,4 @@ async def test_generate_certificate_keypair_identity_invalid_algorithm(test_clie
     )
 
     assert response.status_code == HTTP_400_BAD_REQUEST, response.json()
-    assert response.json() == {
-        "status_code": HTTP_400_BAD_REQUEST,
-        "detail": "Validation failed for POST /api/v1/identity/sn1/subnet/1/certificates/self",
-        "extra": [
-            {
-                "message": "Value error, Currently, only algorithm equals 1 is supported which is EdDSA using Ed25519 curve",
-                "key": "algorithm",
-            }
-        ],
-    }
+    assert response.json() == snapshot_json

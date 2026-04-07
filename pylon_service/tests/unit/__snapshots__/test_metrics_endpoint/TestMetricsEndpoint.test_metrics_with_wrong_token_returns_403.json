@@ -1,0 +1,4 @@
+{
+  "detail": "Invalid authorization token",
+  "status_code": 403
+}

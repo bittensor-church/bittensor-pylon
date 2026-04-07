@@ -14,7 +14,9 @@ from tests.mock_bittensor_client import MockBittensorClient
 
 
 @pytest.mark.asyncio
-async def test_put_weights_commit_reveal_enabled(test_client: AsyncTestClient, sn1_mock_bt_client: MockBittensorClient):
+async def test_put_weights_commit_reveal_enabled(
+    test_client: AsyncTestClient, sn1_mock_bt_client: MockBittensorClient, snapshot_json
+):
     """
     Test setting weights when commit-reveal is enabled.
     """
@@ -40,10 +42,7 @@ async def test_put_weights_commit_reveal_enabled(test_client: AsyncTestClient, s
         )
 
         assert response.status_code == HTTP_200_OK, response.content
-        assert response.json() == {
-            "detail": "weights update scheduled",
-            "count": 3,
-        }
+        assert response.json() == snapshot_json
 
         # Wait for the background task to complete
         await wait_for_background_tasks(ApplyWeights.tasks_running)
@@ -63,7 +62,7 @@ async def test_put_weights_commit_reveal_enabled(test_client: AsyncTestClient, s
 
 @pytest.mark.asyncio
 async def test_put_weights_commit_reveal_disabled(
-    test_client: AsyncTestClient, sn2_mock_bt_client: MockBittensorClient
+    test_client: AsyncTestClient, sn2_mock_bt_client: MockBittensorClient, snapshot_json
 ):
     """
     Test setting weights when commit-reveal is disabled.
@@ -88,10 +87,7 @@ async def test_put_weights_commit_reveal_disabled(
         )
 
         assert response.status_code == HTTP_200_OK, response.content
-        assert response.json() == {
-            "detail": "weights update scheduled",
-            "count": 2,
-        }
+        assert response.json() == snapshot_json
 
         # Wait for the background task to complete
         await wait_for_background_tasks(ApplyWeights.tasks_running)
@@ -110,7 +106,10 @@ async def test_put_weights_commit_reveal_disabled(
 
 @pytest.mark.asyncio
 async def test_put_weights_retries_when_prepare_fails(
-    test_client: AsyncTestClient, sn1_mock_bt_client: MockBittensorClient, monkeypatch: pytest.MonkeyPatch
+    test_client: AsyncTestClient,
+    sn1_mock_bt_client: MockBittensorClient,
+    monkeypatch: pytest.MonkeyPatch,
+    snapshot_json,
 ):
     monkeypatch.setattr("pylon_service.settings.settings.weights_retry_attempts", 3)
     monkeypatch.setattr("pylon_service.settings.settings.weights_retry_delay_seconds", 0)
@@ -133,10 +132,7 @@ async def test_put_weights_retries_when_prepare_fails(
         )
 
         assert response.status_code == HTTP_200_OK, response.content
-        assert response.json() == {
-            "detail": "weights update scheduled",
-            "count": 2,
-        }
+        assert response.json() == snapshot_json
 
         await wait_for_background_tasks(ApplyWeights.tasks_running)
 
@@ -154,36 +150,27 @@ async def test_put_weights_retries_when_prepare_fails(
 
 @pytest.mark.asyncio
 @pytest.mark.parametrize(
-    "json_data,expected_extra",
+    "json_data",
     [
         pytest.param(
             {},
-            [{"message": "Field required", "key": "weights"}],
             id="missing_weights_field",
         ),
         pytest.param(
             {"weights": {}},
-            [{"message": "Value error, No weights provided", "key": "weights"}],
             id="empty_weights",
         ),
         pytest.param(
             {"weights": {"hotkey1": "invalid"}},
-            [
-                {
-                    "message": "Input should be a valid number, unable to parse string as a number",
-                    "key": "weights.hotkey1",
-                }
-            ],
             id="invalid_weight_value",
         ),
         pytest.param(
             {"weights": {"": 0.5}},
-            [{"message": "Value error, Invalid hotkey: '' must be a non-empty string", "key": "weights"}],
             id="empty_hotkey",
         ),
     ],
 )
-async def test_put_weights_validation_errors(test_client: AsyncTestClient, json_data: dict, expected_extra: list):
+async def test_put_weights_validation_errors(test_client: AsyncTestClient, json_data: dict, snapshot_json):
     """
     Test that invalid weight data fails validation.
     """
@@ -193,8 +180,4 @@ async def test_put_weights_validation_errors(test_client: AsyncTestClient, json_
     )
 
     assert response.status_code == HTTP_400_BAD_REQUEST, response.content
-    assert response.json() == {
-        "status_code": 400,
-        "detail": "Validation failed for PUT /api/v1/identity/sn1/subnet/1/weights",
-        "extra": expected_extra,
-    }
+    assert response.json() == snapshot_json

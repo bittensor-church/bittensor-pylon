@@ -13,6 +13,7 @@ from tests.mock_bittensor_client import MockBittensorClient
 async def test_get_validators_open_access_block_not_found(
     test_client: AsyncTestClient,
     open_access_mock_bt_client: MockBittensorClient,
+    snapshot_json,
 ):
     async with open_access_mock_bt_client.mock_behavior(
         get_block=[None],
@@ -20,7 +21,7 @@ async def test_get_validators_open_access_block_not_found(
         response = await test_client.get("/api/v1/subnet/1/block/999999/validators")
 
         assert response.status_code == HTTP_404_NOT_FOUND
-        assert response.json() == {"detail": "Block 999999 not found.", "status_code": 404}
+        assert response.json() == snapshot_json
 
 
 @pytest.mark.asyncio
@@ -33,9 +34,9 @@ async def test_get_validators_open_access_block_not_found(
     ],
 )
 async def test_get_validators_open_access_invalid_block_number_type(
-    test_client: AsyncTestClient, invalid_block_number: str
+    test_client: AsyncTestClient, invalid_block_number: str, snapshot_json
 ):
     response = await test_client.get(f"/api/v1/subnet/1/block/{invalid_block_number}/validators")
 
     assert response.status_code == HTTP_404_NOT_FOUND, response.content
-    assert response.json() == {"status_code": HTTP_404_NOT_FOUND, "detail": "Not Found"}
+    assert response.json() == snapshot_json

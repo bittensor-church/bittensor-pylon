@@ -1,0 +1,10 @@
+{
+  "detail": "Validation failed for POST /api/v1/identity/sn1/subnet/1/commitments",
+  "extra": [
+    {
+      "key": "commitment",
+      "message": "Value error, passed commitment data is not a valid hex string."
+    }
+  ],
+  "status_code": 400
+}

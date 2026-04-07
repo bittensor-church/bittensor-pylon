@@ -1,0 +1,4 @@
+{
+  "detail": "Metrics endpoint is not configured",
+  "status_code": 403
+}

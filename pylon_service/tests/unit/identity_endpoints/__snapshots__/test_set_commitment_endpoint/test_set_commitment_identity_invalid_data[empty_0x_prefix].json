@@ -1,0 +1,10 @@
+{
+  "detail": "Validation failed for POST /api/v1/identity/sn1/subnet/1/commitments",
+  "extra": [
+    {
+      "key": "commitment",
+      "message": "Data should have at least 1 byte"
+    }
+  ],
+  "status_code": 400
+}
