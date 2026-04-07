@@ -5,6 +5,9 @@
 Fill the missing public HTTP test coverage in `pylon_service` so the suite explicitly covers the documented public API
 surface for both `v1` and `_unstable`, with full response-body assertions captured as `syrupy` snapshots.
 
+Also add a focused coverage report for handlers and services so the test pass can measure how well those public-path and
+application-logic layers are exercised, without yet gating the build on a minimum threshold.
+
 ## Current Problem
 
 The current unit HTTP suite covers only part of `v1` and almost none of `_unstable`.
@@ -35,6 +38,7 @@ The test style remains:
 - full response body asserted with `syrupy`
 - shared `autouse=True` world fixture provides defaults
 - per-test mock-contact overrides are used only when a scenario needs different transport behavior
+- coverage reporting is limited to handlers and services for this pass
 
 ## Test Structure
 
@@ -126,6 +130,25 @@ At minimum, each identity-only endpoint family should have its own unknown-ident
 - matchers remain sparse and only for values that are genuinely difficult to freeze
 - if a scenario produces two distinct successful responses in one test, separate snapshot files are acceptable
 
+## Coverage Reporting
+
+This pass should add an explicit coverage-reporting command that focuses on:
+
+- `pylon_service/api/_unstable/`
+- `pylon_service/api/v1/`
+- `pylon_service/services/`
+
+The report should be easy to run locally and in CI later, but it should not yet fail the run based on a percentage
+threshold.
+
+The purpose of the report in this pass is:
+
+- confirm that the new HTTP test coverage actually reaches the handlers and services we care about
+- highlight remaining gaps after the scenario expansion
+- create a stable reporting scope that can later be extended to other parts of the codebase
+
+It is acceptable if uncovered lines remain after this pass, as long as the report is produced and reviewed.
+
 ## Non-Goals
 
 - no change to runtime service behavior
@@ -139,4 +162,5 @@ The implementation is complete when:
 
 - the public API scenarios in `SCENARIOS.md` are satisfied for both `v1` and `_unstable`
 - all new happy and unhappy path tests assert full response bodies
+- a focused coverage report for handlers and services is generated and reviewed
 - `cd pylon_service && uv run --python 3.13 pytest tests/unit -q` passes
