@@ -1,0 +1,13 @@
+{
+  "block": {
+    "hash": "0xblock701",
+    "number": 701
+  },
+  "commitments": {
+    "hotkey1": {
+      "commitment": "0xaaaa",
+      "commitment_block_number": 700,
+      "hotkey": "hotkey1"
+    }
+  }
+}

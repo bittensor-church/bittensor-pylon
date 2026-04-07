@@ -29,7 +29,7 @@ def _build_validator_neurons(block: Block) -> SubnetNeurons:
 
 
 @pytest.mark.asyncio
-async def test_v1_identity_get_validators_returns_only_validator_permit_neurons_sorted_by_total_stake_desc(
+async def test_unstable_identity_get_validators_returns_only_validator_permit_neurons_sorted_by_total_stake_desc(
     test_client, sn1_mock_bt_client: MockBittensorClient, snapshot_json
 ):
     block = Block(number=BlockNumber(321), hash=BlockHash("0xblock321"))
@@ -39,14 +39,14 @@ async def test_v1_identity_get_validators_returns_only_validator_permit_neurons_
         get_block=[block],
         get_neurons=[subnet_neurons],
     ):
-        response = await test_client.get("/api/v1/identity/sn1/subnet/1/block/321/validators")
+        response = await test_client.get("/api/_unstable/identity/sn1/subnet/1/block/321/validators")
 
     assert response.status_code == HTTP_200_OK
     assert response.json() == snapshot_json
 
 
 @pytest.mark.asyncio
-async def test_v1_identity_get_latest_validators_returns_only_validator_permit_neurons_sorted_by_total_stake_desc(
+async def test_unstable_identity_get_latest_validators_returns_only_validator_permit_neurons_sorted_by_total_stake_desc(
     test_client, sn1_mock_bt_client: MockBittensorClient, snapshot_json
 ):
     block = Block(number=BlockNumber(654), hash=BlockHash("0xlatest654"))
@@ -56,18 +56,18 @@ async def test_v1_identity_get_latest_validators_returns_only_validator_permit_n
         get_latest_block=[block],
         get_neurons=[subnet_neurons],
     ):
-        response = await test_client.get("/api/v1/identity/sn1/subnet/1/block/latest/validators")
+        response = await test_client.get("/api/_unstable/identity/sn1/subnet/1/block/latest/validators")
 
     assert response.status_code == HTTP_200_OK
     assert response.json() == snapshot_json
 
 
 @pytest.mark.asyncio
-async def test_v1_identity_get_validators_missing_block_returns_404(
+async def test_unstable_identity_get_validators_missing_block_returns_404(
     test_client, sn1_mock_bt_client: MockBittensorClient, snapshot_json
 ):
     async with sn1_mock_bt_client.mock_behavior(get_block=[None]):
-        response = await test_client.get("/api/v1/identity/sn1/subnet/1/block/999999/validators")
+        response = await test_client.get("/api/_unstable/identity/sn1/subnet/1/block/999999/validators")
 
     assert response.status_code == HTTP_404_NOT_FOUND
     assert response.json() == snapshot_json

@@ -1,0 +1,10 @@
+{
+  "hothey2": {
+    "algorithm": 1,
+    "public_key": "0xfedcba0987654321"
+  },
+  "hotkey1": {
+    "algorithm": 1,
+    "public_key": "0x1234567890abcdef"
+  }
+}

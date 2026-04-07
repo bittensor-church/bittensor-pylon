@@ -34,7 +34,7 @@ def _build_validator_neurons(block: Block) -> SubnetNeurons:
 
 
 @pytest.mark.asyncio
-async def test_v1_open_access_get_validators_returns_only_validator_permit_neurons_sorted_by_total_stake_desc(
+async def test_unstable_open_access_get_validators_returns_only_validator_permit_neurons_sorted_by_total_stake_desc(
     test_client: AsyncTestClient,
     open_access_mock_bt_client: MockBittensorClient,
     snapshot_json,
@@ -46,14 +46,14 @@ async def test_v1_open_access_get_validators_returns_only_validator_permit_neuro
         get_block=[block],
         get_neurons=[subnet_neurons],
     ):
-        response = await test_client.get("/api/v1/subnet/1/block/321/validators")
+        response = await test_client.get("/api/_unstable/subnet/1/block/321/validators")
 
     assert response.status_code == HTTP_200_OK
     assert response.json() == snapshot_json
 
 
 @pytest.mark.asyncio
-async def test_v1_open_access_get_latest_validators_returns_only_validator_permit_neurons_sorted_by_total_stake_desc(
+async def test_unstable_open_access_get_latest_validators_returns_only_validator_permit_neurons_sorted_by_total_stake_desc(
     test_client: AsyncTestClient,
     open_access_mock_bt_client: MockBittensorClient,
     snapshot_json,
@@ -65,7 +65,7 @@ async def test_v1_open_access_get_latest_validators_returns_only_validator_permi
         get_latest_block=[block],
         get_neurons=[subnet_neurons],
     ):
-        response = await test_client.get("/api/v1/subnet/1/block/latest/validators")
+        response = await test_client.get("/api/_unstable/subnet/1/block/latest/validators")
 
     assert response.status_code == HTTP_200_OK
     assert response.json() == snapshot_json
@@ -80,7 +80,7 @@ async def test_get_validators_open_access_block_not_found(
     async with open_access_mock_bt_client.mock_behavior(
         get_block=[None],
     ):
-        response = await test_client.get("/api/v1/subnet/1/block/999999/validators")
+        response = await test_client.get("/api/_unstable/subnet/1/block/999999/validators")
 
         assert response.status_code == HTTP_404_NOT_FOUND
         assert response.json() == snapshot_json
@@ -98,7 +98,7 @@ async def test_get_validators_open_access_block_not_found(
 async def test_get_validators_open_access_invalid_block_number_type(
     test_client: AsyncTestClient, invalid_block_number: str, snapshot_json
 ):
-    response = await test_client.get(f"/api/v1/subnet/1/block/{invalid_block_number}/validators")
+    response = await test_client.get(f"/api/_unstable/subnet/1/block/{invalid_block_number}/validators")
 
     assert response.status_code == HTTP_404_NOT_FOUND, response.content
     assert response.json() == snapshot_json

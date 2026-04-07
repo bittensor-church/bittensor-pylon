@@ -24,4 +24,3 @@ async def test_v1_public_identity_login_missing_token_returns_400_or_422(test_cl
 
     assert response.status_code == HTTP_400_BAD_REQUEST
     assert response.json() == snapshot_json
-

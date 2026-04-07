@@ -7,7 +7,7 @@ from tests.mock_bittensor_client import MockBittensorClient
 
 
 @pytest.mark.asyncio
-async def test_v1_public_latest_block_info_returns_latest_block_info(
+async def test_unstable_public_latest_block_info_returns_latest_block_info(
     test_client, open_access_mock_bt_client: MockBittensorClient, snapshot_json
 ):
     block = Block(number=BlockNumber(123), hash=BlockHash("0xabc123"))
@@ -16,7 +16,8 @@ async def test_v1_public_latest_block_info_returns_latest_block_info(
         get_latest_block=[block],
         get_block_timestamp=[Timestamp(1_700_000_000)],
     ):
-        response = await test_client.get("/api/v1/block/latest")
+        response = await test_client.get("/api/_unstable/block/latest")
 
     assert response.status_code == HTTP_200_OK
     assert response.json() == snapshot_json
+

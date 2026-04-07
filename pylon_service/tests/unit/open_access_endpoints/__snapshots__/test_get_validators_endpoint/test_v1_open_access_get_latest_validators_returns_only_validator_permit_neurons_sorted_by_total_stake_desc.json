@@ -5,58 +5,58 @@
   },
   "validators": [
     {
-      "active": true,
+      "active": false,
       "axon_info": {
-        "ip": "701f:65d1:14ff:4cbf:827b:8b20:945a:77b",
-        "port": 644,
-        "protocol": 0
+        "ip": "7.12.180.206",
+        "port": 3548,
+        "protocol": 4
       },
-      "coldkey": "XODPenlwmjUSDNpXwMrC",
-      "consensus": 757.723071336476,
-      "dividends": 635811385.188347,
-      "emission": 64498739.408836,
+      "coldkey": "DPdgNytkzUuFNKnPEfqb",
+      "consensus": 24951916.4972605,
+      "dividends": -9881818.4633978,
+      "emission": 247891063.709727,
       "hotkey": "validator-high",
-      "incentive": -47.7386242897703,
-      "last_update": 5081,
-      "pruning_score": 6880,
-      "rank": 2050214249881.37,
-      "stake": 98661784.2265725,
+      "incentive": -42744564471.352,
+      "last_update": 7868,
+      "pruning_score": 3977,
+      "rank": -63.4099773314186,
+      "stake": 70817221.3719368,
       "stakes": {
         "alpha": 1.0,
         "tao": 1.0,
         "total": 9.0
       },
-      "trust": 1224.4937571555,
-      "uid": 2416,
+      "trust": -7425857623982.64,
+      "uid": 2201,
       "validator_permit": true,
-      "validator_trust": 65134.9781761323
+      "validator_trust": 4.82692225805075
     },
     {
       "active": true,
       "axon_info": {
-        "ip": "43.220.110.57",
-        "port": 4157,
-        "protocol": 4
+        "ip": "183.109.252.160",
+        "port": 6626,
+        "protocol": 1
       },
-      "coldkey": "acgImfDCpqiRDVXBCgQl",
-      "consensus": -9386162926020.8,
-      "dividends": 1419504355531.23,
-      "emission": 9.2512301582417,
+      "coldkey": "viCKJtwAOBuzbcKZEuiA",
+      "consensus": -8373980503.7882,
+      "dividends": -371598338.1661,
+      "emission": 8978.3132749951,
       "hotkey": "validator-low",
-      "incentive": -120.934119163143,
-      "last_update": 3904,
-      "pruning_score": 3127,
-      "rank": 694.773621477391,
-      "stake": 5.25675208970143,
+      "incentive": 69615820.9418022,
+      "last_update": 8822,
+      "pruning_score": 8849,
+      "rank": -60179.8202335329,
+      "stake": -998734.90995431,
       "stakes": {
         "alpha": 1.0,
         "tao": 1.0,
         "total": 3.0
       },
-      "trust": -6.13363331599537,
-      "uid": 8664,
+      "trust": -9.28125826989206,
+      "uid": 6623,
       "validator_permit": true,
-      "validator_trust": 2075.43546079119
+      "validator_trust": -508480.873329535
     }
   ]
 }

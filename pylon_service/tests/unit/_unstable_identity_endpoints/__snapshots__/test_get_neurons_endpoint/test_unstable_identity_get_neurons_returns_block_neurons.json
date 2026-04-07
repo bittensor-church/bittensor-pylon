@@ -1,0 +1,89 @@
+{
+  "block": {
+    "hash": "0xblock123",
+    "number": 123
+  },
+  "neurons": {
+    "hotkey1": {
+      "active": true,
+      "axon_info": {
+        "ip": "128.150.208.79",
+        "port": 6245,
+        "protocol": 4
+      },
+      "coldkey": "gSNnzxHPebRwNaxLlXUb",
+      "consensus": -37.381936437721,
+      "dividends": 4.82692225805075,
+      "emission": 9275444.31284065,
+      "hotkey": "hotkey1",
+      "incentive": 726760591.229408,
+      "last_update": 8181,
+      "pruning_score": 6444,
+      "rank": 800798.470178216,
+      "stake": 6915.3117513184,
+      "stakes": {
+        "alpha": 4525.2062559164,
+        "tao": 816.457002937533,
+        "total": 2834.74591228881
+      },
+      "trust": 24951916.4972605,
+      "uid": 1,
+      "validator_permit": false,
+      "validator_trust": -7425857623982.64
+    },
+    "hotkey2": {
+      "active": false,
+      "axon_info": {
+        "ip": "117.128.79.146",
+        "port": 9466,
+        "protocol": 1
+      },
+      "coldkey": "TOMeIfiRtMyqSFEHilak",
+      "consensus": 66154.6070506973,
+      "dividends": 24939309018655.8,
+      "emission": 16.3614478509612,
+      "hotkey": "hotkey2",
+      "incentive": 64572392.6119255,
+      "last_update": 9575,
+      "pruning_score": 1500,
+      "rank": 6286.71899914679,
+      "stake": -976842008.282359,
+      "stakes": {
+        "alpha": 70.568032162625,
+        "tao": 1.63750271260246,
+        "total": 35121155309930.4
+      },
+      "trust": -6.220529725448,
+      "uid": 2,
+      "validator_permit": true,
+      "validator_trust": -480401.644089601
+    },
+    "hotkey3": {
+      "active": false,
+      "axon_info": {
+        "ip": "16.170.138.189",
+        "port": 3692,
+        "protocol": 1
+      },
+      "coldkey": "fGrdiBioLxqybuvjfUAk",
+      "consensus": -86484.7004867726,
+      "dividends": -17090.8626357024,
+      "emission": 8463.32001135738,
+      "hotkey": "hotkey3",
+      "incentive": 414080.724671125,
+      "last_update": 621,
+      "pruning_score": 3565,
+      "rank": -9138585.29608396,
+      "stake": -4969906209876.2,
+      "stakes": {
+        "alpha": 60404.2185596104,
+        "tao": 26898233.5820534,
+        "total": 8659487801982.13
+      },
+      "trust": -43117380438531.1,
+      "uid": 3,
+      "validator_permit": false,
+      "validator_trust": 4.5857114851112
+    }
+  }
+}
