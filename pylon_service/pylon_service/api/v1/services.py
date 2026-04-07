@@ -8,11 +8,13 @@ from pylon_service.api._unstable.services import (  # noqa: F401
     CommitmentService as UnstableCommitmentService,
     NeuronService,
 )
+from pylon_service.services import CommitmentService as DomainCommitmentService
 
 
 class CommitmentService(UnstableCommitmentService):
     async def get_commitments(self, router: BittensorPort, netuid: NetUid) -> GetCommitmentsResponse:
-        commitments = await self.get_latest_commitments(router, netuid)
+        block = await router.get_latest_block()
+        commitments = await DomainCommitmentService().get_commitments(router, netuid, block)
         return GetCommitmentsResponse(
             block=commitments.block,
             commitments={hotkey: commitment.commitment for hotkey, commitment in commitments.commitments.items()},

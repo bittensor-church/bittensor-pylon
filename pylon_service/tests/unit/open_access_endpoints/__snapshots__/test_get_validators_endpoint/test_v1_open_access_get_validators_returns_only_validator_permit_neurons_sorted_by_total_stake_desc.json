@@ -1,0 +1,62 @@
+{
+  "block": {
+    "hash": "0xblock321",
+    "number": 321
+  },
+  "validators": [
+    {
+      "active": true,
+      "axon_info": {
+        "ip": "1528:66f3:d582:59:5929:1330:ce2e:53cc",
+        "port": 4833,
+        "protocol": 4
+      },
+      "coldkey": "PYztuwTXRRVXLvkOnUVo",
+      "consensus": 97107181.3607222,
+      "dividends": -6.1147428634165,
+      "emission": 507.590808340586,
+      "hotkey": "validator-high",
+      "incentive": -95.5869779965397,
+      "last_update": 1466,
+      "pruning_score": 2075,
+      "rank": -96176808448782.6,
+      "stake": 1968984027570.14,
+      "stakes": {
+        "alpha": 1.0,
+        "tao": 1.0,
+        "total": 9.0
+      },
+      "trust": 75442856.755017,
+      "uid": 9446,
+      "validator_permit": true,
+      "validator_trust": -32.6261769389734
+    },
+    {
+      "active": false,
+      "axon_info": {
+        "ip": "d634:ee7f:cf7:407:a1fd:d82e:a17c:2594",
+        "port": 8351,
+        "protocol": 0
+      },
+      "coldkey": "PmjFNGnMCcchwVSGJvRs",
+      "consensus": -2321524.23584553,
+      "dividends": -72020921768.9111,
+      "emission": 881.747901270394,
+      "hotkey": "validator-low",
+      "incentive": 4.83531297301864,
+      "last_update": 7259,
+      "pruning_score": 166,
+      "rank": -246.873979582963,
+      "stake": 6532129.99664738,
+      "stakes": {
+        "alpha": 1.0,
+        "tao": 1.0,
+        "total": 3.0
+      },
+      "trust": -23579884030196.6,
+      "uid": 4245,
+      "validator_permit": true,
+      "validator_trust": 111.484732382656
+    }
+  ]
+}

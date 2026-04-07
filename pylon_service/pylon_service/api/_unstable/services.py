@@ -53,7 +53,8 @@ class NeuronService(DomainNeuronService):
         return GetValidatorsResponse.model_validate(subnet_validators, from_attributes=True)
 
     async def get_latest_validators(self, router: BittensorPort, netuid: NetUid) -> GetValidatorsResponse:
-        subnet_validators = await super().get_latest_validators(router, netuid)
+        block = await router.get_latest_block()
+        subnet_validators = await DomainNeuronService().get_validators(router, netuid, block)
         return GetValidatorsResponse.model_validate(subnet_validators, from_attributes=True)
 
     async def get_existing_block(self, router: BittensorPort, block_number: BlockNumber):
@@ -78,7 +79,8 @@ class CertificateService(DomainCertificateService):
 
 class CommitmentService(DomainCommitmentService):
     async def get_commitments(self, router: BittensorPort, netuid: NetUid) -> GetCommitmentsResponse:
-        commitments = await super().get_latest_commitments(router, netuid)
+        block = await router.get_latest_block()
+        commitments = await DomainCommitmentService().get_commitments(router, netuid, block)
         return GetCommitmentsResponse.model_validate(commitments, from_attributes=True)
 
     async def get_commitment(self, router: BittensorPort, netuid: NetUid, hotkey: Hotkey) -> GetCommitmentResponse:

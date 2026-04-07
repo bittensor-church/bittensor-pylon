@@ -1,0 +1,9 @@
+{
+  "block": {
+    "hash": "0xabc123",
+    "number": 1000
+  },
+  "commitment": "0x01020304",
+  "commitment_block_number": 999,
+  "hotkey": "hotkey1"
+}
