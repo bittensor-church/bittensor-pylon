@@ -18,7 +18,7 @@ identities_module.identities.update(identities_module.get_identities(*settings.i
 dependencies.identities = identities_module.identities
 
 
-@pytest.fixture(scope="session")
+@pytest.fixture(scope="package")
 def localchain():
     manager = LocalChainManager(image=SNAPSHOT_IMAGE, startup_timeout=120.0)
     try:
@@ -35,7 +35,7 @@ def localchain():
         manager.stop()
 
 
-@pytest.fixture(scope="session")
+@pytest.fixture(scope="package")
 def pylon_service(localchain):
     settings.bittensor_network = BittensorNetwork(localchain.ws_url)
     settings.bittensor_archive_network = BittensorNetwork(localchain.ws_url)
@@ -53,7 +53,7 @@ def wallet():
     return DevAccount.ALICE.wallet
 
 
-@pytest.fixture(scope="session")
+@pytest.fixture(scope="package")
 def pylon_client(pylon_service):
     from pylon_client.artanis import Config, IdentityName, PylonAuthToken, PylonClient, PylonTimeout
 

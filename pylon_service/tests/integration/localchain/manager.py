@@ -24,13 +24,18 @@ logger = logging.getLogger(__name__)
 
 _HOST = "localhost"
 _CHAIN_RPC_PORT = 9944
+_CONTACT_TEST_AXON_IP = "1.1.1.1"
+_CONTACT_TEST_AXON_PORT = 12345
 
 _RAO_PER_TAO = 1_000_000_000
 
 
 class ChainStorage(enum.StrEnum):
     ADMIN_FREEZE_WINDOW = "SubtensorModule.AdminFreezeWindow"
+    COMMIT_REVEAL_WEIGHTS_ENABLED = "SubtensorModule.CommitRevealWeightsEnabled"
+    SERVING_RATE_LIMIT = "SubtensorModule.ServingRateLimit"
     SUBTOKEN_ENABLED = "SubtensorModule.SubtokenEnabled"
+    TOTAL_NETWORKS = "SubtensorModule.TotalNetworks"
     WEIGHTS_SET_RATE_LIMIT = "SubtensorModule.WeightsSetRateLimit"
 
 
@@ -299,6 +304,52 @@ class LocalChainManager:
                 )
         logger.info("Subtokens enabled on subnet %d", netuid)
 
+    async def enable_commit_reveal_weights(self, sudo_wallet: Wallet, netuid: int) -> None:
+        """
+        Enable commit-reveal weights on a subnet via sudo storage update.
+
+        Args:
+            sudo_wallet: Wallet with sudo privileges.
+            netuid: Subnet UID to enable commit-reveal weights for.
+
+        Raises:
+            RuntimeError: If commit-reveal weights are still disabled after the update.
+        """
+        logger.info("Enabling commit-reveal weights on subnet %d", netuid)
+        await self._set_storage(
+            sudo_wallet=sudo_wallet,
+            storage_name="CommitRevealWeightsEnabled",
+            storage_value="0x01",
+            params=[netuid],
+        )
+        value = await self.get_storage(ChainStorage.COMMIT_REVEAL_WEIGHTS_ENABLED, netuid)
+        if not bool(value):
+            raise RuntimeError(f"CommitRevealWeightsEnabled is still False for subnet {netuid} after sudo call.")
+        logger.info("Commit-reveal weights enabled on subnet %d", netuid)
+
+    async def disable_commit_reveal_weights(self, sudo_wallet: Wallet, netuid: int) -> None:
+        """
+        Disable commit-reveal weights on a subnet via sudo storage update.
+
+        Args:
+            sudo_wallet: Wallet with sudo privileges.
+            netuid: Subnet UID to disable commit-reveal weights for.
+
+        Raises:
+            RuntimeError: If commit-reveal weights remain enabled after the update.
+        """
+        logger.info("Disabling commit-reveal weights on subnet %d", netuid)
+        await self._set_storage(
+            sudo_wallet=sudo_wallet,
+            storage_name="CommitRevealWeightsEnabled",
+            storage_value="0x00",
+            params=[netuid],
+        )
+        value = await self.get_storage(ChainStorage.COMMIT_REVEAL_WEIGHTS_ENABLED, netuid)
+        if bool(value):
+            raise RuntimeError(f"CommitRevealWeightsEnabled is still True for subnet {netuid} after sudo call.")
+        logger.info("Commit-reveal weights disabled on subnet %d", netuid)
+
     async def add_stake(self, wallet: Wallet, netuid: int, hotkey_ss58: str, amount_tao: int) -> None:
         """
         Stake TAO for a hotkey on a subnet.
@@ -368,6 +419,116 @@ class LocalChainManager:
             )
             await result.wait_for_finalization()
 
+    async def set_serving_rate_limit(self, sudo_wallet: Wallet, netuid: int, rate_limit: int) -> None:
+        """
+        Set the serving rate limit for a subnet via sudo storage update.
+
+        Args:
+            sudo_wallet: Wallet with sudo privileges.
+            netuid: Subnet UID.
+            rate_limit: Rate limit value in blocks.
+
+        Raises:
+            RuntimeError: If the rate limit is not updated successfully.
+        """
+        logger.info("Setting serving rate limit to %d on subnet %d", rate_limit, netuid)
+        await self._set_storage(
+            sudo_wallet=sudo_wallet,
+            storage_name="ServingRateLimit",
+            storage_value=f"0x{rate_limit.to_bytes(8, byteorder='little', signed=False).hex()}",
+            params=[netuid],
+        )
+
+        value = await self.get_storage(ChainStorage.SERVING_RATE_LIMIT, netuid)
+        if value != rate_limit:
+            raise RuntimeError(f"ServingRateLimit is {value} for subnet {netuid}, expected {rate_limit}")
+
+    async def serve_axon(self, wallet: Wallet, netuid: int, ip: str, port: int) -> None:
+        """
+        Publish axon info for a registered neuron.
+
+        Args:
+            wallet: Wallet whose hotkey is registered on the subnet.
+            netuid: Subnet UID.
+            ip: Routable IP address to announce.
+            port: Port to announce.
+        """
+        logger.info("Serving axon %s:%d on subnet %d for %s", ip, port, netuid, wallet.hotkey.ss58_address)
+        async with self._turbobt_client(wallet=wallet) as client:
+            await client.subnet(netuid).neurons.serve(ip, port, wallet=wallet)
+
+    async def get_total_networks(self) -> int:
+        """
+        Return the current number of registered networks.
+        """
+        total_networks = await self.get_storage(ChainStorage.TOTAL_NETWORKS)
+        assert isinstance(total_networks, int)
+        return total_networks
+
+    async def prepare_contact_write_subnets(
+        self,
+        sudo_wallet: Wallet,
+        participant_wallets: list[Wallet],
+        transfer_amount_tao: int = 100_000,
+        stake_amount_tao: int = 10_000,
+    ) -> tuple[int, int]:
+        """
+        Prepare one direct-weights subnet and one commit-reveal subnet for contact integration tests.
+
+        Args:
+            sudo_wallet: The sudo wallet and subnet owner.
+            participant_wallets: Wallets that should be funded and registered on both subnets.
+            transfer_amount_tao: TAO amount to transfer to non-owner participants for registration costs.
+            stake_amount_tao: TAO amount to stake for the owner on each subnet.
+
+        Returns:
+            A pair of netuids `(direct_netuid, commit_netuid)`.
+        """
+        await self.disable_admin_freeze_window(sudo_wallet=sudo_wallet)
+
+        for wallet in participant_wallets:
+            if wallet.coldkeypub.ss58_address == sudo_wallet.coldkeypub.ss58_address:
+                continue
+            await self.transfer(
+                wallet=sudo_wallet,
+                destination_ss58=wallet.coldkeypub.ss58_address,
+                amount_tao=transfer_amount_tao,
+            )
+
+        direct_netuid = await self.get_total_networks()
+        await self.register_subnet(wallet=sudo_wallet)
+        commit_netuid = await self.get_total_networks()
+        await self.register_subnet(wallet=sudo_wallet)
+
+        for netuid in (direct_netuid, commit_netuid):
+            for wallet in participant_wallets:
+                await self.register_neuron(wallet=wallet, netuid=netuid)
+            await self.enable_subtokens(sudo_wallet=sudo_wallet, netuid=netuid)
+
+        await self.add_stake(
+            wallet=sudo_wallet,
+            netuid=direct_netuid,
+            hotkey_ss58=sudo_wallet.hotkey.ss58_address,
+            amount_tao=stake_amount_tao,
+        )
+        await self.add_stake(
+            wallet=sudo_wallet,
+            netuid=commit_netuid,
+            hotkey_ss58=sudo_wallet.hotkey.ss58_address,
+            amount_tao=stake_amount_tao,
+        )
+        await self.disable_commit_reveal_weights(sudo_wallet=sudo_wallet, netuid=direct_netuid)
+        await self.enable_commit_reveal_weights(sudo_wallet=sudo_wallet, netuid=commit_netuid)
+        await self.set_serving_rate_limit(sudo_wallet=sudo_wallet, netuid=direct_netuid, rate_limit=0)
+        await self.serve_axon(
+            wallet=sudo_wallet,
+            netuid=direct_netuid,
+            ip=_CONTACT_TEST_AXON_IP,
+            port=_CONTACT_TEST_AXON_PORT,
+        )
+
+        return direct_netuid, commit_netuid
+
     # ---- Private helpers ----
 
     @asynccontextmanager
@@ -383,6 +544,27 @@ class LocalChainManager:
         """
         async with Bittensor(wallet=wallet, uri=self.ws_url) as client:
             yield client
+
+    async def _set_storage(
+        self,
+        sudo_wallet: Wallet,
+        storage_name: str,
+        storage_value: str,
+        params: list[object] | None = None,
+    ) -> None:
+        async with self._turbobt_client(wallet=sudo_wallet) as client:
+            await client.subtensor._init_runtime()
+            assert client.subtensor._metadata is not None
+            pallet = client.subtensor._metadata.get_metadata_pallet("SubtensorModule")
+            storage_function = pallet.get_storage_function(storage_name)
+            storage_key = client.subtensor.state._storage_key(pallet, storage_function, params or [])
+            result = await client.subtensor.sudo.sudo(
+                "System",
+                "set_storage",
+                {"items": [[storage_key, storage_value]]},
+                wallet=sudo_wallet,
+            )
+            await result.wait_for_finalization()
 
     @staticmethod
     def _create_docker_client(endpoint: DockerContextEndpoint) -> docker.DockerClient:
