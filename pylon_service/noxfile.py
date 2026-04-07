@@ -14,6 +14,23 @@ def test(session):
     session.run("pytest", "-s", "-vv", "tests/unit/", *session.posargs, env={"PYLON_ENV_FILE": "tests/.test-env"})
 
 
+@nox.session(name="test-unit-public-coverage", python=PYTHON_VERSION)
+def test_unit_public_coverage(session):
+    session.run("uv", "sync", "--active", "--extra", "dev")
+    session.run(
+        "pytest",
+        "-s",
+        "-vv",
+        "tests/unit/",
+        "--cov=pylon_service/api/_unstable",
+        "--cov=pylon_service/api/v1",
+        "--cov=pylon_service/services",
+        "--cov-report=term-missing",
+        *session.posargs,
+        env={"PYLON_ENV_FILE": "tests/.test-env"},
+    )
+
+
 @nox.session(name="test-pact", python=PYTHON_VERSION)
 def test_pact(session):
     session.run("uv", "sync", "--active", "--extra", "dev")
