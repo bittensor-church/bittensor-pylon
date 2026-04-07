@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from collections.abc import Mapping, Sequence
+from typing import Any, cast
 
 import pytest
 from pylon_commons.types import BlockNumber, ExtrinsicIndex
@@ -248,7 +249,13 @@ async def test_get_block_timestamp_matches_timestamp_extrinsic(open_contact):
     timestamp_extrinsic = await open_contact.get_extrinsic(block, ExtrinsicIndex(0))
 
     assert timestamp_extrinsic is not None
-    assert dump_model(timestamp_extrinsic)["call"]["call_args"][0]["value"] // 1000 == timestamp
+    extrinsic_dump = cast(dict[str, Any], dump_model(timestamp_extrinsic))
+    call_dump = cast(dict[str, Any], extrinsic_dump["call"])
+    call_args = cast(list[dict[str, Any]], call_dump["call_args"])
+    timestamp_millis = call_args[0]["value"]
+
+    assert isinstance(timestamp_millis, int)
+    assert timestamp_millis // 1000 == timestamp
 
 
 @pytest.mark.asyncio

@@ -9,6 +9,7 @@ from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager, suppress
 from dataclasses import dataclass
 from types import TracebackType
+from typing import TYPE_CHECKING
 from urllib.parse import urlparse
 
 import docker
@@ -21,6 +22,9 @@ from turbobt.subtensor.exceptions import HotKeyAlreadyRegisteredInSubNet
 from tests.helpers import find_free_port
 
 logger = logging.getLogger(__name__)
+
+if TYPE_CHECKING:
+    from docker.models.containers import Container
 
 _HOST = "localhost"
 _CHAIN_RPC_PORT = 9944
@@ -619,7 +623,7 @@ class LocalChainManager:
             port=parsed.port,
         )
 
-    def _start_ssh_tunnel(self, container: docker.models.containers.Container) -> None:
+    def _start_ssh_tunnel(self, container: Container) -> None:
         if self._context_endpoint.scheme != "ssh":
             return
         container_ip = self._get_container_ip(container)
@@ -657,7 +661,7 @@ class LocalChainManager:
                 self._ssh_tunnel.wait(timeout=5)
         self._ssh_tunnel = None
 
-    def _get_container_ip(self, container: docker.models.containers.Container) -> str:
+    def _get_container_ip(self, container: Container) -> str:
         container.reload()
         network_settings = container.attrs.get("NetworkSettings", {})
         if ip_address := network_settings.get("IPAddress"):
