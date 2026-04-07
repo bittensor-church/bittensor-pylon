@@ -1,11 +1,15 @@
 from __future__ import annotations
 
 import enum
+import json
 import logging
+import subprocess
 import time
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager, suppress
+from dataclasses import dataclass
 from types import TracebackType
+from urllib.parse import urlparse
 
 import docker
 import docker.errors
@@ -19,6 +23,7 @@ from tests.helpers import find_free_port
 logger = logging.getLogger(__name__)
 
 _HOST = "localhost"
+_CHAIN_RPC_PORT = 9944
 
 _RAO_PER_TAO = 1_000_000_000
 
@@ -27,6 +32,15 @@ class ChainStorage(enum.StrEnum):
     ADMIN_FREEZE_WINDOW = "SubtensorModule.AdminFreezeWindow"
     SUBTOKEN_ENABLED = "SubtensorModule.SubtokenEnabled"
     WEIGHTS_SET_RATE_LIMIT = "SubtensorModule.WeightsSetRateLimit"
+
+
+@dataclass(frozen=True)
+class DockerContextEndpoint:
+    scheme: str
+    raw_host: str
+    hostname: str | None
+    username: str | None
+    port: int | None
 
 
 class LocalChainManager:
@@ -52,7 +66,10 @@ class LocalChainManager:
         self._image = image
         self._startup_timeout = startup_timeout
         self._container_name = f"{self._CONTAINER_NAME_PREFIX}-{self.port}"
-        self._docker = docker.from_env()
+        self._context_endpoint = self._load_active_docker_context()
+        self._docker = self._create_docker_client(self._context_endpoint)
+        self._rpc_host = self._resolve_rpc_host(self._context_endpoint)
+        self._ssh_tunnel: subprocess.Popen[str] | None = None
 
     def __enter__(self) -> LocalChainManager:
         self.start()
@@ -68,11 +85,11 @@ class LocalChainManager:
 
     @property
     def ws_url(self) -> str:
-        return f"ws://{_HOST}:{self.port}"
+        return f"ws://{self._rpc_host}:{self.port}"
 
     @property
     def http_url(self) -> str:
-        return f"http://{_HOST}:{self.port}"
+        return f"http://{self._rpc_host}:{self.port}"
 
     # ---- Docker lifecycle (sync) ----
 
@@ -86,13 +103,18 @@ class LocalChainManager:
             RuntimeError: If the chain doesn't become ready within the timeout.
         """
         logger.info("Starting container from image %s on port %d", self._image, self.port)
-        self._docker.containers.run(
-            self._image,
-            command=["True", "--no-purge"],
-            name=self._container_name,
-            ports={"9944/tcp": self.port},
-            detach=True,
-        )
+        run_kwargs = {
+            "command": ["True", "--no-purge"],
+            "name": self._container_name,
+            "detach": True,
+        }
+        if self._context_endpoint.scheme != "ssh":
+            run_kwargs["ports"] = {f"{_CHAIN_RPC_PORT}/tcp": self.port}
+
+        container = self._docker.containers.run(self._image, **run_kwargs)
+
+        if self._context_endpoint.scheme == "ssh":
+            self._start_ssh_tunnel(container)
 
         deadline = time.monotonic() + self._startup_timeout
         while time.monotonic() < deadline:
@@ -114,10 +136,10 @@ class LocalChainManager:
         """
         Stop and remove the Docker container.
         """
+        self._stop_ssh_tunnel()
         try:
             container = self._docker.containers.get(self._container_name)
-            logger.info("Stopping container %s", self._container_name)
-            container.stop()
+            logger.info("Removing container %s", self._container_name)
             container.remove(force=True)
         except docker.errors.NotFound:
             pass
@@ -138,10 +160,9 @@ class LocalChainManager:
         """
         logger.info("Creating snapshot image %s", image_name)
         container = self._docker.containers.get(self._container_name)
-        container.stop()
         repository, _, tag = image_name.partition(":")
         container.commit(repository=repository, tag=tag or None)
-        container.remove()
+        container.remove(force=True)
         logger.info("Snapshot image %s created", image_name)
 
     # ---- Wallet operations (sync) ----
@@ -362,3 +383,113 @@ class LocalChainManager:
         """
         async with Bittensor(wallet=wallet, uri=self.ws_url) as client:
             yield client
+
+    @staticmethod
+    def _create_docker_client(endpoint: DockerContextEndpoint) -> docker.DockerClient:
+        kwargs: dict[str, object] = {"base_url": endpoint.raw_host}
+        if endpoint.scheme == "ssh":
+            kwargs["use_ssh_client"] = True
+        return docker.DockerClient(version="auto", **kwargs)
+
+    @staticmethod
+    def _resolve_rpc_host(endpoint: DockerContextEndpoint) -> str:
+        if endpoint.scheme in {"ssh", "unix", "npipe"}:
+            return _HOST
+        if endpoint.hostname is None:
+            raise RuntimeError(f"Docker context host {endpoint.raw_host!r} does not expose a hostname")
+        return endpoint.hostname
+
+    @staticmethod
+    def _load_active_docker_context() -> DockerContextEndpoint:
+        context_name_process = subprocess.run(
+            ["docker", "context", "show"],
+            check=True,
+            capture_output=True,
+            text=True,
+        )
+        context_name = context_name_process.stdout.strip()
+        if not context_name:
+            raise RuntimeError("docker context show returned an empty context name")
+
+        inspect_process = subprocess.run(
+            ["docker", "context", "inspect", context_name],
+            check=True,
+            capture_output=True,
+            text=True,
+        )
+        contexts = json.loads(inspect_process.stdout)
+        if len(contexts) != 1:
+            raise RuntimeError(f"Expected one docker context from inspect, got {len(contexts)}")
+
+        raw_host = contexts[0].get("Endpoints", {}).get("docker", {}).get("Host")
+        if not raw_host:
+            raise RuntimeError(f"Docker context {context_name!r} has no docker endpoint host")
+
+        parsed = urlparse(raw_host)
+        if not parsed.scheme:
+            raise RuntimeError(f"Docker context endpoint {raw_host!r} is missing a scheme")
+
+        return DockerContextEndpoint(
+            scheme=parsed.scheme,
+            raw_host=raw_host,
+            hostname=parsed.hostname,
+            username=parsed.username,
+            port=parsed.port,
+        )
+
+    def _start_ssh_tunnel(self, container: docker.models.containers.Container) -> None:
+        if self._context_endpoint.scheme != "ssh":
+            return
+        container_ip = self._get_container_ip(container)
+        remote = self._ssh_remote()
+        command = [
+            "ssh",
+            "-o",
+            "BatchMode=yes",
+            "-o",
+            "ExitOnForwardFailure=yes",
+            "-N",
+            "-L",
+            f"{self.port}:{container_ip}:{_CHAIN_RPC_PORT}",
+        ]
+        if self._context_endpoint.port is not None:
+            command.extend(["-p", str(self._context_endpoint.port)])
+        command.append(remote)
+        logger.info("Starting SSH tunnel for chain RPC via %s", remote)
+        self._ssh_tunnel = subprocess.Popen(
+            command,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.PIPE,
+            text=True,
+        )
+
+    def _stop_ssh_tunnel(self) -> None:
+        if self._ssh_tunnel is None:
+            return
+        if self._ssh_tunnel.poll() is None:
+            self._ssh_tunnel.terminate()
+            try:
+                self._ssh_tunnel.wait(timeout=5)
+            except subprocess.TimeoutExpired:
+                self._ssh_tunnel.kill()
+                self._ssh_tunnel.wait(timeout=5)
+        self._ssh_tunnel = None
+
+    def _get_container_ip(self, container: docker.models.containers.Container) -> str:
+        container.reload()
+        network_settings = container.attrs.get("NetworkSettings", {})
+        if ip_address := network_settings.get("IPAddress"):
+            return ip_address
+
+        networks = network_settings.get("Networks", {})
+        for network in networks.values():
+            if ip_address := network.get("IPAddress"):
+                return ip_address
+        raise RuntimeError(f"Could not determine IP address for container {self._container_name}")
+
+    def _ssh_remote(self) -> str:
+        if self._context_endpoint.hostname is None:
+            raise RuntimeError(f"SSH docker context {self._context_endpoint.raw_host!r} is missing a host")
+        if self._context_endpoint.username:
+            return f"{self._context_endpoint.username}@{self._context_endpoint.hostname}"
+        return self._context_endpoint.hostname

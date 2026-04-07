@@ -28,6 +28,7 @@ dev = [
     "ruff",
     "pyright",
     "nox",
+    "paramiko",
     "syrupy>=4,<5",
 ]
 
