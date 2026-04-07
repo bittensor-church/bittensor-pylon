@@ -3,7 +3,7 @@ Tests for the POST /identity/{identity_name}/subnet/{netuid}/commitments endpoin
 """
 
 import pytest
-from litestar.status_codes import HTTP_201_CREATED, HTTP_400_BAD_REQUEST, HTTP_502_BAD_GATEWAY
+from litestar.status_codes import HTTP_201_CREATED, HTTP_400_BAD_REQUEST, HTTP_404_NOT_FOUND, HTTP_502_BAD_GATEWAY
 from litestar.testing import AsyncTestClient
 
 from tests.mock_bittensor_client import MockBittensorClient
@@ -112,4 +112,15 @@ async def test_set_commitment_identity_invalid_data(test_client: AsyncTestClient
     )
 
     assert response.status_code == HTTP_400_BAD_REQUEST
+    assert response.json() == snapshot_json
+
+
+@pytest.mark.asyncio
+async def test_v1_identity_set_commitment_unknown_identity_returns_404(test_client: AsyncTestClient, snapshot_json):
+    response = await test_client.post(
+        "/api/v1/identity/unknown/subnet/1/commitments",
+        json={"commitment": "0x0102"},
+    )
+
+    assert response.status_code == HTTP_404_NOT_FOUND
     assert response.json() == snapshot_json

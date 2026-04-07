@@ -8,6 +8,7 @@ from litestar.testing import AsyncTestClient
 from pylon_commons.models import Block, SubnetNeurons
 from pylon_commons.types import BlockHash, BlockNumber, NetUid
 
+from tests.factories import NeuronFactory
 from tests.world import default_neurons
 from tests.mock_bittensor_client import MockBittensorClient
 
@@ -38,6 +39,7 @@ async def test_v1_open_access_get_neurons_returns_block_neurons(
     test_client: AsyncTestClient, open_access_mock_bt_client: MockBittensorClient, snapshot_json
 ):
     block = Block(number=BlockNumber(123), hash=BlockHash("0xblock123"))
+    NeuronFactory.seed_random(1)
     subnet_neurons = SubnetNeurons(
         block=block,
         neurons={neuron.hotkey: neuron for neuron in default_neurons()[NetUid(1)]},
@@ -58,6 +60,7 @@ async def test_v1_open_access_get_latest_neurons_returns_latest_neurons(
     test_client: AsyncTestClient, open_access_mock_bt_client: MockBittensorClient, snapshot_json
 ):
     block = Block(number=BlockNumber(456), hash=BlockHash("0xlatest456"))
+    NeuronFactory.seed_random(1)
     subnet_neurons = SubnetNeurons(
         block=block,
         neurons={neuron.hotkey: neuron for neuron in default_neurons()[NetUid(1)]},

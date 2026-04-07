@@ -51,3 +51,11 @@ async def test_get_own_certificate_identity_not_found(
 
         assert response.status_code == HTTP_404_NOT_FOUND
         assert response.json() == snapshot_json
+
+
+@pytest.mark.asyncio
+async def test_v1_identity_get_own_certificate_unknown_identity_returns_404(test_client, snapshot_json):
+    response = await test_client.get("/api/v1/identity/unknown/subnet/1/block/latest/certificates/self")
+
+    assert response.status_code == HTTP_404_NOT_FOUND
+    assert response.json() == snapshot_json

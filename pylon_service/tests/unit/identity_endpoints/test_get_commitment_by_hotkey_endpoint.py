@@ -3,12 +3,33 @@ Tests for the GET identity/{id}/subnet/{netuid}/block/latest/commitments/{hotkey
 """
 
 import pytest
-from litestar.status_codes import HTTP_404_NOT_FOUND
+from litestar.status_codes import HTTP_200_OK, HTTP_404_NOT_FOUND
 from litestar.testing import AsyncTestClient
-from pylon_commons.models import Block
-from pylon_commons.types import BlockHash, BlockNumber
+from pylon_commons.models import Block, Commitment
+from pylon_commons.types import BlockHash, BlockNumber, Hotkey
 
 from tests.mock_bittensor_client import MockBittensorClient
+
+
+@pytest.mark.asyncio
+async def test_v1_identity_get_commitment_by_hotkey_returns_v1_commitment_shape(
+    test_client: AsyncTestClient, sn1_mock_bt_client: MockBittensorClient, snapshot_json
+):
+    block = Block(number=BlockNumber(1000), hash=BlockHash("0xabc123"))
+    commitment = Commitment(
+        commitment_block_number=BlockNumber(999),
+        hotkey=Hotkey("hotkey1"),
+        commitment="0x01020304",
+    )
+
+    async with sn1_mock_bt_client.mock_behavior(
+        get_latest_block=[block],
+        get_commitment=[commitment],
+    ):
+        response = await test_client.get("/api/v1/identity/sn1/subnet/1/block/latest/commitments/hotkey1")
+
+    assert response.status_code == HTTP_200_OK
+    assert response.json() == snapshot_json
 
 
 @pytest.mark.asyncio
