@@ -7,9 +7,11 @@ from typing import Self
 
 from bittensor_wallet import Wallet
 from pydantic import BaseModel, ConfigDict
+from pylon_commons.types import ArchiveBlocksCutoff
 from pylon_commons.types import HotkeyName, WalletName
 
-from pylon_service.bittensor.client import AbstractBittensorClient, BittensorClient
+from pylon_service.bittensor.contact import ContactFactory
+from pylon_service.bittensor.router import BittensorRouter
 
 logger = logging.getLogger(__name__)
 
@@ -38,7 +40,7 @@ class WalletKey(BaseModel):
         )
 
 
-class BittensorClientPool[BTClient: AbstractBittensorClient]:
+class BittensorClientPool[RouterT: BittensorRouter]:
     """
     Pool from which bittensor clients can be acquired based on the provided wallet.
     One client is shared for the same wallet.
@@ -57,14 +59,19 @@ class BittensorClientPool[BTClient: AbstractBittensorClient]:
         CLOSED = "closed"
 
     def __init__(
-        self, client_cls: type[BTClient] = BittensorClient, pool_closing_timeout: float = 60, **client_kwargs
+        self,
+        router_cls: type[RouterT] = BittensorRouter,
+        contact_factory: ContactFactory | None = None,
+        pool_closing_timeout: float = 60,
+        **client_kwargs,
     ) -> None:
         if "wallet" in client_kwargs:
             raise ValueError("Wallet may not be given as a client kwarg in the client pool.")
         self.state = self.State.CLOSED
-        self.client_cls = client_cls
+        self.router_cls = router_cls
+        self.contact_factory = contact_factory or ContactFactory()
         self.closing_timeout = pool_closing_timeout
-        self._pool: dict[WalletKey | None, BTClient] = {}
+        self._pool: dict[WalletKey | None, RouterT] = {}
         self._close_condition = asyncio.Condition()
         self._acquire_lock = asyncio.Lock()
         self._acquire_counter = 0
@@ -79,12 +86,12 @@ class BittensorClientPool[BTClient: AbstractBittensorClient]:
 
     async def open(self):
         self._verify_not_open()
-        logger.info(f"Opening {self.client_cls.__name__} client pool.")
+        logger.info(f"Opening {self.router_cls.__name__} client pool.")
         self.state = self.State.OPEN
 
     async def close(self):
         self._verify_open()
-        logger.info(f"Closing sequence initialized for {self.client_cls.__name__} client pool.")
+        logger.info(f"Closing sequence initialized for {self.router_cls.__name__} client pool.")
         self.state = self.State.CLOSING
         logger.info(
             f"Entered the closing state. Waiting {self.closing_timeout} seconds until all "
@@ -104,7 +111,7 @@ class BittensorClientPool[BTClient: AbstractBittensorClient]:
         await asyncio.gather(*(client.close() for client in self._pool.values()), return_exceptions=True)
         self._pool.clear()
         self.state = self.State.CLOSED
-        logger.info(f"{self.client_cls.__name__} client pool successfully closed.")
+        logger.info(f"{self.router_cls.__name__} client pool successfully closed.")
 
     def _can_close(self) -> bool:
         return self._acquire_counter == 0
@@ -118,7 +125,7 @@ class BittensorClientPool[BTClient: AbstractBittensorClient]:
             raise BittensorClientPoolInvalidState("The pool is open.")
 
     @asynccontextmanager
-    async def acquire(self, wallet: Wallet | None) -> AsyncGenerator[BTClient]:
+    async def acquire(self, wallet: Wallet | None) -> AsyncGenerator[RouterT]:
         """
         Acquire an instance of a bittensor client with connection ready.
         The client will use the provided wallet to perform requests (or no wallet if None is passed).
@@ -139,13 +146,18 @@ class BittensorClientPool[BTClient: AbstractBittensorClient]:
         )
         async with self._acquire_lock:
             if wallet_key in self._pool:
-                client = self._pool[wallet_key]
+                router = self._pool[wallet_key]
             else:
-                logger.debug(f"New client open with {wallet_name} wallet.")
-                client = self._pool[wallet_key] = self.client_cls(wallet, **self.client_kwargs)
-                await client.open()
+                logger.debug(f"New router open with {wallet_name} wallet.")
+                router = self._pool[wallet_key] = self.router_cls(
+                    wallet=wallet,
+                    main_contact=self.contact_factory.create(wallet, self.client_kwargs["uri"]),
+                    archive_contact=self.contact_factory.create(wallet, self.client_kwargs["archive_uri"]),
+                    archive_blocks_cutoff=self.client_kwargs.get("archive_blocks_cutoff", ArchiveBlocksCutoff(300)),
+                )
+                await router.open()
         try:
-            yield client
+            yield router
         finally:
             async with self._close_condition:
                 self._acquire_counter -= 1

@@ -5,12 +5,12 @@ import pytest_asyncio
 from bittensor_wallet import Wallet
 from pylon_commons.types import HotkeyName, WalletName
 
-from pylon_service.bittensor.client import BittensorClient
 from pylon_service.bittensor.pool import (
     BittensorClientPool,
     BittensorClientPoolInvalidState,
     WalletKey,
 )
+from pylon_service.bittensor.router import BittensorRouter
 from tests.helpers import wait_until
 
 
@@ -32,8 +32,8 @@ async def barrier_factory():
 
 
 async def acquire_client(
-    pool: BittensorClientPool[BittensorClient], wallet: Wallet | None, barrier: asyncio.Barrier
-) -> BittensorClient:
+    pool: BittensorClientPool[BittensorRouter], wallet: Wallet | None, barrier: asyncio.Barrier
+) -> BittensorRouter:
     async with pool.acquire(wallet=wallet) as client:
         await barrier.wait()
     return client
@@ -74,8 +74,8 @@ async def test_bittensor_client_pool_proper_use(barrier_factory):
         assert client_wallet.uri == pool.client_kwargs["uri"]
         assert client_wallet.archive_uri == pool.client_kwargs["archive_uri"]
         # Check if the client is open
-        assert client_wallet._main_client._raw_client is not None
-        assert client_wallet._archive_client._raw_client is not None
+        assert client_wallet._main_contact._raw_client is not None
+        assert client_wallet._archive_contact._raw_client is not None
     assert pool._acquire_counter == 5
     # Check if you can acquire client without wallet
     async with pool.acquire(wallet=None) as client_no_wallet:
@@ -103,8 +103,8 @@ async def test_bittensor_client_pool_proper_use(barrier_factory):
     assert pool.state == BittensorClientPool.State.CLOSED
     assert pool._pool == {}
     # Check if the client is closed properly.
-    assert client_wallet._main_client._raw_client is None
-    assert client_wallet._archive_client._raw_client is None
+    assert client_wallet._main_contact._raw_client is None
+    assert client_wallet._archive_contact._raw_client is None
 
 
 @pytest.mark.asyncio
@@ -234,5 +234,5 @@ async def test_bittensor_client_pool_close_timeout(barrier_factory):
     await task
     # Check if the client is closed.
     client = task.result()
-    assert client._main_client._raw_client is None
-    assert client._archive_client._raw_client is None
+    assert client._main_contact._raw_client is None
+    assert client._archive_contact._raw_client is None

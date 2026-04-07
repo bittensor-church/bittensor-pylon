@@ -6,6 +6,7 @@ from abc import ABC, abstractmethod
 from collections import defaultdict
 from collections.abc import Awaitable, Callable
 from contextlib import asynccontextmanager
+from dataclasses import dataclass
 from typing import Any
 
 from bittensor_wallet import Wallet
@@ -566,3 +567,11 @@ class MockBittensorContact(AbstractBittensorContact):
 
     async def get_extrinsic(self, block: Block, extrinsic_index: ExtrinsicIndex) -> Extrinsic | None:
         return await self._execute_behavior("get_extrinsic", block, extrinsic_index)
+
+
+@dataclass(slots=True)
+class ContactFactory:
+    contact_cls: type[AbstractBittensorContact] = TurboBtContact
+
+    def create(self, wallet: Wallet | None, uri: BittensorNetwork) -> AbstractBittensorContact:
+        return self.contact_cls(wallet=wallet, uri=uri)

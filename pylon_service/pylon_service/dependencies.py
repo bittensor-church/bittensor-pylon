@@ -5,7 +5,6 @@ from litestar.datastructures import State
 from litestar.exceptions import NotFoundException
 from pylon_commons.types import IdentityName, NetUid
 
-from pylon_service.bittensor.client import AbstractBittensorClient
 from pylon_service.bittensor.pool import BittensorClientPool
 from pylon_service.bittensor.recent import (
     AbstractContext,
@@ -13,6 +12,7 @@ from pylon_service.bittensor.recent import (
     RecentObjectProvider,
     SubnetContext,
 )
+from pylon_service.bittensor.router import BittensorRouter
 from pylon_service.identities import Identity, identities
 from pylon_service.settings import recent_objects_settings
 from pylon_service.stores import StoreName
@@ -34,16 +34,16 @@ async def identity_dep(identity_name: IdentityName) -> Identity:
     raise NotFoundException(f"Identity '{identity_name}' not found")
 
 
-async def bt_client_identity_dep[BtClient: AbstractBittensorClient](
-    bt_client_pool: BittensorClientPool[BtClient], identity: Identity
-) -> AsyncGenerator[BtClient]:
+async def bt_client_identity_dep(
+    bt_client_pool: BittensorClientPool[BittensorRouter], identity: Identity
+) -> AsyncGenerator[BittensorRouter]:
     async with bt_client_pool.acquire(wallet=identity.wallet) as client:
         yield client
 
 
-async def bt_client_open_access_dep[BtClient: AbstractBittensorClient](
-    bt_client_pool: BittensorClientPool[BtClient],
-) -> AsyncGenerator[BtClient]:
+async def bt_client_open_access_dep(
+    bt_client_pool: BittensorClientPool[BittensorRouter],
+) -> AsyncGenerator[BittensorRouter]:
     async with bt_client_pool.acquire(wallet=None) as client:
         yield client
 
