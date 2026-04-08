@@ -17,6 +17,7 @@ def test_get_validators_success(pact: Pact, get_validators_response_matcher: dic
             block_number=BLOCK_NUMBER,
             validator_count=2,
         )
+        .given("client is logged in", identity_name=IDENTITY_NAME, netuid=NETUID)
         .with_request("GET", f"/api/_unstable/identity/{IDENTITY_NAME}/subnet/{NETUID}/block/{BLOCK_NUMBER}/validators")
         .will_respond_with(codes.OK)
         .with_body(get_validators_response_matcher, content_type="application/json")

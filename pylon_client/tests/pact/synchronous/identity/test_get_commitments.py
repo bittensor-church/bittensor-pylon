@@ -11,6 +11,7 @@ def test_get_commitments_success(pact: Pact, get_commitments_response_matcher: d
     (
         pact.upon_receiving("an identity request for all commitments")
         .given("commitments exist", identity_name=IDENTITY_NAME, netuid=NETUID, commitment_count=2)
+        .given("client is logged in", identity_name=IDENTITY_NAME, netuid=NETUID)
         .with_request("GET", f"/api/_unstable/identity/{IDENTITY_NAME}/subnet/{NETUID}/block/latest/commitments")
         .will_respond_with(codes.OK)
         .with_body(get_commitments_response_matcher, content_type="application/json")

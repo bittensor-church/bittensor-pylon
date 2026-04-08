@@ -3,7 +3,7 @@ Tests for the PUT /subnet/weights endpoint.
 """
 
 import pytest
-from litestar.status_codes import HTTP_200_OK, HTTP_400_BAD_REQUEST, HTTP_404_NOT_FOUND
+from litestar.status_codes import HTTP_200_OK, HTTP_400_BAD_REQUEST, HTTP_401_UNAUTHORIZED
 from litestar.testing import AsyncTestClient
 from pylon_commons.models import Block, CommitReveal, SubnetHyperparams
 from pylon_commons.types import BlockHash, BlockNumber, NeuronUid, RevealRound
@@ -184,11 +184,11 @@ async def test_put_weights_validation_errors(test_client: AsyncTestClient, json_
 
 
 @pytest.mark.asyncio
-async def test_v1_identity_put_weights_unknown_identity_returns_404(test_client: AsyncTestClient, snapshot_json):
+async def test_v1_identity_put_weights_unknown_identity_returns_401(test_client: AsyncTestClient):
     response = await test_client.put(
         "/api/v1/identity/unknown/subnet/1/weights",
         json={"weights": {"hotkey1": 1.0}},
     )
 
-    assert response.status_code == HTTP_404_NOT_FOUND
-    assert response.json() == snapshot_json
+    assert response.status_code == HTTP_401_UNAUTHORIZED
+    assert response.json() == {"detail": "Not authenticated", "status_code": 401}

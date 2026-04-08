@@ -17,7 +17,7 @@ async def test_v1_identity_get_commitment_by_hotkey_returns_v1_commitment_shape(
     test_client: AsyncTestClient, snapshot_json
 ):
     response = await test_client.get(
-        f"/api/v1/identity/sn1/subnet/{COMMITMENTS_ALL_NETUID}/block/latest/commitments/hotkey1"
+        f"/api/v1/identity/cm_all/subnet/{COMMITMENTS_ALL_NETUID}/block/latest/commitments/hotkey1"
     )
 
     assert response.status_code == HTTP_200_OK

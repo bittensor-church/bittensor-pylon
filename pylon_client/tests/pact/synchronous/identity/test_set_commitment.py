@@ -10,6 +10,7 @@ def test_set_commitment_success(pact: Pact, post_commitment_response_matcher: di
     (
         pact.upon_receiving("an identity request to set commitment")
         .given("commitment can be set", identity_name=IDENTITY_NAME, netuid=NETUID)
+        .given("client is logged in", identity_name=IDENTITY_NAME, netuid=NETUID)
         .with_request("POST", f"/api/_unstable/identity/{IDENTITY_NAME}/subnet/{NETUID}/commitments")
         .with_body({"commitment": COMMITMENT_HEX}, content_type="application/json")
         .will_respond_with(codes.CREATED)

@@ -11,6 +11,7 @@ def test_get_commitments_v1_success(pact: Pact, get_commitments_v1_response_matc
     (
         pact.upon_receiving("a v1 identity request for all commitments")
         .given("commitments exist", identity_name=IDENTITY_NAME, netuid=NETUID, commitment_count=2)
+        .given("client is logged in", identity_name=IDENTITY_NAME, netuid=NETUID)
         .with_request("GET", f"/api/v1/identity/{IDENTITY_NAME}/subnet/{NETUID}/block/latest/commitments")
         .will_respond_with(codes.OK)
         .with_body(get_commitments_v1_response_matcher, content_type="application/json")

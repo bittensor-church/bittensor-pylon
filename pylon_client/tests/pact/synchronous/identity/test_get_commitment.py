@@ -11,6 +11,7 @@ def test_get_commitment_success(pact: Pact, get_commitment_response_matcher: dic
     (
         pact.upon_receiving("an identity request for a specific commitment")
         .given("commitment exists", identity_name=IDENTITY_NAME, netuid=NETUID, hotkey=HOTKEY_1)
+        .given("client is logged in", identity_name=IDENTITY_NAME, netuid=NETUID)
         .with_request(
             "GET", f"/api/_unstable/identity/{IDENTITY_NAME}/subnet/{NETUID}/block/latest/commitments/{HOTKEY_1}"
         )

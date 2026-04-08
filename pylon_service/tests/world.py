@@ -126,6 +126,41 @@ def build_test_identities() -> dict[IdentityName, Identity]:
             netuid=NetUid(2),
             token=PylonAuthToken("token_sn2"),
         ),
+        IdentityName("val"): Identity(
+            identity_name=IdentityName("val"),
+            wallet_name=WalletName("wallet_sn1"),
+            hotkey_name=HotkeyName("hotkey_sn1"),
+            netuid=VALIDATORS_NETUID,
+            token=PylonAuthToken("token_val"),
+        ),
+        IdentityName("cm_all"): Identity(
+            identity_name=IdentityName("cm_all"),
+            wallet_name=WalletName("wallet_sn1"),
+            hotkey_name=HotkeyName("hotkey_sn1"),
+            netuid=COMMITMENTS_ALL_NETUID,
+            token=PylonAuthToken("token_cm_all"),
+        ),
+        IdentityName("cm_filtered"): Identity(
+            identity_name=IdentityName("cm_filtered"),
+            wallet_name=WalletName("wallet_sn1"),
+            hotkey_name=HotkeyName("hotkey_sn1"),
+            netuid=COMMITMENTS_FILTERED_NETUID,
+            token=PylonAuthToken("token_cm_filtered"),
+        ),
+        IdentityName("cm_empty"): Identity(
+            identity_name=IdentityName("cm_empty"),
+            wallet_name=WalletName("wallet_sn1"),
+            hotkey_name=HotkeyName("hotkey_sn1"),
+            netuid=COMMITMENTS_EMPTY_NETUID,
+            token=PylonAuthToken("token_cm_empty"),
+        ),
+        IdentityName("cm_own"): Identity(
+            identity_name=IdentityName("cm_own"),
+            wallet_name=WalletName("wallet_sn2"),
+            hotkey_name=HotkeyName("hotkey_sn2"),
+            netuid=OWN_COMMITMENT_NETUID,
+            token=PylonAuthToken("token_cm_own"),
+        ),
     }
 
 

@@ -15,8 +15,10 @@ from litestar.stores.memory import MemoryStore
 
 class StoreName(StrEnum):
     RECENT_OBJECTS = "recent_objects"
+    SESSIONS = "sessions"
 
 
 stores: dict[str, Store] = {
     StoreName.RECENT_OBJECTS: MemoryStore(),
+    StoreName.SESSIONS: MemoryStore(),
 }

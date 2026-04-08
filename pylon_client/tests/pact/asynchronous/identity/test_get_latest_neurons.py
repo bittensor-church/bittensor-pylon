@@ -13,6 +13,7 @@ async def test_get_latest_neurons_success(pact: Pact, get_neurons_response_match
     (
         pact.upon_receiving("an identity request for latest neurons")
         .given("neurons exist", identity_name=IDENTITY_NAME, netuid=NETUID, neuron_count=2)
+        .given("client is logged in", identity_name=IDENTITY_NAME, netuid=NETUID)
         .with_request("GET", f"/api/_unstable/identity/{IDENTITY_NAME}/subnet/{NETUID}/block/latest/neurons")
         .will_respond_with(codes.OK)
         .with_body(get_neurons_response_matcher, content_type="application/json")

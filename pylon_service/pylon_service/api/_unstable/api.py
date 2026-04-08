@@ -1,9 +1,10 @@
 import logging
+import secrets
 from typing import NoReturn
 
-from litestar import Controller, Response, status_codes
+from litestar import Controller, Request, Response, status_codes
 from litestar.di import Provide
-from litestar.exceptions import NotFoundException, ServiceUnavailableException
+from litestar.exceptions import NotAuthorizedException, NotFoundException, ServiceUnavailableException
 from pylon_commons._unstable.bodies import LoginBody, SetCommitmentBody, SetWeightsBody
 from pylon_commons._unstable.endpoints import Endpoint
 from pylon_commons._unstable.requests import GenerateCertificateKeypairRequest
@@ -22,6 +23,7 @@ from pylon_commons.types import BlockNumber, ExtrinsicIndex, NetUid
 from pylon_service.api._unstable import services
 from pylon_service.api._unstable.tasks import ApplyWeights, SetCommitment
 from pylon_service.api.utils import handler
+from pylon_service.auth import identity_session_guard
 from pylon_service.bittensor.recent import RecentObjectProvider
 from pylon_service.bittensor.router import BittensorRouter
 from pylon_service.dependencies import (
@@ -70,7 +72,14 @@ def identity_handler(endpoint: Endpoint, **kwargs):
     dependencies={"identity": identity_dep},
     status_code=status_codes.HTTP_200_OK,
 )
-async def identity_login(data: LoginBody, identity: Identity) -> IdentityLoginResponse:
+async def identity_login(data: LoginBody, identity: Identity, request: Request) -> IdentityLoginResponse:
+    if not secrets.compare_digest(data.token, identity.token):
+        raise NotAuthorizedException(detail="Invalid token")
+
+    existing_identities = request.session.get("identities", {})
+    existing_identities[identity.identity_name] = {"netuid": identity.netuid}
+    request.set_session({"identities": existing_identities})
+
     return IdentityLoginResponse(netuid=identity.netuid, identity_name=identity.identity_name)
 
 
@@ -167,6 +176,7 @@ class OpenAccessController(Controller):
 
 class IdentityController(Controller):
     path = "/identity/{identity_name:str}/subnet/{netuid:int}"
+    guards = [identity_session_guard]
     dependencies = {
         "identity": Provide(identity_dep),
         "bt_client": Provide(bt_client_identity_dep),

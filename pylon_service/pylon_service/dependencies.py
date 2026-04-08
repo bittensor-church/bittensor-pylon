@@ -27,8 +27,6 @@ async def bt_client_pool_dep(state: State) -> BittensorClientPool:
 
 
 async def identity_dep(identity_name: IdentityName) -> Identity:
-    # TODO: When authentication is added, identity will be fetched from the session. A Guard will guarantee that the
-    #   data from identity in the session matches the data in an url.
     if identity_ := identities.get(identity_name):
         return identity_
     raise NotFoundException(f"Identity '{identity_name}' not found")

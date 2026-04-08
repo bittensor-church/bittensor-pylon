@@ -17,6 +17,7 @@ def test_get_neurons_success(pact: Pact, get_neurons_response_matcher: dict, pyl
             block_number=BLOCK_NUMBER,
             neuron_count=2,
         )
+        .given("client is logged in", identity_name=IDENTITY_NAME, netuid=NETUID)
         .with_request("GET", f"/api/_unstable/identity/{IDENTITY_NAME}/subnet/{NETUID}/block/{BLOCK_NUMBER}/neurons")
         .will_respond_with(codes.OK)
         .with_body(get_neurons_response_matcher, content_type="application/json")

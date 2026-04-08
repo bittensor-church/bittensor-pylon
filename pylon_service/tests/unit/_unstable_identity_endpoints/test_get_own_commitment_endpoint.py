@@ -1,5 +1,5 @@
 import pytest
-from litestar.status_codes import HTTP_200_OK, HTTP_404_NOT_FOUND
+from litestar.status_codes import HTTP_200_OK, HTTP_401_UNAUTHORIZED, HTTP_404_NOT_FOUND
 from litestar.testing import AsyncTestClient
 from pylon_commons.models import Block
 from pylon_commons.types import BlockHash, BlockNumber
@@ -13,7 +13,7 @@ async def test_unstable_identity_get_own_commitment_returns_commitment_object(
     test_client: AsyncTestClient, snapshot_json
 ):
     response = await test_client.get(
-        f"/api/_unstable/identity/sn2/subnet/{OWN_COMMITMENT_NETUID}/block/latest/commitments/self"
+        f"/api/_unstable/identity/cm_own/subnet/{OWN_COMMITMENT_NETUID}/block/latest/commitments/self"
     )
 
     assert response.status_code == HTTP_200_OK
@@ -37,8 +37,8 @@ async def test_get_own_commitment_identity_not_found(
 
 
 @pytest.mark.asyncio
-async def test_unstable_identity_get_own_commitment_unknown_identity_returns_404(test_client, snapshot_json):
+async def test_unstable_identity_get_own_commitment_unknown_identity_returns_401(test_client):
     response = await test_client.get("/api/_unstable/identity/unknown/subnet/1/block/latest/commitments/self")
 
-    assert response.status_code == HTTP_404_NOT_FOUND
-    assert response.json() == snapshot_json
+    assert response.status_code == HTTP_401_UNAUTHORIZED
+    assert response.json() == {"detail": "Not authenticated", "status_code": 401}

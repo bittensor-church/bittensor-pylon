@@ -4,6 +4,7 @@ from abc import ABC, abstractmethod
 from typing import TYPE_CHECKING, Any, ClassVar, Literal
 from unittest.mock import AsyncMock
 
+from litestar.stores.base import Store
 from pylon_commons.models import Commitment, SubnetCommitments, SubnetNeurons, SubnetValidators
 from pylon_commons.types import BlockNumber, CommitmentDataHex, Hotkey, Timestamp
 
@@ -14,6 +15,7 @@ from tests.factories import BlockFactory, ExtrinsicFactory, NeuronFactory
 from tests.mock_store import MockStore
 
 if TYPE_CHECKING:
+    from litestar.stores.memory import MemoryStore
     from pytest import MonkeyPatch
 
     from pylon_service.bittensor.contact import MockBittensorContact
@@ -39,7 +41,7 @@ class StateHandler(ABC):
         open_access_client: "MockBittensorContact",
         sn1_client: "MockBittensorContact",
         sn2_client: "MockBittensorContact",
-        mock_stores: dict[StoreName, MockStore],
+        mock_stores: dict[StoreName, Store],
         monkeypatch: "MonkeyPatch",
     ) -> None:
         self._clients = {
@@ -71,15 +73,25 @@ class StateHandler(ABC):
         identity_name = parameters.get("identity_name")
         return self._clients[identity_name]
 
+    def _get_mock_store(self, name: StoreName) -> MockStore:
+        store = self.mock_stores[name]
+        assert isinstance(store, MockStore)
+        return store
+
     @abstractmethod
     def setup(self, parameters: dict[str, Any]) -> None:
         pass
 
     def teardown(self, parameters: dict[str, Any]) -> None:
+        from litestar.stores.memory import MemoryStore
+
         for client in self._clients.values():
             client.reset()
         for store in self.mock_stores.values():
-            store.reset()
+            if isinstance(store, MockStore):
+                store.reset()
+            elif isinstance(store, MemoryStore):
+                store._store.clear()
         self.monkeypatch.undo()
 
     @classmethod
@@ -88,7 +100,7 @@ class StateHandler(ABC):
         open_access_client: "MockBittensorContact",
         sn1_client: "MockBittensorContact",
         sn2_client: "MockBittensorContact",
-        mock_stores: dict[StoreName, MockStore],
+        mock_stores: dict[StoreName, Store],
         monkeypatch: "MonkeyPatch",
     ) -> dict[str, "StateHandler"]:
         return {
@@ -132,7 +144,9 @@ class RecentNeuronsExistHandler(StateHandler):
         subnet_neurons = SubnetNeurons(block=block, neurons={n.hotkey: n for n in neurons})
 
         cache_entry = _CacheEntry(data=subnet_neurons.model_dump_json(), timestamp=Timestamp(int(time.time())))
-        self.mock_stores[StoreName.RECENT_OBJECTS].behave.add_behavior("get", cache_entry.model_dump_json().encode())
+        self._get_mock_store(StoreName.RECENT_OBJECTS).behave.add_behavior(
+            "get", cache_entry.model_dump_json().encode()
+        )
 
 
 class ValidatorsExistHandler(StateHandler):
@@ -283,3 +297,34 @@ class BittensorHangs(StateHandler):
 
         client = self._get_client(parameters)
         client.add_behavior(parameters["method"], hang)
+
+
+class ClientIsLoggedInHandler(StateHandler):
+    name = "client is logged in"
+
+    PACT_SESSION_ID = "pact-test-session-id"
+
+    def _get_session_store(self) -> "MemoryStore":
+        from litestar.stores.memory import MemoryStore
+
+        store = self.mock_stores[StoreName.SESSIONS]
+        assert isinstance(store, MemoryStore)
+        return store
+
+    def setup(self, parameters: dict[str, Any]) -> None:
+        import json
+
+        from litestar.stores.base import StorageObject
+
+        identity_name = parameters["identity_name"]
+        netuid = parameters["netuid"]
+
+        store = self._get_session_store()
+        existing_obj = store._store.get(self.PACT_SESSION_ID)
+        if existing_obj and not existing_obj.expired:
+            session_data = json.loads(existing_obj.data)
+        else:
+            session_data = {"identities": {}}
+
+        session_data["identities"][identity_name] = {"netuid": netuid}
+        store._store[self.PACT_SESSION_ID] = StorageObject.new(data=json.dumps(session_data).encode(), expires_in=None)

@@ -17,7 +17,7 @@ async def test_unstable_identity_get_commitment_by_hotkey_returns_commitment_obj
     test_client: AsyncTestClient, snapshot_json
 ):
     response = await test_client.get(
-        f"/api/_unstable/identity/sn1/subnet/{COMMITMENTS_ALL_NETUID}/block/latest/commitments/hotkey1"
+        f"/api/_unstable/identity/cm_all/subnet/{COMMITMENTS_ALL_NETUID}/block/latest/commitments/hotkey1"
     )
 
     assert response.status_code == HTTP_200_OK

@@ -7,7 +7,7 @@ The Verifier replays interactions from pact files against the actual running ser
 
 from pact import Verifier
 
-from tests.pact.state_handlers import StateHandler
+from tests.pact.state_handlers import ClientIsLoggedInHandler, StateHandler
 
 
 def test_provider_honors_pact_with_pylon_client(
@@ -34,6 +34,7 @@ def test_provider_honors_pact_with_pylon_client(
         Verifier("pylon_service")
         .add_source(str(pacts_dir))
         .add_transport(url=provider_url)
+        .add_custom_header("Cookie", f"session={ClientIsLoggedInHandler.PACT_SESSION_ID}")
         .state_handler(
             StateHandler.create_all(
                 open_access_mock_bt_client, sn1_mock_bt_client, sn2_mock_bt_client, mock_stores, monkeypatch

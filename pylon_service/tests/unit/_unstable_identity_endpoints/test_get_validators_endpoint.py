@@ -9,7 +9,7 @@ from tests.world import VALIDATORS_NETUID
 async def test_unstable_identity_get_validators_returns_only_validator_permit_neurons_sorted_by_total_stake_desc(
     test_client, snapshot_json
 ):
-    response = await test_client.get(f"/api/_unstable/identity/sn1/subnet/{VALIDATORS_NETUID}/block/321/validators")
+    response = await test_client.get(f"/api/_unstable/identity/val/subnet/{VALIDATORS_NETUID}/block/321/validators")
 
     assert response.status_code == HTTP_200_OK
     assert response.json() == snapshot_json
@@ -19,7 +19,7 @@ async def test_unstable_identity_get_validators_returns_only_validator_permit_ne
 async def test_unstable_identity_get_latest_validators_returns_only_validator_permit_neurons_sorted_by_total_stake_desc(
     test_client, snapshot_json
 ):
-    response = await test_client.get(f"/api/_unstable/identity/sn1/subnet/{VALIDATORS_NETUID}/block/latest/validators")
+    response = await test_client.get(f"/api/_unstable/identity/val/subnet/{VALIDATORS_NETUID}/block/latest/validators")
 
     assert response.status_code == HTTP_200_OK
     assert response.json() == snapshot_json

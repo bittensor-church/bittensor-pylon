@@ -7,7 +7,7 @@ from tests.world import COMMITMENTS_ALL_NETUID, COMMITMENTS_EMPTY_NETUID, COMMIT
 @pytest.mark.asyncio
 async def test_unstable_identity_get_commitments_returns_all_registered_commitments(test_client, snapshot_json):
     response = await test_client.get(
-        f"/api/_unstable/identity/sn1/subnet/{COMMITMENTS_ALL_NETUID}/block/latest/commitments"
+        f"/api/_unstable/identity/cm_all/subnet/{COMMITMENTS_ALL_NETUID}/block/latest/commitments"
     )
 
     assert response.status_code == HTTP_200_OK
@@ -19,7 +19,7 @@ async def test_unstable_identity_get_commitments_filters_unregistered_commitment
     test_client, snapshot_json
 ):
     response = await test_client.get(
-        f"/api/_unstable/identity/sn1/subnet/{COMMITMENTS_FILTERED_NETUID}/block/latest/commitments"
+        f"/api/_unstable/identity/cm_filtered/subnet/{COMMITMENTS_FILTERED_NETUID}/block/latest/commitments"
     )
 
     assert response.status_code == HTTP_200_OK
@@ -29,7 +29,7 @@ async def test_unstable_identity_get_commitments_filters_unregistered_commitment
 @pytest.mark.asyncio
 async def test_unstable_identity_get_commitments_returns_empty_map_when_none_exist(test_client, snapshot_json):
     response = await test_client.get(
-        f"/api/_unstable/identity/sn1/subnet/{COMMITMENTS_EMPTY_NETUID}/block/latest/commitments"
+        f"/api/_unstable/identity/cm_empty/subnet/{COMMITMENTS_EMPTY_NETUID}/block/latest/commitments"
     )
 
     assert response.status_code == HTTP_200_OK

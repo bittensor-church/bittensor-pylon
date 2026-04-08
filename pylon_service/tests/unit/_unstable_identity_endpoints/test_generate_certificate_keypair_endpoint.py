@@ -3,7 +3,7 @@ Tests for the POST /identity/{identity_name}/subnet/{netuid}/certificates/self e
 """
 
 import pytest
-from litestar.status_codes import HTTP_201_CREATED, HTTP_400_BAD_REQUEST, HTTP_404_NOT_FOUND, HTTP_502_BAD_GATEWAY
+from litestar.status_codes import HTTP_201_CREATED, HTTP_400_BAD_REQUEST, HTTP_401_UNAUTHORIZED, HTTP_502_BAD_GATEWAY
 from litestar.testing import AsyncTestClient
 from pylon_commons.models import (
     CertificateAlgorithm,
@@ -109,11 +109,11 @@ async def test_generate_certificate_keypair_identity_invalid_algorithm(
 
 
 @pytest.mark.asyncio
-async def test_unstable_identity_generate_certificate_keypair_unknown_identity_returns_404(test_client, snapshot_json):
+async def test_unstable_identity_generate_certificate_keypair_unknown_identity_returns_401(test_client):
     response = await test_client.post(
         "/api/_unstable/identity/unknown/subnet/1/certificates/self",
         json={"algorithm": 1},
     )
 
-    assert response.status_code == HTTP_404_NOT_FOUND
-    assert response.json() == snapshot_json
+    assert response.status_code == HTTP_401_UNAUTHORIZED
+    assert response.json() == {"detail": "Not authenticated", "status_code": 401}

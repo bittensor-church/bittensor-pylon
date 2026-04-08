@@ -9,6 +9,7 @@ from unittest.mock import patch
 import pytest
 import pytest_asyncio
 from bittensor_wallet import Wallet
+from litestar.stores.memory import MemoryStore
 from polyfactory.pytest_plugin import register_fixture
 from pylon_commons.types import ArchiveBlocksCutoff, IdentityName
 from syrupy.extensions.json import JSONSnapshotExtension
@@ -76,6 +77,7 @@ async def mock_bt_client_pool():
 def mock_stores():
     return {
         StoreName.RECENT_OBJECTS: MockStore(),
+        StoreName.SESSIONS: MemoryStore(),
     }
 
 
@@ -83,7 +85,8 @@ def mock_stores():
 def reset_mock_stores(mock_stores):
     yield
     for store in mock_stores.values():
-        store.reset()
+        if isinstance(store, MockStore):
+            store.reset()
 
 
 @pytest.fixture(scope="session")

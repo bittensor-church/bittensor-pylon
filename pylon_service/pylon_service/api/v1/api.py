@@ -20,6 +20,7 @@ from pylon_service.api._unstable.api import (
 )
 from pylon_service.api._unstable.tasks import ApplyWeights, SetCommitment
 from pylon_service.api.utils import handler
+from pylon_service.auth import identity_session_guard
 from pylon_service.bittensor.recent import RecentObjectProvider
 from pylon_service.bittensor.router import BittensorRouter
 from pylon_service.dependencies import (
@@ -113,6 +114,7 @@ class OpenAccessController(Controller):
 
 class IdentityController(Controller):
     path = "/identity/{identity_name:str}/subnet/{netuid:int}"
+    guards = [identity_session_guard]
     dependencies = {
         "identity": Provide(identity_dep),
         "bt_client": Provide(bt_client_identity_dep),

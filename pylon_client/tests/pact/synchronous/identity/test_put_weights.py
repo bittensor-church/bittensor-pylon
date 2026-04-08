@@ -10,6 +10,7 @@ def test_put_weights_success(pact: Pact, put_weights_response_matcher: dict, pyl
     (
         pact.upon_receiving("an identity request to set weights")
         .given("weights can be set", identity_name=IDENTITY_NAME, netuid=NETUID)
+        .given("client is logged in", identity_name=IDENTITY_NAME, netuid=NETUID)
         .with_request("PUT", f"/api/_unstable/identity/{IDENTITY_NAME}/subnet/{NETUID}/weights")
         .with_body({"weights": {HOTKEY_1: 0.6, HOTKEY_2: 0.4}}, content_type="application/json")
         .will_respond_with(codes.OK)
