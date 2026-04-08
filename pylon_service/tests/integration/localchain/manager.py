@@ -310,7 +310,7 @@ class LocalChainManager:
 
     async def enable_commit_reveal_weights(self, sudo_wallet: Wallet, netuid: int) -> None:
         """
-        Enable commit-reveal weights on a subnet via sudo storage update.
+        Enable commit-reveal weights on a subnet via the admin hyperparameter extrinsic.
 
         Args:
             sudo_wallet: Wallet with sudo privileges.
@@ -320,12 +320,13 @@ class LocalChainManager:
             RuntimeError: If commit-reveal weights are still disabled after the update.
         """
         logger.info("Enabling commit-reveal weights on subnet %d", netuid)
-        await self._set_storage(
-            sudo_wallet=sudo_wallet,
-            storage_name="CommitRevealWeightsEnabled",
-            storage_value="0x01",
-            params=[netuid],
-        )
+        async with self._turbobt_client(wallet=sudo_wallet) as client:
+            result = await client.subtensor.admin_utils.sudo_set_commit_reveal_weights_enabled(
+                netuid=netuid,
+                enabled=True,
+                wallet=sudo_wallet,
+            )
+            await result.wait_for_finalization()
         value = await self.get_storage(ChainStorage.COMMIT_REVEAL_WEIGHTS_ENABLED, netuid)
         if not bool(value):
             raise RuntimeError(f"CommitRevealWeightsEnabled is still False for subnet {netuid} after sudo call.")
@@ -333,7 +334,7 @@ class LocalChainManager:
 
     async def disable_commit_reveal_weights(self, sudo_wallet: Wallet, netuid: int) -> None:
         """
-        Disable commit-reveal weights on a subnet via sudo storage update.
+        Disable commit-reveal weights on a subnet via the admin hyperparameter extrinsic.
 
         Args:
             sudo_wallet: Wallet with sudo privileges.
@@ -343,12 +344,13 @@ class LocalChainManager:
             RuntimeError: If commit-reveal weights remain enabled after the update.
         """
         logger.info("Disabling commit-reveal weights on subnet %d", netuid)
-        await self._set_storage(
-            sudo_wallet=sudo_wallet,
-            storage_name="CommitRevealWeightsEnabled",
-            storage_value="0x00",
-            params=[netuid],
-        )
+        async with self._turbobt_client(wallet=sudo_wallet) as client:
+            result = await client.subtensor.admin_utils.sudo_set_commit_reveal_weights_enabled(
+                netuid=netuid,
+                enabled=False,
+                wallet=sudo_wallet,
+            )
+            await result.wait_for_finalization()
         value = await self.get_storage(ChainStorage.COMMIT_REVEAL_WEIGHTS_ENABLED, netuid)
         if bool(value):
             raise RuntimeError(f"CommitRevealWeightsEnabled is still True for subnet {netuid} after sudo call.")
