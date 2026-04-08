@@ -34,7 +34,9 @@ Examples of external service boundaries include:
 
 ### Required
 
-- Put reusable mock contacts in production code when downstream projects are expected to use them in their own tests.
+- When implementing a library, put reusable mock contacts in production code when downstream projects are expected to 
+  use them in their own tests. Thanks to this, downstream repos can use these mocks to implement their own tests without
+  the need to mock your whole library or learning how to mock its contact.
 - Make mock contacts implement the same abstract contact interface as the real contact.
 - Keep mock contacts declarative.
 - Allow mock contacts to be mutated during a single test.

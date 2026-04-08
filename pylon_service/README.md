@@ -199,24 +199,6 @@ The contact must not return unstable DTOs directly if doing so would destroy inf
 
 ## API versioning rules
 
-API versioning is explicit and layered.
-
-```text
-contact models
-    -> router + latest internal service logic
-    -> unstable services + unstable DTOs
-    -> stable services + stable DTOs
-```
-
-This diagram shows data dependency and transformation flow, not a package tree.
-
-Meaning:
-
-- contacts return rich internal models
-- the router and latest internal services operate on those models directly
-- unstable services map those models into the latest public DTOs
-- stable services like `v1` may build on the same lower-layer data while preserving older public behavior
-
 Stable APIs must not use unstable DTOs as their source of truth. They depend on the lower-layer contact data and map
 it into their own DTOs.
 
