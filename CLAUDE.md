@@ -12,6 +12,8 @@ Bittensor Pylon is a high-performance, asynchronous proxy for a Bittensor subnet
 | `pylon_client` | `bittensor-pylon-client` | Lightweight Python client library for the Pylon service API |
 | `pylon_service` | - | Core REST API service that connects to Bittensor network (distributed as Docker image) |
 
+When working on a particular package, you must read it's README.md, if it exists.
+
 ### Dependency Structure
 ```
 pylon_commons (no dependencies on other packages)

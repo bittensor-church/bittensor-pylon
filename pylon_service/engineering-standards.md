@@ -1,6 +1,6 @@
 # Engineering Standards
 
-This document defines repository-wide engineering rules for service boundaries, mocks, singletons, and tests.
+This document defines project-wide engineering rules for service boundaries, mocks, singletons, and tests.
 
 These rules apply to both humans and agents.
 
