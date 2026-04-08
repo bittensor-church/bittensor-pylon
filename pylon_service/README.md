@@ -15,7 +15,8 @@ Pylon exposes its public HTTP API obeying semver and apiver. While semver is str
 
 - `./engineering-standards.md`
 
-The most important imported rules are:
+The most important imported rules are (this is a short explanation of how those
+standards have been applied here):
 
 - external Bittensor/Subtensor communication lives behind a thin `Contact`
 - `Contact` owns transport concerns only: connection, reconnect, shielding, and model translation
@@ -76,9 +77,7 @@ Handlers do not:
 - contain business logic
 - perform routing decisions between lite and archive
 - call turbobt directly
-- inherit from handlers in another API version
 
-Handler inheritance is forbidden because it makes unstable behavior leak into stable versions.
 
 ### Services
 
