@@ -4,7 +4,7 @@ from pylon_commons.v1.responses import GetCommitmentResponse, GetCommitmentsResp
 from pylon_service.api._unstable.services import BlockService, CertificateService, NeuronService  # noqa: F401
 from pylon_service.bittensor.contact import BittensorPort
 from pylon_service.bittensor.models import Block, Commitment
-from pylon_service.services import CommitmentService as DomainCommitmentService
+from pylon_service.services.commitments import CommitmentService as DomainCommitmentService
 
 
 class CommitmentService:

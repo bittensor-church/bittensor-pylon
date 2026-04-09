@@ -11,10 +11,10 @@ from pylon_commons.types import BlockNumber, ExtrinsicIndex, Hotkey, NetUid
 from pylon_service.bittensor.contact import BittensorPort
 from pylon_service.bittensor.models import CertificateAlgorithm, NeuronCertificate, NeuronCertificateKeypair
 from pylon_service.bittensor.recent import RecentObjectProvider
-from pylon_service.services import BlockService as DomainBlockService
-from pylon_service.services import CertificateService as DomainCertificateService
-from pylon_service.services import CommitmentService as DomainCommitmentService
-from pylon_service.services import NeuronService as DomainNeuronService
+from pylon_service.services.blocks import BlockService as DomainBlockService
+from pylon_service.services.certificates import CertificateService as DomainCertificateService
+from pylon_service.services.commitments import CommitmentService as DomainCommitmentService
+from pylon_service.services.neurons import NeuronService as DomainNeuronService
 
 
 class BlockService:

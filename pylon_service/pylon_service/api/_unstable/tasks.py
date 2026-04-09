@@ -24,7 +24,8 @@ from pylon_service.metrics import (
     set_commitment_job_duration,
     track_operation,
 )
-from pylon_service.services import CommitmentService, WeightsService
+from pylon_service.services.commitments import CommitmentService
+from pylon_service.services.weights import WeightsService
 from pylon_service.settings import settings
 
 logger = logging.getLogger(__name__)

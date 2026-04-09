@@ -9,7 +9,7 @@ from tenacity import AsyncRetrying, stop_before_delay, wait_exponential
 
 from pylon_service.bittensor.contact import BittensorPort
 from pylon_service.bittensor.pool import BittensorClientPool
-from pylon_service.services import NeuronService
+from pylon_service.services.neurons import NeuronService
 
 from .adapter import RecentCacheAdapter
 from .context import AbstractContext, SubnetContext
