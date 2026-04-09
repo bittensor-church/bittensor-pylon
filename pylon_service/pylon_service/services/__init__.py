@@ -1,6 +1,5 @@
-from .blocks import BlockService
-from .certificates import CertificateService
-from .commitments import CommitmentService
+from importlib import import_module
+
 from .errors import (
     BlockNotFoundError,
     CertificateGenerationFailedError,
@@ -13,8 +12,14 @@ from .errors import (
     RecentObjectStaleError,
     ServiceError,
 )
-from .neurons import NeuronService
-from .weights import WeightsService
+
+_SERVICE_EXPORTS = {
+    "BlockService": ".blocks",
+    "CertificateService": ".certificates",
+    "CommitmentService": ".commitments",
+    "NeuronService": ".neurons",
+    "WeightsService": ".weights",
+}
 
 __all__ = [
     "BlockNotFoundError",
@@ -33,3 +38,16 @@ __all__ = [
     "ServiceError",
     "WeightsService",
 ]
+
+
+def __getattr__(name: str):
+    module_name = _SERVICE_EXPORTS.get(name)
+    if module_name is None:
+        raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
+
+    module = import_module(module_name, __name__)
+    return getattr(module, name)
+
+
+def __dir__() -> list[str]:
+    return sorted(__all__)
