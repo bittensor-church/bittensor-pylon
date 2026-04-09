@@ -84,7 +84,9 @@ def contact_router(main_contact, archive_contact):
 
 
 @pytest.mark.asyncio
-async def test_contact_router_recent_block_uses_main_contact(contact_router, main_contact, archive_contact, test_neuron):
+async def test_contact_router_recent_block_uses_main_contact(
+    contact_router, main_contact, archive_contact, test_neuron
+):
     recent_block = Block(number=BlockNumber(450), hash=BlockHash("0xrecent"))
     latest_block = Block(number=BlockNumber(500), hash=BlockHash("0xlatest"))
     expected_neurons = [test_neuron]
@@ -103,7 +105,9 @@ async def test_contact_router_recent_block_uses_main_contact(contact_router, mai
 
 
 @pytest.mark.asyncio
-async def test_contact_router_unknown_block_falls_back_to_archive(contact_router, main_contact, archive_contact, test_neuron):
+async def test_contact_router_unknown_block_falls_back_to_archive(
+    contact_router, main_contact, archive_contact, test_neuron
+):
     recent_block = Block(number=BlockNumber(450), hash=BlockHash("0xrecent"))
     latest_block = Block(number=BlockNumber(500), hash=BlockHash("0xlatest"))
     expected_neurons = [test_neuron]

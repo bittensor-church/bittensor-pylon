@@ -69,7 +69,9 @@ class OpenAccessController(Controller):
         return await neuron_service.get_validators(bt_contact_router, netuid, block_number)
 
     @handler(Endpoint.LATEST_VALIDATORS)
-    async def get_latest_validators(self, bt_contact_router: BittensorContactRouter, netuid: NetUid) -> GetValidatorsResponse:
+    async def get_latest_validators(
+        self, bt_contact_router: BittensorContactRouter, netuid: NetUid
+    ) -> GetValidatorsResponse:
         return await neuron_service.get_latest_validators(bt_contact_router, netuid)
 
     @handler(Endpoint.CERTIFICATES)
@@ -85,7 +87,9 @@ class OpenAccessController(Controller):
         return await certificate_service.get_certificate(bt_contact_router, netuid, hotkey)
 
     @handler(Endpoint.LATEST_COMMITMENTS)
-    async def get_commitments_endpoint(self, bt_contact_router: BittensorContactRouter, netuid: NetUid) -> GetCommitmentsResponse:
+    async def get_commitments_endpoint(
+        self, bt_contact_router: BittensorContactRouter, netuid: NetUid
+    ) -> GetCommitmentsResponse:
         return await commitment_service.get_commitments(bt_contact_router, netuid)
 
     @handler(Endpoint.LATEST_COMMITMENTS_HOTKEY)
@@ -124,7 +128,9 @@ class IdentityController(Controller):
         return await neuron_service.get_validators(bt_contact_router, netuid, block_number)
 
     @identity_handler(Endpoint.LATEST_VALIDATORS)
-    async def get_latest_validators(self, bt_contact_router: BittensorContactRouter, netuid: NetUid) -> GetValidatorsResponse:
+    async def get_latest_validators(
+        self, bt_contact_router: BittensorContactRouter, netuid: NetUid
+    ) -> GetValidatorsResponse:
         return await neuron_service.get_latest_validators(bt_contact_router, netuid)
 
     @identity_handler(Endpoint.CERTIFICATES)
@@ -154,7 +160,9 @@ class IdentityController(Controller):
         return Response(certificate_keypair, status_code=status_codes.HTTP_201_CREATED)
 
     @identity_handler(Endpoint.LATEST_COMMITMENTS)
-    async def get_commitments_endpoint(self, bt_contact_router: BittensorContactRouter, netuid: NetUid) -> GetCommitmentsResponse:
+    async def get_commitments_endpoint(
+        self, bt_contact_router: BittensorContactRouter, netuid: NetUid
+    ) -> GetCommitmentsResponse:
         return await commitment_service.get_commitments(bt_contact_router, netuid)
 
     @identity_handler(Endpoint.LATEST_COMMITMENTS_HOTKEY)
@@ -164,11 +172,15 @@ class IdentityController(Controller):
         return await commitment_service.get_commitment(bt_contact_router, netuid, hotkey)
 
     @identity_handler(Endpoint.LATEST_COMMITMENTS_SELF)
-    async def get_own_commitment_endpoint(self, bt_contact_router: BittensorContactRouter, netuid: NetUid) -> GetCommitmentResponse:
+    async def get_own_commitment_endpoint(
+        self, bt_contact_router: BittensorContactRouter, netuid: NetUid
+    ) -> GetCommitmentResponse:
         return await commitment_service.get_own_commitment(bt_contact_router, netuid)
 
     @identity_handler(Endpoint.SUBNET_WEIGHTS)
-    async def put_weights_endpoint(self, data: SetWeightsBody, bt_contact_router: BittensorContactRouter, netuid: NetUid) -> Response:
+    async def put_weights_endpoint(
+        self, data: SetWeightsBody, bt_contact_router: BittensorContactRouter, netuid: NetUid
+    ) -> Response:
         ApplyWeights(bt_contact_router, data.weights, netuid).schedule()
         return Response(
             {"detail": "weights update scheduled", "count": len(data.weights)}, status_code=status_codes.HTTP_200_OK

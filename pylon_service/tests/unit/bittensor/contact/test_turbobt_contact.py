@@ -47,6 +47,8 @@ async def open_contact(raw_client):
     finally:
         if contact._raw_client is not None:
             await contact.close()
+
+
 class _ListHandler(logging.Handler):
     def __init__(self) -> None:
         super().__init__(level=logging.INFO)

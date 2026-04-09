@@ -403,8 +403,7 @@ class TurboBtContact(AbstractBittensorContact):
     )
     async def get_certificates(self, netuid: NetUid, block: Block) -> dict[Hotkey, NeuronCertificate]:
         certificates = await self._protect_turbobt(
-            "get_certificates",
-            lambda c: c.subnet(netuid).neurons.get_certificates(block_hash=block.hash)
+            "get_certificates", lambda c: c.subnet(netuid).neurons.get_certificates(block_hash=block.hash)
         )
         if not certificates:
             return {}
@@ -423,7 +422,7 @@ class TurboBtContact(AbstractBittensorContact):
         resolved_hotkey = self._resolve_hotkey(hotkey)
         certificate = await self._protect_turbobt(
             "get_certificate",
-            lambda c: c.subnet(netuid).neuron(hotkey=resolved_hotkey).get_certificate(block_hash=block.hash)
+            lambda c: c.subnet(netuid).neuron(hotkey=resolved_hotkey).get_certificate(block_hash=block.hash),
         )
         if certificate:
             certificate = await self._translate_certificate(certificate)
@@ -448,7 +447,7 @@ class TurboBtContact(AbstractBittensorContact):
             "generate_certificate_keypair",
             lambda c: c.subnet(netuid).neurons.generate_certificate_keypair(
                 algorithm=TurboBtCertificateAlgorithm(algorithm)
-            )
+            ),
         )
         if keypair:
             keypair = await self._translate_certificate_keypair(keypair)
@@ -488,8 +487,7 @@ class TurboBtContact(AbstractBittensorContact):
     async def get_commitment(self, netuid: NetUid, block: Block, hotkey: Hotkey | None = None) -> Commitment | None:
         resolved_hotkey = self._resolve_hotkey(hotkey)
         result = await self._protect_turbobt(
-            "get_commitment",
-            lambda c: c.subnet(netuid).commitments.get(resolved_hotkey, block_hash=block.hash)
+            "get_commitment", lambda c: c.subnet(netuid).commitments.get(resolved_hotkey, block_hash=block.hash)
         )
         if result is None:
             return None
@@ -505,8 +503,7 @@ class TurboBtContact(AbstractBittensorContact):
     )
     async def get_commitments(self, netuid: NetUid, block: Block) -> SubnetCommitments:
         raw_commitments = await self._protect_turbobt(
-            "get_commitments",
-            lambda c: c.subnet(netuid).commitments.fetch(block_hash=block.hash)
+            "get_commitments", lambda c: c.subnet(netuid).commitments.fetch(block_hash=block.hash)
         )
         commitments = {
             Hotkey(hotkey): Commitment(

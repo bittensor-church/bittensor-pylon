@@ -37,7 +37,9 @@ class NeuronService:
         self._domain = DomainNeuronService()
         self._blocks = DomainBlockService()
 
-    async def get_neurons(self, contact_router: BittensorPort, netuid: NetUid, block_number: BlockNumber) -> GetNeuronsResponse:
+    async def get_neurons(
+        self, contact_router: BittensorPort, netuid: NetUid, block_number: BlockNumber
+    ) -> GetNeuronsResponse:
         block = await self._blocks.get_existing_block(contact_router, block_number)
         subnet_neurons = await self._domain.get_neurons(contact_router, netuid, block)
         return GetNeuronsResponse.model_validate(subnet_neurons, from_attributes=True)
@@ -90,7 +92,9 @@ class CommitmentService:
         commitments = await self._domain.get_commitments(contact_router, netuid, block)
         return GetCommitmentsResponse.model_validate(commitments, from_attributes=True)
 
-    async def get_commitment(self, contact_router: BittensorPort, netuid: NetUid, hotkey: Hotkey) -> GetCommitmentResponse:
+    async def get_commitment(
+        self, contact_router: BittensorPort, netuid: NetUid, hotkey: Hotkey
+    ) -> GetCommitmentResponse:
         block, commitment = await self._domain.get_commitment(contact_router, netuid, hotkey)
         return GetCommitmentResponse(block=block, **commitment.model_dump())
 

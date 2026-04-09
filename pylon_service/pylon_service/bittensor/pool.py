@@ -107,7 +107,9 @@ class BittensorContactPool[RouterT: BittensorContactRouter]:
             )
         else:
             logger.info("Closing all the contact routers...")
-        await asyncio.gather(*(contact_router.close() for contact_router in self._pool.values()), return_exceptions=True)
+        await asyncio.gather(
+            *(contact_router.close() for contact_router in self._pool.values()), return_exceptions=True
+        )
         self._pool.clear()
         self.state = self.State.CLOSED
         logger.info(f"{self.contact_router_cls.__name__} contact pool successfully closed.")

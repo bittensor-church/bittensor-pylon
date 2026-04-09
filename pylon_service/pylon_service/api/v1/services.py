@@ -19,7 +19,9 @@ class CommitmentService:
             commitments={hotkey: commitment.commitment for hotkey, commitment in commitments.commitments.items()},
         )
 
-    async def get_commitment(self, contact_router: BittensorPort, netuid: NetUid, hotkey: Hotkey) -> GetCommitmentResponse:
+    async def get_commitment(
+        self, contact_router: BittensorPort, netuid: NetUid, hotkey: Hotkey
+    ) -> GetCommitmentResponse:
         block, commitment = await self._domain.get_commitment(contact_router, netuid, hotkey)
         return self._wrap_commitment(block, commitment)
 
