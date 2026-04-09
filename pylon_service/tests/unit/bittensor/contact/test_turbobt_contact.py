@@ -4,12 +4,11 @@ from unittest.mock import AsyncMock, create_autospec, patch
 import pytest
 import pytest_asyncio
 from pylon_commons.models import Block
-from pylon_commons.types import BlockHash
-from pylon_commons.types import BlockNumber
-from pylon_commons.types import BittensorNetwork
+from pylon_commons.types import BittensorNetwork, BlockHash, BlockNumber
 from turbobt import BlockReference as TurboBtBlockReference
 from turbobt.block import Block as TurboBtBlock
 from turbobt.client import Bittensor
+from websockets.exceptions import ConnectionClosedError, ConnectionClosedOK
 
 from pylon_service.bittensor.contact import TurboBtContact
 
@@ -82,9 +81,89 @@ async def test_cancelled_task_does_not_cancel_turbobt_call(open_contact, block_r
 
 
 @pytest.mark.asyncio
+async def test_cancelled_task_preserves_cancelled_error_when_recreation_fails(open_contact, block_ref):
+    turbobt_call_started = asyncio.Event()
+    turbobt_call_gate = asyncio.Event()
+    turbobt_call_completed = asyncio.Event()
+
+    async def slow_get():
+        turbobt_call_started.set()
+        await turbobt_call_gate.wait()
+        turbobt_call_completed.set()
+        return TurboBtBlock("hash", 203, client=open_contact._raw_client)
+
+    block_ref.get.side_effect = slow_get
+    open_contact._recreate_bt_client = AsyncMock(side_effect=RuntimeError("recreate failed"))
+
+    task = asyncio.create_task(open_contact.get_block(BlockNumber(203)))
+    await turbobt_call_started.wait()
+
+    task.cancel()
+    with pytest.raises(asyncio.CancelledError):
+        await task
+
+    turbobt_call_gate.set()
+    await asyncio.wait_for(turbobt_call_completed.wait(), timeout=1)
+    assert turbobt_call_completed.is_set()
+    open_contact._recreate_bt_client.assert_awaited_once()
+
+
+@pytest.mark.asyncio
 async def test_runtime_error_triggers_contact_recreation_and_retry(open_contact, bittensor_ctor, raw_client, block_ref):
     old_raw_client = raw_client
     block_ref.get.side_effect = RuntimeError("turbobt internal state broken")
+
+    new_raw_client = create_autospec(Bittensor, instance=True)
+    new_raw_client.__aenter__ = AsyncMock(return_value=new_raw_client)
+    new_raw_client.__aexit__ = AsyncMock(return_value=None)
+
+    new_block_ref = create_autospec(TurboBtBlockReference, instance=True)
+    new_block_ref.get.return_value = TurboBtBlock("hash", 42, client=new_raw_client)
+    new_raw_client.block.return_value = new_block_ref
+
+    bittensor_ctor.side_effect = [new_raw_client]
+
+    result = await open_contact.get_block(BlockNumber(42))
+
+    assert result == Block(number=BlockNumber(42), hash=BlockHash("hash"))
+    assert block_ref.get.call_count == 1
+    assert new_block_ref.get.call_count == 1
+    old_raw_client.__aexit__.assert_called_once()
+    assert bittensor_ctor.call_count == 2
+
+
+@pytest.mark.asyncio
+async def test_connection_closed_error_triggers_contact_recreation_and_retry(
+    open_contact, bittensor_ctor, raw_client, block_ref
+):
+    old_raw_client = raw_client
+    block_ref.get.side_effect = ConnectionClosedError(None, None, None)
+
+    new_raw_client = create_autospec(Bittensor, instance=True)
+    new_raw_client.__aenter__ = AsyncMock(return_value=new_raw_client)
+    new_raw_client.__aexit__ = AsyncMock(return_value=None)
+
+    new_block_ref = create_autospec(TurboBtBlockReference, instance=True)
+    new_block_ref.get.return_value = TurboBtBlock("hash", 42, client=new_raw_client)
+    new_raw_client.block.return_value = new_block_ref
+
+    bittensor_ctor.side_effect = [new_raw_client]
+
+    result = await open_contact.get_block(BlockNumber(42))
+
+    assert result == Block(number=BlockNumber(42), hash=BlockHash("hash"))
+    assert block_ref.get.call_count == 1
+    assert new_block_ref.get.call_count == 1
+    old_raw_client.__aexit__.assert_called_once()
+    assert bittensor_ctor.call_count == 2
+
+
+@pytest.mark.asyncio
+async def test_connection_closed_ok_triggers_contact_recreation_and_retry(
+    open_contact, bittensor_ctor, raw_client, block_ref
+):
+    old_raw_client = raw_client
+    block_ref.get.side_effect = ConnectionClosedOK(None, None, None)
 
     new_raw_client = create_autospec(Bittensor, instance=True)
     new_raw_client.__aenter__ = AsyncMock(return_value=new_raw_client)

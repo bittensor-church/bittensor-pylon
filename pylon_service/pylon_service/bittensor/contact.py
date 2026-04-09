@@ -51,6 +51,7 @@ from turbobt.subnet import NeuronCertificateKeypair as TurboBtNeuronCertificateK
 from turbobt.subnet import SubnetHyperparams as TurboBtSubnetHyperparams
 from turbobt.substrate.pallets.chain import Extrinsic as TurboBtExtrinsic
 from turbobt.substrate.pallets.chain import SignedBlock
+from websockets.exceptions import ConnectionClosed
 
 from pylon_service.bittensor.models import (
     AxonInfo,
@@ -240,8 +241,19 @@ class TurboBtContact(AbstractBittensorContact):
         bt_client = await self._get_bt_client()
         try:
             return await asyncio.shield(coro_factory(bt_client))
-        except RuntimeError:
-            logger.exception("RuntimeError caught during bittensor operation on %s, recreating contact", self.uri)
+        except asyncio.CancelledError as cancelled_error:
+            logger.warning("Cancellation caught during bittensor operation on %s, recreating contact", self.uri)
+            try:
+                await asyncio.shield(self._recreate_bt_client())
+            except asyncio.CancelledError:
+                logger.warning("Recreation was cancelled during cancellation handling on %s", self.uri)
+            except Exception:
+                logger.exception("Failed to recreate contact after cancellation on %s", self.uri)
+            raise cancelled_error from None
+        except (ConnectionClosed, RuntimeError):
+            logger.exception(
+                "Transport/runtime error caught during bittensor operation on %s, recreating contact", self.uri
+            )
             await asyncio.shield(self._recreate_bt_client())
             bt_client = await self._get_bt_client()
             return await asyncio.shield(coro_factory(bt_client))

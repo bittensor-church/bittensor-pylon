@@ -153,6 +153,52 @@ class LocalChainManager:
         except docker.errors.NotFound:
             pass
 
+    @classmethod
+    def load_active_docker_context(cls) -> DockerContextEndpoint:
+        """Return the active Docker context endpoint."""
+        return cls._load_active_docker_context()
+
+    @staticmethod
+    def resolve_rpc_host_for_context(endpoint: DockerContextEndpoint) -> str:
+        """Return the RPC host for the given Docker context endpoint."""
+        return LocalChainManager._resolve_rpc_host(endpoint)
+
+    @staticmethod
+    def docker_client_for_context(endpoint: DockerContextEndpoint) -> docker.DockerClient:
+        """Create a Docker client for the given Docker context endpoint."""
+        return LocalChainManager._create_docker_client(endpoint)
+
+    @staticmethod
+    def get_container_ip(container: Container) -> str:
+        """Return the container IP address in its connected Docker network.
+
+        Raises:
+            RuntimeError: If the container has no readable IP address.
+        """
+        container.reload()
+        network_settings = container.attrs.get("NetworkSettings", {})
+        if ip_address := network_settings.get("IPAddress"):
+            return ip_address
+
+        networks = network_settings.get("Networks", {})
+        for network in networks.values():
+            if ip_address := network.get("IPAddress"):
+                return ip_address
+        raise RuntimeError("Could not determine container IP address")
+
+    def get_container(self) -> Container:
+        """Return the running Docker container for this manager."""
+        return self._docker.containers.get(self._container_name)
+
+    def is_running(self) -> bool:
+        """Report whether the managed container currently exists and is running."""
+        try:
+            container = self.get_container()
+        except docker.errors.NotFound:
+            return False
+        container.reload()
+        return container.status == "running"
+
     def make_snapshot(self, image_name: str) -> None:
         """
         Stop the container and commit it as a Docker image.
@@ -664,16 +710,10 @@ class LocalChainManager:
         self._ssh_tunnel = None
 
     def _get_container_ip(self, container: Container) -> str:
-        container.reload()
-        network_settings = container.attrs.get("NetworkSettings", {})
-        if ip_address := network_settings.get("IPAddress"):
-            return ip_address
-
-        networks = network_settings.get("Networks", {})
-        for network in networks.values():
-            if ip_address := network.get("IPAddress"):
-                return ip_address
-        raise RuntimeError(f"Could not determine IP address for container {self._container_name}")
+        try:
+            return self.get_container_ip(container)
+        except RuntimeError as exc:
+            raise RuntimeError(f"Could not determine IP address for container {self._container_name}") from exc
 
     def _ssh_remote(self) -> str:
         if self._context_endpoint.hostname is None:
