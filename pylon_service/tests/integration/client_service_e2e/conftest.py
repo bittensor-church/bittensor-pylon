@@ -2,8 +2,6 @@ import docker.errors
 import pytest
 from pylon_commons.types import BittensorNetwork
 
-from pylon_service import dependencies
-from pylon_service import identities as identities_module
 from pylon_service.main import create_app
 from pylon_service.settings import settings
 from tests.helpers import UvicornServer, find_free_port
@@ -12,10 +10,6 @@ from tests.integration.localchain.manager import LocalChainManager
 
 SERVICE_HOST = "localhost"
 SNAPSHOT_IMAGE = "prepared-localnet:latest"
-
-identities_module.identities.clear()
-identities_module.identities.update(identities_module.get_identities(*settings.identities))
-dependencies.identities = identities_module.identities
 
 
 @pytest.fixture(scope="package")

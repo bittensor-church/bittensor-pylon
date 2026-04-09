@@ -14,18 +14,19 @@ from pylon_commons.types import ArchiveBlocksCutoff, IdentityName
 from syrupy.extensions.json import JSONSnapshotExtension
 from syrupy.matchers import path_type
 
-from pylon_service import dependencies, lifespans, main
 from pylon_service import identities as identities_module
+from pylon_service import lifespans, main
 from pylon_service.bittensor.contact import ContactFactory, MockBittensorContact
 from pylon_service.bittensor.contact_router import BittensorContactRouter
 from pylon_service.bittensor.pool import BittensorContactPool
 from pylon_service.main import create_app
+from pylon_service.settings import settings
 from pylon_service.stores import StoreName
 from tests.factories import BlockFactory, NeuronFactory
+from tests.fixture_contract import EXPECTED_IDENTITIES, assert_test_fixture_contract
 from tests.mock_store import MockStore
 from tests.world import (
     SharedWorld,
-    build_test_identities,
     default_commitments,
     default_latest_block,
     default_neurons,
@@ -35,10 +36,14 @@ from tests.world import (
 register_fixture(BlockFactory)
 register_fixture(NeuronFactory)
 
-TEST_IDENTITIES = build_test_identities()
-identities_module.identities.clear()
-identities_module.identities.update(TEST_IDENTITIES)
-dependencies.identities = identities_module.identities
+TEST_IDENTITIES = identities_module.identities
+
+
+def pytest_configure() -> None:
+    try:
+        assert_test_fixture_contract(settings=settings, identities=TEST_IDENTITIES)
+    except RuntimeError as exc:
+        raise pytest.UsageError(str(exc)) from exc
 
 
 @pytest.fixture
@@ -166,10 +171,13 @@ async def shared_world(mock_bt_contact_pool) -> AsyncGenerator[SharedWorld]:
                     sn1_archive=sn1_contact_router._archive_contact,
                     sn2_main=sn2_contact_router._main_contact,
                     sn2_archive=sn2_contact_router._archive_contact,
-                    identities=TEST_IDENTITIES,
                     default_latest_block=default_latest_block(),
-                    default_neurons=default_neurons(),
-                    default_subnet_states=default_subnet_states(),
+                    default_neurons=default_neurons(
+                        own_commitment_hotkey=EXPECTED_IDENTITIES[IdentityName("sn2")].hotkey_ss58,
+                    ),
+                    default_subnet_states=default_subnet_states(
+                        own_commitment_hotkey=EXPECTED_IDENTITIES[IdentityName("sn2")].hotkey_ss58,
+                    ),
                     default_commitments=default_commitments(),
                 )
 

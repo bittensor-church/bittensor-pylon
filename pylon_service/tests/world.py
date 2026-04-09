@@ -15,13 +15,10 @@ from pylon_commons.types import (
     Dividends,
     EmissionRao,
     Hotkey,
-    HotkeyName,
-    IdentityName,
     Incentive,
     NetUid,
     NeuronUid,
     PruningScore,
-    PylonAuthToken,
     Rank,
     SubnetActive,
     TaoStake,
@@ -31,11 +28,9 @@ from pylon_commons.types import (
     TotalStakeRao,
     Trust,
     ValidatorPermit,
-    WalletName,
 )
 
 from pylon_service.bittensor.contact import MockBittensorContact
-from pylon_service.identities import Identity
 from tests.factories import NeuronFactory
 
 VALIDATORS_NETUID = NetUid(11)
@@ -53,7 +48,6 @@ class SharedWorld:
     sn1_archive: MockBittensorContact
     sn2_main: MockBittensorContact
     sn2_archive: MockBittensorContact
-    identities: dict[IdentityName, Identity]
     default_latest_block: Block
     default_neurons: dict[NetUid, list[Neuron]]
     default_subnet_states: dict[NetUid, SubnetState]
@@ -93,7 +87,7 @@ class SharedWorld:
                 "get_commitments",
                 lambda netuid, block, commitments=self.default_commitments: SubnetCommitments(
                     block=block,
-                    commitments=commitments[netuid],
+                    commitments=commitments.get(netuid, {}),
                 ),
             )
             contact.set_default(
@@ -110,25 +104,6 @@ class SharedWorld:
             )
 
 
-def build_test_identities() -> dict[IdentityName, Identity]:
-    return {
-        IdentityName("sn1"): Identity(
-            identity_name=IdentityName("sn1"),
-            wallet_name=WalletName("wallet_sn1"),
-            hotkey_name=HotkeyName("hotkey_sn1"),
-            netuid=NetUid(1),
-            token=PylonAuthToken("token_sn1"),
-        ),
-        IdentityName("sn2"): Identity(
-            identity_name=IdentityName("sn2"),
-            wallet_name=WalletName("wallet_sn2"),
-            hotkey_name=HotkeyName("hotkey_sn2"),
-            netuid=NetUid(2),
-            token=PylonAuthToken("token_sn2"),
-        ),
-    }
-
-
 def default_latest_block() -> Block:
     return Block(number=BlockNumber(1000), hash=BlockHash("0xshared-latest-block"))
 
@@ -137,7 +112,7 @@ def build_block(number: BlockNumber) -> Block:
     return Block(number=number, hash=BlockHash(f"0xblock{number}"))
 
 
-def default_neurons() -> dict[NetUid, list[Neuron]]:
+def default_neurons(*, own_commitment_hotkey: str) -> dict[NetUid, list[Neuron]]:
     NeuronFactory.seed_random(1)
 
     def build_neuron(netuid: int, uid: int, hotkey: str) -> Neuron:
@@ -201,19 +176,25 @@ def default_neurons() -> dict[NetUid, list[Neuron]]:
         ],
         COMMITMENTS_EMPTY_NETUID: [],
         OWN_COMMITMENT_NETUID: [
-            build_neuron(24, 1, "hotkey_sn2"),
+            build_neuron(24, 1, own_commitment_hotkey),
         ],
     }
 
 
-def _build_subnet_state(netuid: NetUid, registered_hotkeys: list[str]) -> SubnetState:
+def _build_subnet_state(
+    netuid: NetUid, registered_hotkeys: list[str], *, validator_permits: list[bool] | None = None
+) -> SubnetState:
     count = len(registered_hotkeys)
+    if validator_permits is None:
+        validator_permits = [True] * count
+    if len(validator_permits) != count:
+        raise ValueError("validator_permits must match registered_hotkeys length")
     return SubnetState(
         netuid=netuid,
         hotkeys=[Hotkey(hotkey) for hotkey in registered_hotkeys],
         coldkeys=[Coldkey(f"coldkey-{i}") for i in range(count)],
         active=[SubnetActive(True)] * count,
-        validator_permit=[ValidatorPermit(True)] * count,
+        validator_permit=[ValidatorPermit(value) for value in validator_permits],
         pruning_score=[PruningScore(0)] * count,
         last_update=[Timestamp(0)] * count,
         emission=[EmissionRao(CurrencyRao[Token.ALPHA](0))] * count,
@@ -230,18 +211,19 @@ def _build_subnet_state(netuid: NetUid, registered_hotkeys: list[str]) -> Subnet
     )
 
 
-def default_subnet_states() -> dict[NetUid, SubnetState]:
+def default_subnet_states(*, own_commitment_hotkey: str) -> dict[NetUid, SubnetState]:
     return {
         NetUid(1): _build_subnet_state(NetUid(1), ["hotkey1", "hotkey2", "hotkey3"]),
         NetUid(2): _build_subnet_state(NetUid(2), ["hotkey1", "hotkey2", "hotkey3"]),
         VALIDATORS_NETUID: _build_subnet_state(
             VALIDATORS_NETUID,
             ["validator-low", "non-validator", "validator-high"],
+            validator_permits=[True, False, True],
         ),
         COMMITMENTS_ALL_NETUID: _build_subnet_state(COMMITMENTS_ALL_NETUID, ["hotkey1", "hotkey2"]),
         COMMITMENTS_FILTERED_NETUID: _build_subnet_state(COMMITMENTS_FILTERED_NETUID, ["hotkey1"]),
         COMMITMENTS_EMPTY_NETUID: _build_subnet_state(COMMITMENTS_EMPTY_NETUID, []),
-        OWN_COMMITMENT_NETUID: _build_subnet_state(OWN_COMMITMENT_NETUID, ["hotkey_sn2"]),
+        OWN_COMMITMENT_NETUID: _build_subnet_state(OWN_COMMITMENT_NETUID, [own_commitment_hotkey]),
     }
 
 
