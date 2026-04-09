@@ -1,6 +1,7 @@
 from litestar import Router
 from pylon_commons.apiver import ApiVersion
 
+from pylon_service.api.exception_handlers import domain_exception_handlers
 from pylon_service.api.v1.api import (
     IdentityController,
     OpenAccessController,
@@ -18,4 +19,5 @@ v1_router = Router(
         get_extrinsic_endpoint,
         get_latest_block_info_endpoint,
     ],
+    exception_handlers=dict(domain_exception_handlers),
 )

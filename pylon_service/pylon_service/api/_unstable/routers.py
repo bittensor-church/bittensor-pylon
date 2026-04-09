@@ -8,6 +8,7 @@ from pylon_service.api._unstable.api import (
     get_latest_block_info_endpoint,
     identity_login,
 )
+from pylon_service.api.exception_handlers import domain_exception_handlers
 
 unstable_router = Router(
     path=ApiVersion.UNSTABLE.prefix,
@@ -18,4 +19,5 @@ unstable_router = Router(
         get_extrinsic_endpoint,
         get_latest_block_info_endpoint,
     ],
+    exception_handlers=dict(domain_exception_handlers),
 )
