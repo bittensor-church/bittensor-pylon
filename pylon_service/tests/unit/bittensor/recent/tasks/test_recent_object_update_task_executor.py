@@ -5,11 +5,11 @@ from pylon_commons.types import NetUid, Timestamp
 from tenacity import AsyncRetrying, stop_after_attempt
 
 from pylon_service.bittensor.contact import BittensorPort
-from pylon_service.bittensor.pool import BittensorClientPool
+from pylon_service.bittensor.pool import BittensorContactPool
 from pylon_service.bittensor.recent import AbstractContext, RecentObjectUpdateTaskExecutor, SubnetContext
 from pylon_service.bittensor.recent.adapter import CacheKey, _CacheEntry
 from pylon_service.bittensor.recent.tasks import UpdateRecentObject
-from pylon_service.bittensor.router import BittensorRouter
+from pylon_service.bittensor.contact_router import BittensorContactRouter
 from tests.behave import Behave
 
 
@@ -19,7 +19,7 @@ class AnObjectModel(BittensorModel):
 
 
 class Task(UpdateRecentObject[AnObjectModel, SubnetContext]):
-    def __init__(self, store: Store, pool: BittensorClientPool) -> None:
+    def __init__(self, store: Store, pool: BittensorContactPool) -> None:
         super().__init__(store, pool)
         self.behave = Behave()
 
@@ -38,8 +38,8 @@ def context() -> AbstractContext:
 
 
 @pytest.fixture
-def update_task(mock_recent_objects_store, mock_bt_client_pool) -> Task:
-    return Task(mock_recent_objects_store, mock_bt_client_pool)
+def update_task(mock_recent_objects_store, mock_bt_contact_pool) -> Task:
+    return Task(mock_recent_objects_store, mock_bt_contact_pool)
 
 
 @pytest.fixture
@@ -56,7 +56,7 @@ async def test_executor_failed(executor, update_task, open_access_mock_bt_client
     calls = update_task.behave.calls["_get_object"]
     assert len(calls) == 3
     assert [call[0] for call in calls] == [context] * 3
-    assert all(isinstance(call[1], BittensorRouter) for call in calls)
+    assert all(isinstance(call[1], BittensorContactRouter) for call in calls)
     assert all(call[1]._main_contact is open_access_mock_bt_client for call in calls)
 
 
@@ -81,6 +81,6 @@ async def test_executor_success_after_attempt(
     calls = update_task.behave.calls["_get_object"]
     assert len(calls) == 2
     assert [call[0] for call in calls] == [context] * 2
-    assert all(isinstance(call[1], BittensorRouter) for call in calls)
+    assert all(isinstance(call[1], BittensorContactRouter) for call in calls)
     assert all(call[1]._main_contact is open_access_mock_bt_client for call in calls)
     assert mock_recent_objects_store.behave.calls["set"] == [(CacheKey(AnObjectModel, NetUid(1), None), data, None)]

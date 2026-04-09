@@ -4,7 +4,7 @@ from pylon_commons.models import BittensorModel
 from pylon_commons.types import NetUid, Timestamp
 
 from pylon_service.bittensor.contact import BittensorPort
-from pylon_service.bittensor.pool import BittensorClientPool
+from pylon_service.bittensor.pool import BittensorContactPool
 from pylon_service.bittensor.recent import SubnetContext
 from pylon_service.bittensor.recent.adapter import CacheKey, _CacheEntry
 from pylon_service.bittensor.recent.tasks import UpdateRecentObject
@@ -16,7 +16,7 @@ class AnObjectModel(BittensorModel):
 
 
 class Task(UpdateRecentObject[AnObjectModel, SubnetContext]):
-    def __init__(self, store: Store, pool: BittensorClientPool, object_: AnObjectModel) -> None:
+    def __init__(self, store: Store, pool: BittensorContactPool, object_: AnObjectModel) -> None:
         super().__init__(store, pool)
         self._object = object_
 
@@ -38,8 +38,8 @@ def object_() -> AnObjectModel:
 
 
 @pytest.fixture
-def update_task(mock_recent_objects_store, mock_bt_client_pool, object_) -> Task:
-    return Task(mock_recent_objects_store, mock_bt_client_pool, object_)
+def update_task(mock_recent_objects_store, mock_bt_contact_pool, object_) -> Task:
+    return Task(mock_recent_objects_store, mock_bt_contact_pool, object_)
 
 
 @pytest.mark.asyncio

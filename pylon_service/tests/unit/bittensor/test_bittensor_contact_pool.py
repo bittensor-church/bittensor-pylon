@@ -6,12 +6,12 @@ from bittensor_wallet import Wallet
 from pylon_commons.types import HotkeyName, WalletName
 
 from pylon_service.bittensor.contact import TurboBtContact
+from pylon_service.bittensor.contact_router import BittensorContactRouter
 from pylon_service.bittensor.pool import (
-    BittensorClientPool,
-    BittensorClientPoolInvalidState,
+    BittensorContactPool,
+    BittensorContactPoolInvalidState,
     WalletKey,
 )
-from pylon_service.bittensor.router import BittensorRouter
 from tests.helpers import wait_until
 
 
@@ -33,38 +33,26 @@ async def barrier_factory():
 
 
 async def acquire_client(
-    pool: BittensorClientPool[BittensorRouter], wallet: Wallet | None, barrier: asyncio.Barrier
-) -> BittensorRouter:
+    pool: BittensorContactPool[BittensorContactRouter], wallet: Wallet | None, barrier: asyncio.Barrier
+) -> BittensorContactRouter:
     async with pool.acquire(wallet=wallet) as client:
         await barrier.wait()
     return client
 
 
 @pytest.mark.asyncio
-async def test_bittensor_client_pool_proper_use(barrier_factory):
-    """
-    The general plan of this test is to test normal use scenario:
-        - spawn 5 tasks that just acquire the client from the pool
-          and waits for the signal form the barrier to release them,
-        - close the client and see if it withholds its closure until all clients are returned to the pool,
-        - return the clients to the pool,
-        - check if everything is clean.
-    """
+async def test_bittensor_contact_pool_proper_use(barrier_factory):
     barrier = await barrier_factory(6)
-    # These wallets should produce the same client even though wallet1 != wallet2
     wallets = [Wallet(), Wallet()]
-    # Spawn 5 tasks that will wait with the client acquired.
-    pool = BittensorClientPool(
+    pool = BittensorContactPool(
         uri="ws://localhost:8000",
         archive_uri="ws://localhost:8001",
     )
     await pool.open()
-    assert pool.state == BittensorClientPool.State.OPEN
+    assert pool.state == BittensorContactPool.State.OPEN
     tasks = [asyncio.create_task(acquire_client(pool, wallets[i % 2], barrier)) for i in range(5)]
-    # Wait until all the tasks acquire the client
     await wait_until(lambda: barrier.n_waiting == barrier.parties - 1)
     assert pool._acquire_counter == 5
-    # Acquire the client and check its attributes.
     async with pool.acquire(wallet=wallets[0]) as client_wallet:
         assert pool._pool == {
             WalletKey(  # type: ignore[reportUnhashable]
@@ -74,13 +62,11 @@ async def test_bittensor_client_pool_proper_use(barrier_factory):
         assert pool._acquire_counter == 6
         assert client_wallet.uri == pool.client_kwargs["uri"]
         assert client_wallet.archive_uri == pool.client_kwargs["archive_uri"]
-        # Check if the client is open
         assert isinstance(client_wallet._main_contact, TurboBtContact)
         assert isinstance(client_wallet._archive_contact, TurboBtContact)
         assert client_wallet._main_contact._raw_client is not None
         assert client_wallet._archive_contact._raw_client is not None
     assert pool._acquire_counter == 5
-    # Check if you can acquire client without wallet
     async with pool.acquire(wallet=None) as client_no_wallet:
         assert pool._pool == {
             WalletKey(  # type: ignore[reportUnhashable]
@@ -91,21 +77,15 @@ async def test_bittensor_client_pool_proper_use(barrier_factory):
         assert pool._acquire_counter == 6
     assert pool._acquire_counter == 5
     close_task = asyncio.create_task(pool.close())
-    # See if close() will put the pool into the closing state, but wait with closure until all clients are returned to
-    # the pool.
-    await wait_until(lambda: pool.state == BittensorClientPool.State.CLOSING)
-    # Release the tasks so that the pool may close.
+    await wait_until(lambda: pool.state == BittensorContactPool.State.CLOSING)
     async with asyncio.timeout(2):
         await barrier.wait()
     clients = await asyncio.gather(*tasks)
-    # Check if all the tasks clients were the same instance.
     assert set(clients) == {client_wallet}
     assert pool._acquire_counter == 0
     await close_task
-    # Check if the pool is closed properly.
-    assert pool.state == BittensorClientPool.State.CLOSED
+    assert pool.state == BittensorContactPool.State.CLOSED
     assert pool._pool == {}
-    # Check if the client is closed properly.
     assert isinstance(client_wallet._main_contact, TurboBtContact)
     assert isinstance(client_wallet._archive_contact, TurboBtContact)
     assert client_wallet._main_contact._raw_client is None
@@ -113,26 +93,20 @@ async def test_bittensor_client_pool_proper_use(barrier_factory):
 
 
 @pytest.mark.asyncio
-async def test_bittensor_client_pool_acquire_when_pool_closed():
-    """
-    Test that acquiring a client from a closed pool raises BittensorClientPoolClosed.
-    """
-    pool = BittensorClientPool(
+async def test_bittensor_contact_pool_acquire_when_pool_closed():
+    pool = BittensorContactPool(
         uri="ws://localhost:8000",
         archive_uri="ws://localhost:8001",
     )
-    with pytest.raises(BittensorClientPoolInvalidState):
+    with pytest.raises(BittensorContactPoolInvalidState):
         async with pool.acquire(wallet=None):
             pass
 
 
 @pytest.mark.asyncio
-async def test_bittensor_client_pool_acquire_when_pool_closing(barrier_factory):
-    """
-    Test that acquiring a client while pool is closing raises BittensorClientPoolClosing.
-    """
+async def test_bittensor_contact_pool_acquire_when_pool_closing(barrier_factory):
     barrier = await barrier_factory(2)
-    pool = BittensorClientPool(
+    pool = BittensorContactPool(
         uri="ws://localhost:8000",
         archive_uri="ws://localhost:8001",
     )
@@ -140,8 +114,8 @@ async def test_bittensor_client_pool_acquire_when_pool_closing(barrier_factory):
     task = asyncio.create_task(acquire_client(pool, None, barrier))
     await wait_until(lambda: pool._acquire_counter == 1)
     close_task = asyncio.create_task(pool.close())
-    await wait_until(lambda: pool.state == BittensorClientPool.State.CLOSING)
-    with pytest.raises(BittensorClientPoolInvalidState):
+    await wait_until(lambda: pool.state == BittensorContactPool.State.CLOSING)
+    with pytest.raises(BittensorContactPoolInvalidState):
         async with pool.acquire(wallet=None):
             pass
     async with asyncio.timeout(2):
@@ -151,25 +125,19 @@ async def test_bittensor_client_pool_acquire_when_pool_closing(barrier_factory):
 
 
 @pytest.mark.asyncio
-async def test_bittensor_client_pool_close_already_closed_pool():
-    """
-    Test that closing an already closed pool raises BittensorClientPoolClosed.
-    """
-    pool = BittensorClientPool(
+async def test_bittensor_contact_pool_close_already_closed_pool():
+    pool = BittensorContactPool(
         uri="ws://localhost:8000",
         archive_uri="ws://localhost:8001",
     )
-    with pytest.raises(BittensorClientPoolInvalidState):
+    with pytest.raises(BittensorContactPoolInvalidState):
         await pool.close()
 
 
 @pytest.mark.asyncio
-async def test_bittensor_client_pool_close_pool_while_closing(barrier_factory):
-    """
-    Test that closing a pool while it's already closing raises BittensorClientPoolClosing.
-    """
+async def test_bittensor_contact_pool_close_pool_while_closing(barrier_factory):
     barrier = await barrier_factory(2)
-    pool = BittensorClientPool(
+    pool = BittensorContactPool(
         uri="ws://localhost:8000",
         archive_uri="ws://localhost:8001",
     )
@@ -177,8 +145,8 @@ async def test_bittensor_client_pool_close_pool_while_closing(barrier_factory):
     task = asyncio.create_task(acquire_client(pool, None, barrier))
     await wait_until(lambda: pool._acquire_counter == 1)
     close_task = asyncio.create_task(pool.close())
-    await wait_until(lambda: pool.state == BittensorClientPool.State.CLOSING)
-    with pytest.raises(BittensorClientPoolInvalidState):
+    await wait_until(lambda: pool.state == BittensorContactPool.State.CLOSING)
+    with pytest.raises(BittensorContactPoolInvalidState):
         await pool.close()
     async with asyncio.timeout(2):
         await barrier.wait()
@@ -187,27 +155,21 @@ async def test_bittensor_client_pool_close_pool_while_closing(barrier_factory):
 
 
 @pytest.mark.asyncio
-async def test_bittensor_client_pool_close_empty_pool():
-    """
-    Test closing already empty pool.
-    """
-    pool = BittensorClientPool(
+async def test_bittensor_contact_pool_close_empty_pool():
+    pool = BittensorContactPool(
         uri="ws://localhost:8000",
         archive_uri="ws://localhost:8001",
     )
     await pool.open()
-    assert pool.state == BittensorClientPool.State.OPEN
+    assert pool.state == BittensorContactPool.State.OPEN
     await pool.close()
-    assert pool.state == BittensorClientPool.State.CLOSED
+    assert pool.state == BittensorContactPool.State.CLOSED
 
 
 @pytest.mark.asyncio
-async def test_bittensor_client_pool_stress(barrier_factory):
-    """
-    Pool's stress test.
-    """
+async def test_bittensor_contact_pool_stress(barrier_factory):
     barrier = await barrier_factory(10000)
-    pool = BittensorClientPool(
+    pool = BittensorContactPool(
         uri="ws://localhost:8000",
         archive_uri="ws://localhost:8001",
     )
@@ -220,12 +182,9 @@ async def test_bittensor_client_pool_stress(barrier_factory):
 
 
 @pytest.mark.asyncio
-async def test_bittensor_client_pool_close_timeout(barrier_factory):
-    """
-    Test that the pool will close after timeout.
-    """
+async def test_bittensor_contact_pool_close_timeout(barrier_factory):
     barrier = await barrier_factory(2)
-    pool = BittensorClientPool(
+    pool = BittensorContactPool(
         pool_closing_timeout=0.1,
         uri="ws://localhost:8000",
         archive_uri="ws://localhost:8001",
@@ -237,7 +196,6 @@ async def test_bittensor_client_pool_close_timeout(barrier_factory):
     async with asyncio.timeout(2):
         await barrier.wait()
     await task
-    # Check if the client is closed.
     client = task.result()
     assert isinstance(client._main_contact, TurboBtContact)
     assert isinstance(client._archive_contact, TurboBtContact)

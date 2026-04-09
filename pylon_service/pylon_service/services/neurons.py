@@ -9,12 +9,12 @@ from .errors import RecentObjectMissingError, RecentObjectStaleError
 
 
 class NeuronService:
-    async def get_neurons(self, router: BittensorPort, netuid: NetUid, block: Block) -> SubnetNeurons:
-        return await router.get_neurons(netuid, block)
+    async def get_neurons(self, contact_router: BittensorPort, netuid: NetUid, block: Block) -> SubnetNeurons:
+        return await contact_router.get_neurons(netuid, block)
 
-    async def get_latest_neurons(self, router: BittensorPort, netuid: NetUid) -> SubnetNeurons:
-        block = await router.get_latest_block()
-        return await router.get_neurons(netuid, block)
+    async def get_latest_neurons(self, contact_router: BittensorPort, netuid: NetUid) -> SubnetNeurons:
+        block = await contact_router.get_latest_block()
+        return await contact_router.get_neurons(netuid, block)
 
     async def get_recent_neurons(self, recent_object_provider: RecentObjectProvider) -> SubnetNeurons:
         try:
@@ -27,12 +27,12 @@ class NeuronService:
         except RecentObjectStale as exc:
             raise RecentObjectStaleError("Recent neurons data is stale. Cache update may be failing.") from exc
 
-    async def get_validators(self, router: BittensorPort, netuid: NetUid, block: Block) -> SubnetValidators:
-        subnet_neurons = await router.get_neurons(netuid, block)
+    async def get_validators(self, contact_router: BittensorPort, netuid: NetUid, block: Block) -> SubnetValidators:
+        subnet_neurons = await contact_router.get_neurons(netuid, block)
         validators = [neuron for neuron in subnet_neurons.neurons.values() if neuron.validator_permit]
         validators.sort(key=lambda neuron: neuron.stakes.total, reverse=True)
         return SubnetValidators(block=block, validators=validators)
 
-    async def get_latest_validators(self, router: BittensorPort, netuid: NetUid) -> SubnetValidators:
-        block = await router.get_latest_block()
-        return await self.get_validators(router, netuid, block)
+    async def get_latest_validators(self, contact_router: BittensorPort, netuid: NetUid) -> SubnetValidators:
+        block = await contact_router.get_latest_block()
+        return await self.get_validators(contact_router, netuid, block)

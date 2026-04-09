@@ -70,7 +70,7 @@ The REST API service, organized with an `api/` package containing versioned subp
 - **`pylon_service/dependencies.py`**: DI providers shared across all API versions
 - **`pylon_service/identities.py`**: Identity system for multi-subnet/multi-wallet support with per-identity authentication
 - **`pylon_service/bittensor/client.py`**: Manages all interactions with the Bittensor network using the `turbobt` library, including wallet operations. Provides `AbstractBittensorClient` base class and `TurboBtClient` implementation
-- **`pylon_service/bittensor/pool.py`**: Manages `BittensorClientPool` for acquiring and sharing client instances per wallet
+- **`pylon_service/bittensor/pool.py`**: Manages `BittensorContactPool` for acquiring and sharing `BittensorContactRouter` instances per wallet
 - **`pylon_service/api/utils.py`**: Shared `handler()` decorator used by all API versions to create Litestar handlers from `Endpoint` enums
 - **`pylon_service/api/v1/api.py`**: The v1 Litestar-based API layer that defines all v1 endpoints using two controllers:
   - `OpenAccessController`: Endpoints under `/subnet/{netuid}/` (requires `open_access_token`)
@@ -176,7 +176,7 @@ The service supports multi-subnet/multi-wallet operations through an identity sy
 ### Client Architecture
 - **`AbstractBittensorClient`**: Abstract base class defining the interface for Bittensor operations
 - **`TurboBtClient`**: Production implementation using the turbobt library
-- **`BittensorClientPool`**: Connection pool that maintains one client instance per wallet, managed via `BittensorClientPool.acquire(wallet)` context manager
+- **`BittensorContactPool`**: Connection pool that maintains one `BittensorContactRouter` instance per wallet, managed via `BittensorContactPool.acquire(wallet)` context manager
 
 ### Key turbobt Features Used
 - **Blockchain Interaction**:
@@ -303,7 +303,7 @@ The service endpoints are tested using `MockBittensorClient` (`pylon_service/tes
   - `pylon_service/tests/open_access_endpoints/`: Tests for open access endpoints
   - `pylon_service/tests/identity_endpoints/`: Tests for identity-scoped endpoints
 - **Shared fixtures**: Common fixtures in `pylon_service/tests/conftest.py`:
-  - `mock_bt_client_pool`: Shared `BittensorClientPool` with `MockBittensorClient` instances (session-scoped)
+  - `mock_bt_contact_pool`: Shared `BittensorContactPool` with `MockBittensorContact` instances (session-scoped)
   - `open_access_mock_bt_client`: Mock client for open access endpoints (no wallet)
   - `sn1_mock_bt_client`: Mock client for "sn1" identity (with wallet)
   - `sn2_mock_bt_client`: Mock client for "sn2" identity (with wallet)
@@ -463,8 +463,8 @@ This creates and pushes a `service-v1.2.0` tag, triggering the CD workflow to pu
 - **Service**: Published as Docker image to Docker Hub (not distributed via PyPI)
 
 ### Testing
-- **Session-scoped fixtures**: Many test fixtures (`test_app`, `test_client`, `mock_bt_client_pool`) are session-scoped for performance
-- **Client pool sharing**: All tests in a session share the same `BittensorClientPool`, but each test gets fresh mock clients via `reset_call_tracking()`
+- **Session-scoped fixtures**: Many test fixtures (`test_app`, `test_client`, `mock_bt_contact_pool`) are session-scoped for performance
+- **Contact pool sharing**: All tests in a session share the same `BittensorContactPool`, but each test gets fresh mock contacts via `reset_call_tracking()`
 - **Background tasks**: Always use `wait_for_background_tasks()` instead of `asyncio.sleep()` for reliability
 
 ### API Access Patterns
@@ -479,7 +479,7 @@ This creates and pushes a `service-v1.2.0` tag, triggering the CD workflow to pu
 - **Bittensor client abstraction**:
   - `AbstractBittensorClient`: Base interface for all Bittensor operations
   - `TurboBtClient`: Production implementation using turbobt library
-  - `BittensorClientPool`: Manages client instances per wallet with connection pooling
+  - `BittensorContactPool`: Manages `BittensorContactRouter` instances per wallet with connection pooling
   - `MockBittensorClient`: Testing implementation without blockchain interactions
 - **Multi-identity support**: Service can operate multiple wallets/subnets simultaneously through the identity system
 - **Async-first**: All operations are asynchronous using `asyncio`

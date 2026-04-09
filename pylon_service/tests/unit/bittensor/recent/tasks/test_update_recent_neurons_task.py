@@ -7,8 +7,8 @@ from pylon_service.bittensor.recent.adapter import CacheKey, _CacheEntry
 
 
 @pytest.fixture
-def update_task(mock_recent_objects_store, mock_bt_client_pool) -> UpdateRecentNeurons:
-    return UpdateRecentNeurons(mock_recent_objects_store, mock_bt_client_pool)
+def update_task(mock_recent_objects_store, mock_bt_contact_pool) -> UpdateRecentNeurons:
+    return UpdateRecentNeurons(mock_recent_objects_store, mock_bt_contact_pool)
 
 
 @pytest.mark.asyncio

@@ -8,7 +8,7 @@ from pylon_commons.types import Timestamp
 from tenacity import AsyncRetrying, stop_before_delay, wait_exponential
 
 from pylon_service.bittensor.contact import BittensorPort
-from pylon_service.bittensor.pool import BittensorClientPool
+from pylon_service.bittensor.pool import BittensorContactPool
 from pylon_service.services.neurons import NeuronService
 
 from .adapter import RecentCacheAdapter
@@ -23,7 +23,7 @@ class UpdateRecentObject[ModelT: BittensorModel, ContextT: AbstractContext](ABC)
     An abstract task for implementing tasks for updating recent objects.
     """
 
-    def __init__(self, store: Store, pool: BittensorClientPool) -> None:
+    def __init__(self, store: Store, pool: BittensorContactPool) -> None:
         self._store = store
         self._pool = pool
 

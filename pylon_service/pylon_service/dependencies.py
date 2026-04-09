@@ -5,25 +5,25 @@ from litestar.datastructures import State
 from litestar.exceptions import NotFoundException
 from pylon_commons.types import IdentityName, NetUid
 
-from pylon_service.bittensor.pool import BittensorClientPool
+from pylon_service.bittensor.pool import BittensorContactPool
 from pylon_service.bittensor.recent import (
     AbstractContext,
     IdentitySubnetContext,
     RecentObjectProvider,
     SubnetContext,
 )
-from pylon_service.bittensor.router import BittensorRouter
+from pylon_service.bittensor.contact_router import BittensorContactRouter
 from pylon_service.identities import Identity, identities
 from pylon_service.settings import recent_objects_settings
 from pylon_service.stores import StoreName
 
 
-async def bt_client_pool_dep(state: State) -> BittensorClientPool:
+async def bt_contact_pool_dep(state: State) -> BittensorContactPool:
     """
-    Pool of bittensor clients. Every client used in the service should be taken from the pool to maintain and reuse
-    connections.
+    Pool of bittensor contact routers. Every contact router used in the service should be taken from the pool to
+    maintain and reuse connections.
     """
-    return state.bittensor_client_pool
+    return state.bittensor_contact_pool
 
 
 async def identity_dep(identity_name: IdentityName) -> Identity:
@@ -34,18 +34,18 @@ async def identity_dep(identity_name: IdentityName) -> Identity:
     raise NotFoundException(f"Identity '{identity_name}' not found")
 
 
-async def bt_client_identity_dep(
-    bt_client_pool: BittensorClientPool[BittensorRouter], identity: Identity
-) -> AsyncGenerator[BittensorRouter]:
-    async with bt_client_pool.acquire(wallet=identity.wallet) as client:
-        yield client
+async def bt_contact_router_identity_dep(
+    bt_contact_pool: BittensorContactPool[BittensorContactRouter], identity: Identity
+) -> AsyncGenerator[BittensorContactRouter]:
+    async with bt_contact_pool.acquire(wallet=identity.wallet) as contact_router:
+        yield contact_router
 
 
-async def bt_client_open_access_dep(
-    bt_client_pool: BittensorClientPool[BittensorRouter],
-) -> AsyncGenerator[BittensorRouter]:
-    async with bt_client_pool.acquire(wallet=None) as client:
-        yield client
+async def bt_contact_router_open_access_dep(
+    bt_contact_pool: BittensorContactPool[BittensorContactRouter],
+) -> AsyncGenerator[BittensorContactRouter]:
+    async with bt_contact_pool.acquire(wallet=None) as contact_router:
+        yield contact_router
 
 
 def _create_recent_object_provider(request: Request, context: AbstractContext) -> RecentObjectProvider:

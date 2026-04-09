@@ -28,7 +28,7 @@ from pylon_service.metrics import bittensor_fallback_total
 logger = logging.getLogger(__name__)
 
 
-class BittensorRouter:
+class BittensorContactRouter:
     """
     Wallet-bound facade that exposes the contact interface while routing stale-block reads to archive.
     """

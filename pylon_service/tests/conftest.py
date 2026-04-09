@@ -17,8 +17,8 @@ from syrupy.matchers import path_type
 from pylon_service import dependencies, lifespans, main
 from pylon_service import identities as identities_module
 from pylon_service.bittensor.contact import ContactFactory, MockBittensorContact
-from pylon_service.bittensor.pool import BittensorClientPool
-from pylon_service.bittensor.router import BittensorRouter
+from pylon_service.bittensor.pool import BittensorContactPool
+from pylon_service.bittensor.contact_router import BittensorContactRouter
 from pylon_service.main import create_app
 from pylon_service.stores import StoreName
 from tests.factories import BlockFactory, NeuronFactory
@@ -58,12 +58,12 @@ def response_matchers():
 
 
 @pytest_asyncio.fixture(scope="session", loop_scope="session")
-async def mock_bt_client_pool():
+async def mock_bt_contact_pool():
     """
-    Create a mock Bittensor client pool.
+    Create a mock Bittensor contact pool.
     """
-    async with BittensorClientPool(
-        router_cls=BittensorRouter,
+    async with BittensorContactPool(
+        contact_router_cls=BittensorContactRouter,
         contact_factory=ContactFactory(contact_cls=MockBittensorContact),
         uri="mock://main",
         archive_uri="mock://archive",
@@ -87,15 +87,15 @@ def reset_mock_stores(mock_stores):
 
 
 @pytest.fixture(scope="session")
-def test_app(mock_bt_client_pool, mock_stores):
+def test_app(mock_bt_contact_pool, mock_stores):
     """
-    Create a test Litestar app with the mock client pool.
+    Create a test Litestar app with the mock contact pool.
     """
 
-    # Mock the bittensor_client lifespan to just set our mock client
+    # Mock the bittensor contact pool lifespan to just set our mock pool.
     @asynccontextmanager
     async def mock_lifespan(app):
-        app.state.bittensor_client_pool = mock_bt_client_pool
+        app.state.bittensor_contact_pool = mock_bt_contact_pool
         yield
 
     # Mock the scheduler lifespan to prevent background task execution during tests
@@ -104,7 +104,7 @@ def test_app(mock_bt_client_pool, mock_stores):
         yield
 
     with (
-        patch.object(lifespans, "bittensor_client_pool", mock_lifespan),
+        patch.object(lifespans, "bittensor_contact_pool", mock_lifespan),
         patch.object(lifespans, "scheduler_lifespan", mock_scheduler_lifespan),
         # Litestar appends its own stuff to the dict we give it - so let's give it a copy, otherwise we end up
         # resetting the cache store which we don't care about here. (caching is already disabled directly for tests)
@@ -127,41 +127,45 @@ def wallet():
 
 
 @pytest_asyncio.fixture
-async def open_access_mock_bt_client(mock_bt_client_pool):
-    async with mock_bt_client_pool.acquire(wallet=None) as router:
-        yield router._main_contact
-        router._main_contact.reset()
-        router._archive_contact.reset()
+async def open_access_mock_bt_client(mock_bt_contact_pool):
+    async with mock_bt_contact_pool.acquire(wallet=None) as contact_router:
+        yield contact_router._main_contact
+        contact_router._main_contact.reset()
+        contact_router._archive_contact.reset()
 
 
 @pytest_asyncio.fixture
-async def sn1_mock_bt_client(mock_bt_client_pool):
-    async with mock_bt_client_pool.acquire(wallet=TEST_IDENTITIES[IdentityName("sn1")].wallet) as router:
-        yield router._main_contact
-        router._main_contact.reset()
-        router._archive_contact.reset()
+async def sn1_mock_bt_client(mock_bt_contact_pool):
+    async with mock_bt_contact_pool.acquire(wallet=TEST_IDENTITIES[IdentityName("sn1")].wallet) as contact_router:
+        yield contact_router._main_contact
+        contact_router._main_contact.reset()
+        contact_router._archive_contact.reset()
 
 
 @pytest_asyncio.fixture
-async def sn2_mock_bt_client(mock_bt_client_pool):
-    async with mock_bt_client_pool.acquire(wallet=TEST_IDENTITIES[IdentityName("sn2")].wallet) as router:
-        yield router._main_contact
-        router._main_contact.reset()
-        router._archive_contact.reset()
+async def sn2_mock_bt_client(mock_bt_contact_pool):
+    async with mock_bt_contact_pool.acquire(wallet=TEST_IDENTITIES[IdentityName("sn2")].wallet) as contact_router:
+        yield contact_router._main_contact
+        contact_router._main_contact.reset()
+        contact_router._archive_contact.reset()
 
 
 @pytest_asyncio.fixture(scope="session")
-async def shared_world(mock_bt_client_pool) -> AsyncGenerator[SharedWorld]:
-    async with mock_bt_client_pool.acquire(wallet=None) as open_access_router:
-        async with mock_bt_client_pool.acquire(wallet=TEST_IDENTITIES[IdentityName("sn1")].wallet) as sn1_router:
-            async with mock_bt_client_pool.acquire(wallet=TEST_IDENTITIES[IdentityName("sn2")].wallet) as sn2_router:
+async def shared_world(mock_bt_contact_pool) -> AsyncGenerator[SharedWorld]:
+    async with mock_bt_contact_pool.acquire(wallet=None) as open_access_contact_router:
+        async with mock_bt_contact_pool.acquire(
+            wallet=TEST_IDENTITIES[IdentityName("sn1")].wallet
+        ) as sn1_contact_router:
+            async with mock_bt_contact_pool.acquire(
+                wallet=TEST_IDENTITIES[IdentityName("sn2")].wallet
+            ) as sn2_contact_router:
                 yield SharedWorld(
-                    open_access_main=open_access_router._main_contact,
-                    open_access_archive=open_access_router._archive_contact,
-                    sn1_main=sn1_router._main_contact,
-                    sn1_archive=sn1_router._archive_contact,
-                    sn2_main=sn2_router._main_contact,
-                    sn2_archive=sn2_router._archive_contact,
+                    open_access_main=open_access_contact_router._main_contact,
+                    open_access_archive=open_access_contact_router._archive_contact,
+                    sn1_main=sn1_contact_router._main_contact,
+                    sn1_archive=sn1_contact_router._archive_contact,
+                    sn2_main=sn2_contact_router._main_contact,
+                    sn2_archive=sn2_contact_router._archive_contact,
                     identities=TEST_IDENTITIES,
                     default_latest_block=default_latest_block(),
                     default_neurons=default_neurons(),

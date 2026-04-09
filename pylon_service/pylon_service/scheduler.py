@@ -50,7 +50,7 @@ def _add_recent_neurons_job(app: Litestar, scheduler: BaseScheduler):
             contexts.append(SubnetContext(netuid))
 
     timeout = recent_objects_settings.update_interval_seconds
-    updater = UpdateRecentNeurons(app.stores.get(StoreName.RECENT_OBJECTS), app.state.bittensor_client_pool)
+    updater = UpdateRecentNeurons(app.stores.get(StoreName.RECENT_OBJECTS), app.state.bittensor_contact_pool)
     executor = RecentObjectUpdateTaskExecutor(updater, timeout=timeout, contexts=contexts)
 
     scheduler.add_job(

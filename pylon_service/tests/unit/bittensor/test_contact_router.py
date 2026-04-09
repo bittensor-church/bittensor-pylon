@@ -32,8 +32,8 @@ from pylon_commons.types import (
 from turbobt.substrate.exceptions import UnknownBlock
 
 from pylon_service.bittensor.contact import MockBittensorContact
+from pylon_service.bittensor.contact_router import BittensorContactRouter
 from pylon_service.bittensor.exceptions import ArchiveFallbackException
-from pylon_service.bittensor.router import BittensorRouter
 
 
 @pytest.fixture
@@ -74,8 +74,8 @@ def archive_contact():
 
 
 @pytest.fixture
-def router(main_contact, archive_contact):
-    return BittensorRouter(
+def contact_router(main_contact, archive_contact):
+    return BittensorContactRouter(
         wallet=Wallet(),
         main_contact=main_contact,
         archive_contact=archive_contact,
@@ -84,17 +84,17 @@ def router(main_contact, archive_contact):
 
 
 @pytest.mark.asyncio
-async def test_router_recent_block_uses_main_contact(router, main_contact, archive_contact, test_neuron):
+async def test_contact_router_recent_block_uses_main_contact(contact_router, main_contact, archive_contact, test_neuron):
     recent_block = Block(number=BlockNumber(450), hash=BlockHash("0xrecent"))
     latest_block = Block(number=BlockNumber(500), hash=BlockHash("0xlatest"))
     expected_neurons = [test_neuron]
 
-    async with router:
+    async with contact_router:
         async with main_contact.mock_behavior(
             get_latest_block=[latest_block],
             get_neurons_list=[expected_neurons],
         ):
-            result = await router.get_neurons_list(netuid=NetUid(1), block=recent_block)
+            result = await contact_router.get_neurons_list(netuid=NetUid(1), block=recent_block)
 
     assert result == expected_neurons
     assert main_contact.calls["get_latest_block"] == [()]
@@ -103,12 +103,12 @@ async def test_router_recent_block_uses_main_contact(router, main_contact, archi
 
 
 @pytest.mark.asyncio
-async def test_router_unknown_block_falls_back_to_archive(router, main_contact, archive_contact, test_neuron):
+async def test_contact_router_unknown_block_falls_back_to_archive(contact_router, main_contact, archive_contact, test_neuron):
     recent_block = Block(number=BlockNumber(450), hash=BlockHash("0xrecent"))
     latest_block = Block(number=BlockNumber(500), hash=BlockHash("0xlatest"))
     expected_neurons = [test_neuron]
 
-    async with router:
+    async with contact_router:
         async with (
             main_contact.mock_behavior(
                 get_latest_block=[latest_block],
@@ -118,7 +118,7 @@ async def test_router_unknown_block_falls_back_to_archive(router, main_contact, 
                 get_neurons_list=[expected_neurons],
             ),
         ):
-            result = await router.get_neurons_list(netuid=NetUid(1), block=recent_block)
+            result = await contact_router.get_neurons_list(netuid=NetUid(1), block=recent_block)
 
     assert result == expected_neurons
     assert main_contact.calls["get_neurons_list"] == [(NetUid(1), recent_block)]
@@ -126,11 +126,13 @@ async def test_router_unknown_block_falls_back_to_archive(router, main_contact, 
 
 
 @pytest.mark.asyncio
-async def test_router_unknown_block_on_both_nodes_raises_archive_fallback(router, main_contact, archive_contact):
+async def test_contact_router_unknown_block_on_both_nodes_raises_archive_fallback(
+    contact_router, main_contact, archive_contact
+):
     recent_block = Block(number=BlockNumber(450), hash=BlockHash("0xrecent"))
     latest_block = Block(number=BlockNumber(500), hash=BlockHash("0xlatest"))
 
-    async with router:
+    async with contact_router:
         async with (
             main_contact.mock_behavior(
                 get_latest_block=[latest_block],
@@ -141,4 +143,4 @@ async def test_router_unknown_block_on_both_nodes_raises_archive_fallback(router
             ),
         ):
             with pytest.raises(ArchiveFallbackException, match="unavailable on both main and archive nodes"):
-                await router.get_neurons_list(netuid=NetUid(1), block=recent_block)
+                await contact_router.get_neurons_list(netuid=NetUid(1), block=recent_block)

@@ -40,7 +40,7 @@ HTTP handlers
 versioned services
     |
     v
-wallet-bound router
+wallet-bound BittensorContactRouter
     |
     v
 contacts
@@ -66,7 +66,7 @@ Handlers are short and declarative.
 They:
 
 - read request data
-- obtain the wallet-bound router from the pool through dependencies
+- obtain the wallet-bound `BittensorContactRouter` from the `BittensorContactPool` through dependencies
 - obtain cache-facing collaborators such as recent-object providers through dependencies when the endpoint uses cache
 - call the appropriate versioned service
 - translate domain exceptions into HTTP exceptions and status codes
@@ -86,7 +86,7 @@ Services contain application logic.
 They:
 
 - implement endpoint behavior
-- compose multiple router calls
+- compose multiple `BittensorContactRouter` calls
 - access cache collaborators when the endpoint semantics require cached data
 - apply filtering, sorting, reshaping, and compatibility logic
 - convert between contact-internal models and versioned DTO models
@@ -129,9 +129,9 @@ That means:
   exceptions
 - handlers map domain exceptions into HTTP responses
 
-### Router
+### BittensorContactRouter
 
-The router is wallet-bound and pooled.
+The `BittensorContactRouter` is wallet-bound and pooled.
 
 It:
 
@@ -140,10 +140,10 @@ It:
 - decides internally whether to use the main or archive contact
 - hides archive fallback policy from services
 
-The router is not a contact subclass. It only implements the same interface shape by composition.
+The `BittensorContactRouter` is not a contact subclass. It only implements the same interface shape by composition.
 
-There is no separate router protocol just for its own sake. The router should expose the same method surface as the
-contact so services can use either without caring about transport details.
+There is no separate `BittensorContactRouter` protocol just for its own sake. The `BittensorContactRouter` should
+expose the same method surface as the contact so services can use either without caring about transport details.
 
 ### Contact
 
@@ -205,7 +205,7 @@ it into their own DTOs.
 Rules:
 
 - contacts are not versioned
-- router is not versioned
+- `BittensorContactRouter` is not versioned
 - handlers are versioned
 - services are versioned
 - DTO models are versioned
@@ -301,8 +301,8 @@ Only the contact is mocked.
 
 In tests:
 
-- use a real router
-- use a real pool
+- use a real `BittensorContactRouter`
+- use a real `BittensorContactPool`
 - use real services
 - use real handlers
 - use real in-process stores and cache logic when practical
@@ -330,7 +330,8 @@ implements obvious mock mechanics. The mock contact should be validated by the p
 temporary migration test is acceptable only if it is removed once the surrounding test seam is stable.
 
 Recent-object cache access should be exercised through services, not by having handlers read cache directly. The cache
-must return the same model shapes as router/contact reads so cached and uncached paths share service logic cleanly.
+must return the same model shapes as `BittensorContactRouter`/contact reads so cached and uncached paths share service
+logic cleanly.
 
 ### Snapshot convention
 
@@ -392,8 +393,8 @@ The required public-API scenario checklist lives in:
 Do not mock:
 
 - services, in normal cases
-- router behavior
-- pool behavior
+- `BittensorContactRouter` behavior
+- `BittensorContactPool` behavior
 - internal helpers below the chosen public seam
 
 Services should not generally get their own direct tests. Prefer public-path tests through handlers or jobs. Test a
@@ -401,16 +402,16 @@ service directly only when there is no reasonable public entry point.
 
 ## Construction and dependency injection
 
-Contact implementation is chosen at composition time, not by mutating a live router.
+Contact implementation is chosen at composition time, not by mutating a live `BittensorContactRouter`.
 
 The intended pattern is:
 
-- app startup constructs the router pool
-- the pool constructs wallet-bound routers
-- routers construct their contacts through a typed contact factory
+- app startup constructs the `BittensorContactPool`
+- the pool constructs wallet-bound `BittensorContactRouter` instances
+- `BittensorContactRouter` instances construct their contacts through a typed contact factory
 - tests patch that factory to return `MockContact`
 
-Avoid mutable APIs like `router.set_contact_class(...)`. They are unsafe with pooling and background jobs.
+Avoid mutable APIs like `contact_router.set_contact_class(...)`. They are unsafe with pooling and background jobs.
 
 ## Background jobs and recent-data tasks
 
@@ -444,7 +445,7 @@ pylon_service/
     bittensor/
         contact.py
         models.py
-        router.py
+        contact_router.py
         pool.py
         recent/
             ...
@@ -458,15 +459,15 @@ Meaning:
 - `api/*/services.py` defines versioned service entry points
 - `bittensor/contact.py` defines the turbobt boundary
 - `bittensor/models.py` defines contact-internal models
-- `bittensor/router.py` defines wallet-bound main/archive routing
-- `bittensor/pool.py` manages router reuse
+- `bittensor/contact_router.py` defines wallet-bound main/archive routing
+- `bittensor/pool.py` manages `BittensorContactPool` reuse
 
 ## Change checklist
 
 Before merging changes in `pylon_service`, verify:
 
 - no code outside the contact talks to turbobt directly
-- archive selection logic lives in the router
+- archive selection logic lives in the `BittensorContactRouter`
 - business logic lives in services, not contacts
 - contact models preserve data needed by older stable APIs
 - versioned services handle DTO compatibility explicitly
