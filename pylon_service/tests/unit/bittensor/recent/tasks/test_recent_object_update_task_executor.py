@@ -5,11 +5,11 @@ from pylon_commons.types import NetUid, Timestamp
 from tenacity import AsyncRetrying, stop_after_attempt
 
 from pylon_service.bittensor.contact import BittensorPort
+from pylon_service.bittensor.contact_router import BittensorContactRouter
 from pylon_service.bittensor.pool import BittensorContactPool
 from pylon_service.bittensor.recent import AbstractContext, RecentObjectUpdateTaskExecutor, SubnetContext
 from pylon_service.bittensor.recent.adapter import CacheKey, _CacheEntry
 from pylon_service.bittensor.recent.tasks import UpdateRecentObject
-from pylon_service.bittensor.contact_router import BittensorContactRouter
 from tests.behave import Behave
 
 

@@ -19,8 +19,8 @@ from pylon_service.api._unstable.api import (
 )
 from pylon_service.api._unstable.tasks import ApplyWeights, SetCommitment
 from pylon_service.api.utils import handler
-from pylon_service.bittensor.recent import RecentObjectProvider
 from pylon_service.bittensor.contact_router import BittensorContactRouter
+from pylon_service.bittensor.recent import RecentObjectProvider
 from pylon_service.dependencies import (
     bt_contact_router_identity_dep,
     bt_contact_router_open_access_dep,

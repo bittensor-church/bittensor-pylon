@@ -5,6 +5,7 @@ from litestar.datastructures import State
 from litestar.exceptions import NotFoundException
 from pylon_commons.types import IdentityName, NetUid
 
+from pylon_service.bittensor.contact_router import BittensorContactRouter
 from pylon_service.bittensor.pool import BittensorContactPool
 from pylon_service.bittensor.recent import (
     AbstractContext,
@@ -12,7 +13,6 @@ from pylon_service.bittensor.recent import (
     RecentObjectProvider,
     SubnetContext,
 )
-from pylon_service.bittensor.contact_router import BittensorContactRouter
 from pylon_service.identities import Identity, identities
 from pylon_service.settings import recent_objects_settings
 from pylon_service.stores import StoreName
