@@ -30,7 +30,7 @@ dev = [
     "nox",
     "paramiko",
     "syrupy>=4,<5",
-    "dirty-equals>=0.11",
+    "dirty-equals==0.11",
 ]
 
 [project.urls]

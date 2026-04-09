@@ -227,7 +227,7 @@ requires-dist = [
     { name = "bittensor-pylon-client", marker = "extra == 'dev'", editable = "../pylon_client" },
     { name = "bittensor-pylon-commons", editable = "../pylon_commons" },
     { name = "bittensor-wallet" },
-    { name = "dirty-equals", marker = "extra == 'dev'", specifier = ">=0.11" },
+    { name = "dirty-equals", marker = "extra == 'dev'", specifier = "==0.11" },
     { name = "docker", marker = "extra == 'dev'" },
     { name = "httpx", marker = "extra == 'dev'" },
     { name = "litestar", extras = ["prometheus", "standard"] },
