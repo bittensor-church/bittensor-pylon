@@ -72,4 +72,5 @@ def litestar_logging_config():
             "pylon_filter": {"()": PylonLogFilter},
         },
         log_exceptions="always",
+        disable_stack_trace=set(range(400, 500)),
     )
