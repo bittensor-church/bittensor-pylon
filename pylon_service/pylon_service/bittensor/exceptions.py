@@ -8,6 +8,21 @@ class BittensorException(Exception):
         super().__init__(detail)
 
 
+class BittensorTransportError(BittensorException):
+    """
+    Raised when a contact operation still fails after transport recovery.
+    """
+
+    def __init__(self, *, operation: str, uri: str, original_exception: BaseException):
+        self.operation = operation
+        self.uri = uri
+        self.original_exception = original_exception
+        self.error_type = type(original_exception).__name__
+        message = str(original_exception).strip()
+        self.transport_gist = f"{self.error_type}: {message}" if message else self.error_type
+        super().__init__(f"{operation} failed on {uri}: {self.transport_gist}")
+
+
 class ArchiveFallbackException(BittensorException):
     """
     Raised when block data is unavailable after archive node fallback.

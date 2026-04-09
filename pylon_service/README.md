@@ -154,6 +154,7 @@ It:
 - opens and closes connections
 - shields turbobt calls (asyncio.shield, an internal quirk fix)
 - recreates connections when needed
+- logs expected reconnects at `INFO` and raises a typed contact transport exception if retry still fails
 - translates turbobt objects into Pylon contact-internal models
 - translates write inputs from Pylon models into turbobt calls
 

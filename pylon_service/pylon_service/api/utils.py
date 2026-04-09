@@ -6,6 +6,7 @@ from litestar.exceptions import HTTPException
 from litestar.handlers.http_handlers import decorators as http_decorators
 from pylon_commons.endpoints import Endpoint
 
+from pylon_service.bittensor.exceptions import BittensorTransportError
 from pylon_service.services.errors import (
     BlockNotFoundError,
     CertificateGenerationFailedError,
@@ -26,6 +27,9 @@ def _response_for_exception(exc: Exception) -> Response | None:
 
     if isinstance(exc, CertificateGenerationFailedError):
         return Response(status_code=502, content={"status_code": 502, "detail": str(exc)})
+
+    if isinstance(exc, BittensorTransportError):
+        return Response(status_code=502, content={"status_code": 502, "detail": exc.detail})
 
     if isinstance(exc, HTTPException):
         content = {"status_code": exc.status_code, "detail": exc.detail}

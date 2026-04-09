@@ -1,4 +1,6 @@
 import asyncio
+import contextlib
+import logging
 from unittest.mock import AsyncMock, create_autospec, patch
 
 import pytest
@@ -11,6 +13,7 @@ from turbobt.client import Bittensor
 from websockets.exceptions import ConnectionClosedError, ConnectionClosedOK
 
 from pylon_service.bittensor.contact import TurboBtContact
+from pylon_service.bittensor.exceptions import BittensorTransportError
 
 
 @pytest.fixture
@@ -44,6 +47,27 @@ async def open_contact(raw_client):
     finally:
         if contact._raw_client is not None:
             await contact.close()
+class _ListHandler(logging.Handler):
+    def __init__(self) -> None:
+        super().__init__(level=logging.INFO)
+        self.records: list[logging.LogRecord] = []
+
+    def emit(self, record: logging.LogRecord) -> None:
+        self.records.append(record)
+
+
+@contextlib.contextmanager
+def capture_contact_logs():
+    contact_logger = logging.getLogger("pylon_service.bittensor.contact")
+    handler = _ListHandler()
+    previous_level = contact_logger.level
+    contact_logger.addHandler(handler)
+    contact_logger.setLevel(logging.INFO)
+    try:
+        yield handler.records
+    finally:
+        contact_logger.removeHandler(handler)
+        contact_logger.setLevel(previous_level)
 
 
 @pytest.mark.asyncio
@@ -109,7 +133,9 @@ async def test_cancelled_task_preserves_cancelled_error_when_recreation_fails(op
 
 
 @pytest.mark.asyncio
-async def test_runtime_error_triggers_contact_recreation_and_retry(open_contact, bittensor_ctor, raw_client, block_ref):
+async def test_runtime_error_triggers_contact_recreation_and_retry_without_traceback_logs(
+    open_contact, bittensor_ctor, raw_client, block_ref
+):
     old_raw_client = raw_client
     block_ref.get.side_effect = RuntimeError("turbobt internal state broken")
 
@@ -123,9 +149,16 @@ async def test_runtime_error_triggers_contact_recreation_and_retry(open_contact,
 
     bittensor_ctor.side_effect = [new_raw_client]
 
-    result = await open_contact.get_block(BlockNumber(42))
+    with capture_contact_logs() as records:
+        result = await open_contact.get_block(BlockNumber(42))
 
     assert result == Block(number=BlockNumber(42), hash=BlockHash("hash"))
+    reconnect_records = [
+        record for record in records if "Recoverable transport error during get_block" in record.getMessage()
+    ]
+    assert len(reconnect_records) == 1
+    assert reconnect_records[0].levelno == logging.INFO
+    assert reconnect_records[0].exc_info is None
     assert block_ref.get.call_count == 1
     assert new_block_ref.get.call_count == 1
     old_raw_client.__aexit__.assert_called_once()
@@ -185,7 +218,7 @@ async def test_connection_closed_ok_triggers_contact_recreation_and_retry(
 
 
 @pytest.mark.asyncio
-async def test_runtime_error_on_retry_propagates(open_contact, bittensor_ctor, block_ref):
+async def test_runtime_error_on_retry_raises_bittensor_transport_error(open_contact, bittensor_ctor, block_ref):
     new_raw_client = create_autospec(Bittensor, instance=True)
     new_raw_client.__aenter__ = AsyncMock(return_value=new_raw_client)
     new_raw_client.__aexit__ = AsyncMock(return_value=None)
@@ -197,11 +230,19 @@ async def test_runtime_error_on_retry_propagates(open_contact, bittensor_ctor, b
     bittensor_ctor.side_effect = [new_raw_client]
     block_ref.get.side_effect = RuntimeError("turbobt broken permanently")
 
-    with pytest.raises(RuntimeError, match="turbobt broken permanently"):
+    with pytest.raises(
+        BittensorTransportError,
+        match="get_block failed on mock://test: RuntimeError: turbobt broken permanently",
+    ) as exc_info:
         await open_contact.get_block(BlockNumber(42))
 
     assert block_ref.get.call_count == 1
     assert new_block_ref.get.call_count == 1
+    assert exc_info.value.operation == "get_block"
+    assert exc_info.value.uri == "mock://test"
+    assert exc_info.value.error_type == "RuntimeError"
+    assert exc_info.value.transport_gist == "RuntimeError: turbobt broken permanently"
+    assert isinstance(exc_info.value.__cause__, RuntimeError)
 
 
 @pytest.mark.asyncio

@@ -53,6 +53,7 @@ from turbobt.substrate.pallets.chain import Extrinsic as TurboBtExtrinsic
 from turbobt.substrate.pallets.chain import SignedBlock
 from websockets.exceptions import ConnectionClosed
 
+from pylon_service.bittensor.exceptions import BittensorTransportError
 from pylon_service.bittensor.models import (
     AxonInfo,
     AxonProtocol,
@@ -77,6 +78,7 @@ from tests.behave import Behave, Behavior
 logger = logging.getLogger(__name__)
 
 unknown_hotkey = Hotkey("N/A")
+RECONNECT_EXCEPTIONS = (AttributeError, ConnectionClosed, OSError, RuntimeError)
 
 
 class AbstractBittensorContact(ABC):
@@ -220,7 +222,7 @@ class TurboBtContact(AbstractBittensorContact):
 
     async def _recreate_bt_client(self) -> None:
         assert self._raw_client is not None, "The contact is None so cannot be recreated."
-        logger.warning("Recreating Bittensor contact for %s", self.uri)
+        logger.info("Recreating Bittensor contact for %s", self.uri)
         if not self._is_client_ready.is_set():
             async with asyncio.timeout(5):
                 await self._is_client_ready.wait()
@@ -230,33 +232,62 @@ class TurboBtContact(AbstractBittensorContact):
             old_client = self._raw_client
             try:
                 await asyncio.shield(old_client.__aexit__(None, None, None))
-            except Exception:
-                logger.warning("Failed to close old Bittensor contact during recreation", exc_info=True)
+            except Exception as exc:
+                logger.warning(
+                    "Failed to close old Bittensor contact during recreation for %s: %s",
+                    self.uri,
+                    self._transport_gist(exc),
+                )
             self._raw_client = Bittensor(wallet=self.wallet, uri=self.uri)
             await asyncio.shield(self._raw_client.__aenter__())
         finally:
             self._is_client_ready.set()
 
-    async def _protect_turbobt[T](self, coro_factory: Callable[[Bittensor], Awaitable[T]]) -> T:
+    def _transport_gist(self, exc: BaseException) -> str:
+        message = str(exc).strip()
+        return f"{type(exc).__name__}: {message}" if message else type(exc).__name__
+
+    def _transport_error(self, operation_name: str, exc: BaseException) -> BittensorTransportError:
+        return BittensorTransportError(operation=operation_name, uri=str(self.uri), original_exception=exc)
+
+    async def _protect_turbobt[T](self, operation_name: str, coro_factory: Callable[[Bittensor], Awaitable[T]]) -> T:
         bt_client = await self._get_bt_client()
         try:
             return await asyncio.shield(coro_factory(bt_client))
         except asyncio.CancelledError as cancelled_error:
-            logger.warning("Cancellation caught during bittensor operation on %s, recreating contact", self.uri)
+            logger.info("Bittensor operation %s cancelled on %s; recreating contact", operation_name, self.uri)
             try:
                 await asyncio.shield(self._recreate_bt_client())
             except asyncio.CancelledError:
-                logger.warning("Recreation was cancelled during cancellation handling on %s", self.uri)
-            except Exception:
-                logger.exception("Failed to recreate contact after cancellation on %s", self.uri)
+                logger.info(
+                    "Contact recreation cancelled while handling cancellation for %s on %s",
+                    operation_name,
+                    self.uri,
+                )
+            except Exception as exc:
+                logger.warning(
+                    "Contact recreation failed while handling cancellation for %s on %s: %s",
+                    operation_name,
+                    self.uri,
+                    self._transport_gist(exc),
+                )
             raise cancelled_error from None
-        except (ConnectionClosed, RuntimeError):
-            logger.exception(
-                "Transport/runtime error caught during bittensor operation on %s, recreating contact", self.uri
+        except RECONNECT_EXCEPTIONS as exc:
+            logger.info(
+                "Recoverable transport error during %s on %s: %s; recreating contact",
+                operation_name,
+                self.uri,
+                self._transport_gist(exc),
             )
-            await asyncio.shield(self._recreate_bt_client())
+            try:
+                await asyncio.shield(self._recreate_bt_client())
+            except Exception as recreate_exc:
+                raise self._transport_error(operation_name, recreate_exc) from recreate_exc
             bt_client = await self._get_bt_client()
-            return await asyncio.shield(coro_factory(bt_client))
+            try:
+                return await asyncio.shield(coro_factory(bt_client))
+            except RECONNECT_EXCEPTIONS as retry_exc:
+                raise self._transport_error(operation_name, retry_exc) from retry_exc
 
     def _resolve_hotkey(self, hotkey: Hotkey | None) -> Hotkey:
         if hotkey:
@@ -270,7 +301,7 @@ class TurboBtContact(AbstractBittensorContact):
         labels={"uri": Attr("uri"), "hotkey": Attr("hotkey")},
     )
     async def get_block(self, number: BlockNumber) -> Block | None:
-        block_obj = await self._protect_turbobt(lambda c: c.block(number).get())
+        block_obj = await self._protect_turbobt("get_block", lambda c: c.block(number).get())
         if block_obj is None or block_obj.number is None or block_obj.hash is None:
             return None
         return Block(number=BlockNumber(block_obj.number), hash=BlockHash(block_obj.hash))
@@ -289,7 +320,7 @@ class TurboBtContact(AbstractBittensorContact):
             turbobt_block: TurboBtBlock = await bt_client.block(block.number).get()
             return await turbobt_block.get_timestamp()
 
-        timestamp = await self._protect_turbobt(_get_timestamp)
+        timestamp = await self._protect_turbobt("get_block_timestamp", _get_timestamp)
         return Timestamp(int(timestamp.timestamp()))
 
     @staticmethod
@@ -323,7 +354,9 @@ class TurboBtContact(AbstractBittensorContact):
         labels={"uri": Attr("uri"), "netuid": Param("netuid"), "hotkey": Attr("hotkey")},
     )
     async def get_neurons_list(self, netuid: NetUid, block: Block) -> list[Neuron]:
-        neurons = await self._protect_turbobt(lambda c: c.subnet(netuid).list_neurons(block_hash=block.hash))
+        neurons = await self._protect_turbobt(
+            "get_neurons_list", lambda c: c.subnet(netuid).list_neurons(block_hash=block.hash)
+        )
         state = await self.get_subnet_state(netuid, block)
         stakes = state.hotkeys_stakes
         return [await self._translate_neuron(neuron, stakes[Hotkey(neuron.hotkey)]) for neuron in neurons]
@@ -350,7 +383,9 @@ class TurboBtContact(AbstractBittensorContact):
         labels={"uri": Attr("uri"), "netuid": Param("netuid"), "hotkey": Attr("hotkey")},
     )
     async def get_hyperparams(self, netuid: NetUid, block: Block) -> SubnetHyperparams | None:
-        params = await self._protect_turbobt(lambda c: c.subnet(netuid).get_hyperparameters(block_hash=block.hash))
+        params = await self._protect_turbobt(
+            "get_hyperparams", lambda c: c.subnet(netuid).get_hyperparameters(block_hash=block.hash)
+        )
         if not params:
             return None
         return await self._translate_hyperparams(params)
@@ -368,6 +403,7 @@ class TurboBtContact(AbstractBittensorContact):
     )
     async def get_certificates(self, netuid: NetUid, block: Block) -> dict[Hotkey, NeuronCertificate]:
         certificates = await self._protect_turbobt(
+            "get_certificates",
             lambda c: c.subnet(netuid).neurons.get_certificates(block_hash=block.hash)
         )
         if not certificates:
@@ -386,6 +422,7 @@ class TurboBtContact(AbstractBittensorContact):
     ) -> NeuronCertificate | None:
         resolved_hotkey = self._resolve_hotkey(hotkey)
         certificate = await self._protect_turbobt(
+            "get_certificate",
             lambda c: c.subnet(netuid).neuron(hotkey=resolved_hotkey).get_certificate(block_hash=block.hash)
         )
         if certificate:
@@ -408,6 +445,7 @@ class TurboBtContact(AbstractBittensorContact):
         self, netuid: NetUid, algorithm: CertificateAlgorithm
     ) -> NeuronCertificateKeypair | None:
         keypair = await self._protect_turbobt(
+            "generate_certificate_keypair",
             lambda c: c.subnet(netuid).neurons.generate_certificate_keypair(
                 algorithm=TurboBtCertificateAlgorithm(algorithm)
             )
@@ -421,7 +459,7 @@ class TurboBtContact(AbstractBittensorContact):
         labels={"uri": Attr("uri"), "netuid": Param("netuid"), "hotkey": Attr("hotkey")},
     )
     async def get_subnet_state(self, netuid: NetUid, block: Block) -> SubnetState:
-        state = await self._protect_turbobt(lambda c: c.subnet(netuid).get_state(block.hash))
+        state = await self._protect_turbobt("get_subnet_state", lambda c: c.subnet(netuid).get_state(block.hash))
         return SubnetState(**state)  # type: ignore[arg-type]
 
     @track_operation(
@@ -430,7 +468,9 @@ class TurboBtContact(AbstractBittensorContact):
     )
     async def commit_weights(self, netuid: NetUid, weights: dict[NeuronUid, Weight]) -> RevealRound:
         normalized_weights = {int(uid): float(weight) for uid, weight in weights.items()}
-        reveal_round = await self._protect_turbobt(lambda c: c.subnet(netuid).weights.commit(normalized_weights))
+        reveal_round = await self._protect_turbobt(
+            "commit_weights", lambda c: c.subnet(netuid).weights.commit(normalized_weights)
+        )
         return RevealRound(reveal_round)
 
     @track_operation(
@@ -439,7 +479,7 @@ class TurboBtContact(AbstractBittensorContact):
     )
     async def set_weights(self, netuid: NetUid, weights: dict[NeuronUid, Weight]) -> None:
         normalized_weights = {int(uid): float(weight) for uid, weight in weights.items()}
-        await self._protect_turbobt(lambda c: c.subnet(netuid).weights.set(normalized_weights))
+        await self._protect_turbobt("set_weights", lambda c: c.subnet(netuid).weights.set(normalized_weights))
 
     @track_operation(
         bittensor_operation_duration,
@@ -448,6 +488,7 @@ class TurboBtContact(AbstractBittensorContact):
     async def get_commitment(self, netuid: NetUid, block: Block, hotkey: Hotkey | None = None) -> Commitment | None:
         resolved_hotkey = self._resolve_hotkey(hotkey)
         result = await self._protect_turbobt(
+            "get_commitment",
             lambda c: c.subnet(netuid).commitments.get(resolved_hotkey, block_hash=block.hash)
         )
         if result is None:
@@ -464,6 +505,7 @@ class TurboBtContact(AbstractBittensorContact):
     )
     async def get_commitments(self, netuid: NetUid, block: Block) -> SubnetCommitments:
         raw_commitments = await self._protect_turbobt(
+            "get_commitments",
             lambda c: c.subnet(netuid).commitments.fetch(block_hash=block.hash)
         )
         commitments = {
@@ -481,10 +523,10 @@ class TurboBtContact(AbstractBittensorContact):
         labels={"uri": Attr("uri"), "netuid": Param("netuid"), "hotkey": Attr("hotkey")},
     )
     async def set_commitment(self, netuid: NetUid, data: CommitmentDataBytes) -> None:
-        await self._protect_turbobt(lambda c: c.subnet(netuid).commitments.set(bytes(data)))
+        await self._protect_turbobt("set_commitment", lambda c: c.subnet(netuid).commitments.set(bytes(data)))
 
     async def get_signed_block(self, block: Block) -> SignedBlock | None:
-        return await self._protect_turbobt(lambda c: c.subtensor.chain.getBlock(block.hash))
+        return await self._protect_turbobt("get_signed_block", lambda c: c.subtensor.chain.getBlock(block.hash))
 
     async def get_extrinsic(self, block: Block, extrinsic_index: ExtrinsicIndex) -> Extrinsic | None:
         signed_block = await self.get_signed_block(block)
