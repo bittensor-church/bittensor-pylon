@@ -27,6 +27,7 @@ from pylon_commons.types import (
     Dividends,
     EmissionRao,
     Hotkey,
+    IdentityName,
     Incentive,
     NetUid,
     NeuronUid,
@@ -58,13 +59,15 @@ REVEALED_COMMITMENTS_NETUID = NetUid(28)
 
 
 @dataclass(frozen=True)
+class IdentityContacts:
+    main: MockBittensorContact
+    archive: MockBittensorContact
+
+
+@dataclass(frozen=True)
 class SharedWorld:
-    open_access_main: MockBittensorContact
-    open_access_archive: MockBittensorContact
-    sn1_main: MockBittensorContact
-    sn1_archive: MockBittensorContact
-    sn2_main: MockBittensorContact
-    sn2_archive: MockBittensorContact
+    open_access: IdentityContacts
+    identity_contacts: dict[IdentityName, IdentityContacts]
     default_latest_block: Block
     default_neurons: dict[NetUid, list[Neuron]]
     default_subnet_states: dict[NetUid, SubnetState]
@@ -73,14 +76,18 @@ class SharedWorld:
 
     @property
     def contacts(self) -> tuple[MockBittensorContact, ...]:
-        return (
-            self.open_access_main,
-            self.open_access_archive,
-            self.sn1_main,
-            self.sn1_archive,
-            self.sn2_main,
-            self.sn2_archive,
-        )
+        seen: set[int] = set()
+        result: list[MockBittensorContact] = []
+        for contact in (self.open_access.main, self.open_access.archive):
+            if id(contact) not in seen:
+                seen.add(id(contact))
+                result.append(contact)
+        for ic in self.identity_contacts.values():
+            for contact in (ic.main, ic.archive):
+                if id(contact) not in seen:
+                    seen.add(id(contact))
+                    result.append(contact)
+        return tuple(result)
 
     def reset(self) -> None:
         for contact in self.contacts:

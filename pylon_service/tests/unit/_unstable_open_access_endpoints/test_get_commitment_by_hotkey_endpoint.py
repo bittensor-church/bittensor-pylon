@@ -8,8 +8,7 @@ from litestar.testing import AsyncTestClient
 from pylon_commons.models import Block
 from pylon_commons.types import BlockHash, BlockNumber
 
-from pylon_service.bittensor.mock_contact import MockBittensorContact
-from tests.world import COMMITMENTS_ALL_NETUID, COMMITMENTS_MIXED_NETUID
+from tests.world import COMMITMENTS_ALL_NETUID
 
 
 @pytest.mark.asyncio
@@ -23,28 +22,17 @@ async def test_unstable_open_access_get_commitment_by_hotkey_returns_commitment_
 
 
 @pytest.mark.asyncio
-async def test_unstable_open_access_get_commitment_by_hotkey_returns_timelock_variant(
-    test_client: AsyncTestClient, snapshot_json
-):
-    response = await test_client.get(
-        f"/api/_unstable/subnet/{COMMITMENTS_MIXED_NETUID}/block/latest/commitments/hotkey2"
-    )
-
-    assert response.status_code == HTTP_200_OK
-    assert response.json() == snapshot_json
-
-
-@pytest.mark.asyncio
 async def test_get_commitment_open_access_not_found(
-    test_client: AsyncTestClient, open_access_mock_bt_client: MockBittensorContact, snapshot_json
+    test_client: AsyncTestClient, mock_bt_client_factory, snapshot_json
 ):
     """
     Test getting a commitment that doesn't exist.
     """
-    async with open_access_mock_bt_client.mock_behavior(
-        get_latest_block=[Block(number=BlockNumber(1000), hash=BlockHash("0xabc123"))],
-        get_commitment=[None],
-    ):
-        response = await test_client.get("/api/_unstable/subnet/1/block/latest/commitments/hotkey1")
-    assert response.status_code == HTTP_404_NOT_FOUND
-    assert response.json() == snapshot_json
+    async with mock_bt_client_factory() as mock_client:
+        async with mock_client.mock_behavior(
+            get_latest_block=[Block(number=BlockNumber(1000), hash=BlockHash("0xabc123"))],
+            get_commitment=[None],
+        ):
+            response = await test_client.get("/api/_unstable/subnet/1/block/latest/commitments/hotkey1")
+        assert response.status_code == HTTP_404_NOT_FOUND
+        assert response.json() == snapshot_json

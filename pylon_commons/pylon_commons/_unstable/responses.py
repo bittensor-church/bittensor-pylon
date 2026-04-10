@@ -27,27 +27,31 @@ class PylonResponse(BaseModel):
 
 class LoginResponse(PylonResponse):
     """
-    Base class for response that is returned for the login request.
+    Deprecated. Kept for backward compatibility with pylon_client.v1 re-exports; will be removed in 2.0.0.
     """
-
-    pass
 
 
 class OpenAccessLoginResponse(LoginResponse):
     """
-    Response returned for the login via open access request.
+    Deprecated. Kept for backward compatibility with pylon_client.v1 re-exports; will be removed in 2.0.0.
     """
-
-    pass
 
 
 class IdentityLoginResponse(LoginResponse):
     """
-    Response returned for the login via identity request.
+    Deprecated. Kept for backward compatibility with pylon_client.v1 re-exports; will be removed in 2.0.0.
     """
 
     netuid: NetUid
     identity_name: IdentityName
+
+
+class GetIdentitiesResponse(PylonResponse):
+    """
+    Response returned for the GET /identities request.
+    """
+
+    identities: dict[IdentityName, NetUid]
 
 
 class SetWeightsResponse(PylonResponse):

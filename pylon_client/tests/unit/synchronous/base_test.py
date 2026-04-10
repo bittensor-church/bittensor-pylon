@@ -135,27 +135,27 @@ class IdentityEndpointTest(BaseEndpointTest, ABC):
     no_credentials_error_message = "Can not use identity api - no identity name or token provided in config."
 
     @property
-    def _login_endpoint(self) -> Endpoint:
-        return type(self.endpoint)["IDENTITY_LOGIN"]
+    def _identities_endpoint(self) -> Endpoint:
+        return type(self.endpoint)["IDENTITIES"]
 
     def _setup_login_mock(self, service_mock):
-        login_url = self._login_endpoint.absolute_url(identity_name="sn1")
-        service_mock.post(login_url).mock(
-            return_value=Response(status_code=codes.OK, json={"netuid": 1, "identity_name": "sn1"})
+        identities_url = self._identities_endpoint.absolute_url()
+        service_mock.get(identities_url).mock(
+            return_value=Response(status_code=codes.OK, json={"identities": {"sn1": 1}})
         )
 
     def test_login_request_error(self, pylon_client, service_mock):
         assert pylon_client.config.retry.stop.max_attempt_number <= 3
-        login_url = self._login_endpoint.absolute_url(identity_name="sn1")
-        service_mock.post(login_url).mock(side_effect=ConnectError("Connection failed"))
+        identities_url = self._identities_endpoint.absolute_url()
+        service_mock.get(identities_url).mock(side_effect=ConnectError("Connection failed"))
 
         with pylon_client:
             with pytest.raises(PylonRequestException, match="An error occurred while making a request to Pylon API."):
                 self.make_endpoint_call(pylon_client)
 
     def test_login_response_error(self, pylon_client, service_mock):
-        login_url = self._login_endpoint.absolute_url(identity_name="sn1")
-        service_mock.post(login_url).mock(return_value=Response(status_code=codes.INTERNAL_SERVER_ERROR))
+        identities_url = self._identities_endpoint.absolute_url()
+        service_mock.get(identities_url).mock(return_value=Response(status_code=codes.INTERNAL_SERVER_ERROR))
 
         with pylon_client:
             with pytest.raises(PylonResponseException, match="Invalid response from Pylon API."):

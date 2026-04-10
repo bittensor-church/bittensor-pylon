@@ -89,10 +89,9 @@ class IdentityApi(UnstableIdentityApi):
         return self._send_authenticated_request(self._get_own_commitment_request)
 
     def _get_commitments_request(self) -> GetCommitmentsRequest:  # type: ignore[reportIncompatibleMethodOverride]
-        assert self._login_response, "Attempted api request without authentication."
         return GetCommitmentsRequest(
-            netuid=self._login_response.netuid,
-            identity_name=self._login_response.identity_name,
+            netuid=self.netuid,
+            identity_name=self.identity_name,
         )
 
     def _get_commitment_request(self, hotkey: Hotkey) -> GetCommitmentRequest:  # type: ignore[reportIncompatibleMethodOverride]

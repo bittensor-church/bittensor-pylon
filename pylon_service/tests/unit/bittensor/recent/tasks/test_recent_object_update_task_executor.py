@@ -49,38 +49,40 @@ def executor(update_task, context) -> RecentObjectUpdateTaskExecutor:
 
 
 @pytest.mark.asyncio
-async def test_executor_failed(executor, update_task, open_access_mock_bt_client, context):
-    async with update_task.behave.mock(_get_object=[Exception("error"), Exception("error"), Exception("error")]):
-        await executor.run()
+async def test_executor_failed(executor, update_task, mock_bt_client_factory, context):
+    async with mock_bt_client_factory() as mock_client:
+        async with update_task.behave.mock(_get_object=[Exception("error"), Exception("error"), Exception("error")]):
+            await executor.run()
 
-    calls = update_task.behave.calls["_get_object"]
-    assert len(calls) == 3
-    assert [call[0] for call in calls] == [context] * 3
-    assert all(isinstance(call[1], BittensorContactRouter) for call in calls)
-    assert all(call[1]._main_contact is open_access_mock_bt_client for call in calls)
+        calls = update_task.behave.calls["_get_object"]
+        assert len(calls) == 3
+        assert [call[0] for call in calls] == [context] * 3
+        assert all(isinstance(call[1], BittensorContactRouter) for call in calls)
+        assert all(call[1]._main_contact is mock_client for call in calls)
 
 
 @pytest.mark.asyncio
 async def test_executor_success_after_attempt(
     executor,
     update_task,
-    open_access_mock_bt_client,
+    mock_bt_client_factory,
     mock_recent_objects_store,
     context,
 ):
     object_ = AnObjectModel(field_1="foo", field_2=123)
 
-    async with (
-        update_task.behave.mock(_get_object=[Exception("error"), (Timestamp(123123123), object_)]),
-        mock_recent_objects_store.behave.mock(set=[None]),
-    ):
-        await executor.run()
+    async with mock_bt_client_factory() as mock_client:
+        async with (
+            update_task.behave.mock(_get_object=[Exception("error"), (Timestamp(123123123), object_)]),
+            mock_recent_objects_store.behave.mock(set=[None]),
+        ):
+            await executor.run()
 
-    data = _CacheEntry(data=object_.model_dump_json(), timestamp=Timestamp(123123123)).model_dump_json()
+        data = _CacheEntry(data=object_.model_dump_json(), timestamp=Timestamp(123123123)).model_dump_json()
 
-    calls = update_task.behave.calls["_get_object"]
-    assert len(calls) == 2
-    assert [call[0] for call in calls] == [context] * 2
-    assert all(isinstance(call[1], BittensorContactRouter) for call in calls)
-    assert all(call[1]._main_contact is open_access_mock_bt_client for call in calls)
-    assert mock_recent_objects_store.behave.calls["set"] == [(CacheKey(AnObjectModel, NetUid(1), None), data, None)]
+        calls = update_task.behave.calls["_get_object"]
+        assert len(calls) == 2
+        assert [call[0] for call in calls] == [context] * 2
+        assert all(isinstance(call[1], BittensorContactRouter) for call in calls)
+        assert all(call[1]._main_contact is mock_client for call in calls)
+        assert mock_recent_objects_store.behave.calls["set"] == [(CacheKey(AnObjectModel, NetUid(1), None), data, None)]

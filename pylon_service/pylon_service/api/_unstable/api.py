@@ -1,9 +1,11 @@
 import logging
+import re
 
-from litestar import Controller, Response, status_codes
+from litestar import Controller, Request, Response, status_codes
 from litestar.di import Provide
 from litestar.exceptions import NotFoundException
-from pylon_commons._unstable.bodies import LoginBody, SetCommitmentBody, SetRevealedCommitmentBody, SetWeightsBody
+from litestar.response import Redirect
+from pylon_commons._unstable.bodies import SetCommitmentBody, SetRevealedCommitmentBody, SetWeightsBody
 from pylon_commons._unstable.endpoints import Endpoint
 from pylon_commons._unstable.requests import GenerateCertificateKeypairRequest
 from pylon_commons._unstable.responses import (
@@ -12,11 +14,11 @@ from pylon_commons._unstable.responses import (
     GetCommitmentsResponse,
     GetDrandLastStoredRoundResponse,
     GetExtrinsicResponse,
+    GetIdentitiesResponse,
     GetLatestBlockInfoResponse,
     GetNeuronsResponse,
     GetRevealedCommitmentsResponse,
     GetValidatorsResponse,
-    IdentityLoginResponse,
     SetRevealedCommitmentResponse,
 )
 from pylon_commons.models import Hotkey, NeuronCertificate
@@ -35,7 +37,8 @@ from pylon_service.dependencies import (
     recent_object_provider_open_access_dep,
 )
 from pylon_service.exceptions import BadGatewayException
-from pylon_service.identities import Identity
+from pylon_service.guards import identity_auth_guard
+from pylon_service.identities import identities
 
 logger = logging.getLogger(__name__)
 
@@ -50,12 +53,11 @@ def identity_handler(endpoint: Endpoint, **kwargs):
 
 
 @handler(
-    Endpoint.IDENTITY_LOGIN,
-    dependencies={"identity": identity_dep},
+    Endpoint.IDENTITIES,
     status_code=status_codes.HTTP_200_OK,
 )
-async def identity_login(data: LoginBody, identity: Identity) -> IdentityLoginResponse:
-    return IdentityLoginResponse(netuid=identity.netuid, identity_name=identity.identity_name)
+async def get_identities() -> GetIdentitiesResponse:
+    return GetIdentitiesResponse(identities={name: identity.netuid for name, identity in identities.items()})
 
 
 @handler(
@@ -174,8 +176,20 @@ class OpenAccessController(Controller):
         return GetRevealedCommitmentsResponse(block=block, commitments=commitments)
 
 
+async def _check_identity_netuid(request: Request) -> Response | None:
+    identity_name = request.path_params["identity_name"]
+    netuid = request.path_params["netuid"]
+    identity = identities.get(identity_name)
+    if identity and identity.netuid != netuid:
+        correct_path = re.sub(r"/subnet/\d+", f"/subnet/{identity.netuid}", request.url.path, count=1)
+        return Redirect(path=correct_path, status_code=308)
+    return None
+
+
 class IdentityController(Controller):
     path = "/identity/{identity_name:str}/subnet/{netuid:int}"
+    guards = [identity_auth_guard]
+    before_request = _check_identity_netuid
     dependencies = {
         "identity": Provide(identity_dep),
         "bt_contact_router": Provide(bt_contact_router_identity_dep),
@@ -306,4 +320,4 @@ class IdentityController(Controller):
         return Response(certificate_keypair, status_code=status_codes.HTTP_201_CREATED)
 
 
-__all__ = ["OpenAccessController", "IdentityController", "identity_login", "get_extrinsic_endpoint"]
+__all__ = ["OpenAccessController", "IdentityController", "get_identities", "get_extrinsic_endpoint"]

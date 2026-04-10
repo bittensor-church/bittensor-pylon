@@ -1,15 +1,17 @@
 import pytest
 from litestar.status_codes import HTTP_200_OK, HTTP_404_NOT_FOUND
 
-from pylon_service.bittensor.mock_contact import MockBittensorContact
 from tests.world import VALIDATORS_NETUID
 
 
 @pytest.mark.asyncio
 async def test_unstable_identity_get_validators_returns_only_validator_permit_neurons_sorted_by_total_stake_desc(
-    test_client, snapshot_json
+    identity_test_client_factory, snapshot_json
 ):
-    response = await test_client.get(f"/api/_unstable/identity/sn1/subnet/{VALIDATORS_NETUID}/block/321/validators")
+    async with identity_test_client_factory("sn11") as client:
+        response = await client.get(
+            f"/api/_unstable/identity/sn11/subnet/{VALIDATORS_NETUID}/block/321/validators",
+        )
 
     assert response.status_code == HTTP_200_OK
     assert response.json() == snapshot_json
@@ -17,9 +19,12 @@ async def test_unstable_identity_get_validators_returns_only_validator_permit_ne
 
 @pytest.mark.asyncio
 async def test_unstable_identity_get_latest_validators_returns_only_validator_permit_neurons_sorted_by_total_stake_desc(
-    test_client, snapshot_json
+    identity_test_client_factory, snapshot_json
 ):
-    response = await test_client.get(f"/api/_unstable/identity/sn1/subnet/{VALIDATORS_NETUID}/block/latest/validators")
+    async with identity_test_client_factory("sn11") as client:
+        response = await client.get(
+            f"/api/_unstable/identity/sn11/subnet/{VALIDATORS_NETUID}/block/latest/validators",
+        )
 
     assert response.status_code == HTTP_200_OK
     assert response.json() == snapshot_json
@@ -27,10 +32,14 @@ async def test_unstable_identity_get_latest_validators_returns_only_validator_pe
 
 @pytest.mark.asyncio
 async def test_unstable_identity_get_validators_missing_block_returns_404(
-    test_client, sn1_mock_bt_client: MockBittensorContact, snapshot_json
+    identity_test_client_factory, mock_bt_client_factory, snapshot_json
 ):
-    async with sn1_mock_bt_client.mock_behavior(get_block=[None]):
-        response = await test_client.get("/api/_unstable/identity/sn1/subnet/1/block/999999/validators")
+    async with mock_bt_client_factory("sn1") as mock_client:
+        async with mock_client.mock_behavior(get_block=[None]):
+            async with identity_test_client_factory("sn1") as client:
+                response = await client.get(
+                    "/api/_unstable/identity/sn1/subnet/1/block/999999/validators",
+                )
 
     assert response.status_code == HTTP_404_NOT_FOUND
     assert response.json() == snapshot_json

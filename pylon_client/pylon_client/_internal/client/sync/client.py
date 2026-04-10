@@ -44,17 +44,16 @@ class AbstractPylonClient(Generic[CommunicatorT], ABC):
 
     def __init__(self, config: Config):
         self.config = config
-        self._open_access_communicator = self._communicator_cls(config)
-        self._identity_communicator = self._communicator_cls(config)
+        self._communicator = self._communicator_cls(config)
 
         self.v1 = ClientNamespace(
-            open_access=OpenAccessApi(self._open_access_communicator),
-            identity=IdentityApi(self._identity_communicator),
+            open_access=OpenAccessApi(self._communicator),
+            identity=IdentityApi(self._communicator),
         )
 
         self.unstable = ClientNamespace(
-            open_access=UnstableOpenAccessApi(self._open_access_communicator),
-            identity=UnstableIdentityApi(self._identity_communicator),
+            open_access=UnstableOpenAccessApi(self._communicator),
+            identity=UnstableIdentityApi(self._communicator),
         )
 
         self.is_open = False
@@ -95,8 +94,7 @@ class AbstractPylonClient(Generic[CommunicatorT], ABC):
             raise ValueError("The client is already open.")
         logger.debug(f"Opening client for the server {self.config.address}")
         self.is_open = True
-        self._open_access_communicator.open()
-        self._identity_communicator.open()
+        self._communicator.open()
 
     def close(self) -> None:
         """
@@ -109,8 +107,7 @@ class AbstractPylonClient(Generic[CommunicatorT], ABC):
             raise ValueError("The client is already closed.")
         logger.debug(f"Closing client for the server {self.config.address}")
         self.is_open = False
-        self._open_access_communicator.close()
-        self._identity_communicator.close()
+        self._communicator.close()
 
 
 class PylonClient(AbstractPylonClient[HttpCommunicator]):

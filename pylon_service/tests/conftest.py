@@ -3,7 +3,7 @@ Shared fixtures for all service tests (unit and pact).
 """
 
 from collections.abc import AsyncGenerator
-from contextlib import asynccontextmanager
+from contextlib import AsyncExitStack, asynccontextmanager
 from unittest.mock import patch
 
 import pytest
@@ -27,6 +27,7 @@ from tests.factories import BlockFactory, NeuronFactory
 from tests.fixture_contract import EXPECTED_IDENTITIES, assert_test_fixture_contract
 from tests.mock_store import MockStore
 from tests.world import (
+    IdentityContacts,
     SharedWorld,
     default_commitments,
     default_latest_block,
@@ -133,58 +134,47 @@ def wallet():
     return Wallet(path="tests/wallets", name="pylon", hotkey="pylon")
 
 
-@pytest_asyncio.fixture
-async def open_access_mock_bt_client(mock_bt_contact_pool):
-    async with mock_bt_contact_pool.acquire(wallet=None) as contact_router:
-        yield contact_router._main_contact
-        contact_router._main_contact.reset()
-        contact_router._archive_contact.reset()
+@pytest.fixture
+def mock_bt_client_factory(mock_bt_contact_pool):
+    @asynccontextmanager
+    async def _factory(identity_name: str | None = None):
+        wallet = TEST_IDENTITIES[IdentityName(identity_name)].wallet if identity_name else None
+        async with mock_bt_contact_pool.acquire(wallet=wallet) as router:
+            yield router._main_contact
+            router._main_contact.reset()
+            router._archive_contact.reset()
 
-
-@pytest_asyncio.fixture
-async def sn1_mock_bt_client(mock_bt_contact_pool):
-    async with mock_bt_contact_pool.acquire(wallet=TEST_IDENTITIES[IdentityName("sn1")].wallet) as contact_router:
-        yield contact_router._main_contact
-        contact_router._main_contact.reset()
-        contact_router._archive_contact.reset()
-
-
-@pytest_asyncio.fixture
-async def sn2_mock_bt_client(mock_bt_contact_pool):
-    async with mock_bt_contact_pool.acquire(wallet=TEST_IDENTITIES[IdentityName("sn2")].wallet) as contact_router:
-        yield contact_router._main_contact
-        contact_router._main_contact.reset()
-        contact_router._archive_contact.reset()
+    return _factory
 
 
 @pytest_asyncio.fixture(scope="session")
 async def shared_world(mock_bt_contact_pool) -> AsyncGenerator[SharedWorld]:
-    async with mock_bt_contact_pool.acquire(wallet=None) as open_access_contact_router:
-        async with mock_bt_contact_pool.acquire(
-            wallet=TEST_IDENTITIES[IdentityName("sn1")].wallet
-        ) as sn1_contact_router:
-            async with mock_bt_contact_pool.acquire(
-                wallet=TEST_IDENTITIES[IdentityName("sn2")].wallet
-            ) as sn2_contact_router:
-                yield SharedWorld(
-                    open_access_main=open_access_contact_router._main_contact,
-                    open_access_archive=open_access_contact_router._archive_contact,
-                    sn1_main=sn1_contact_router._main_contact,
-                    sn1_archive=sn1_contact_router._archive_contact,
-                    sn2_main=sn2_contact_router._main_contact,
-                    sn2_archive=sn2_contact_router._archive_contact,
-                    default_latest_block=default_latest_block(),
-                    default_neurons=default_neurons(
-                        own_commitment_hotkey=EXPECTED_IDENTITIES[IdentityName("sn2")].hotkey_ss58,
-                    ),
-                    default_subnet_states=default_subnet_states(
-                        own_commitment_hotkey=EXPECTED_IDENTITIES[IdentityName("sn2")].hotkey_ss58,
-                    ),
-                    default_commitments=default_commitments(),
-                    default_revealed_commitments=default_revealed_commitments(
-                        own_commitment_hotkey=EXPECTED_IDENTITIES[IdentityName("sn2")].hotkey_ss58,
-                    ),
-                )
+    async with AsyncExitStack() as stack:
+        open_access_router = await stack.enter_async_context(mock_bt_contact_pool.acquire(wallet=None))
+
+        id_contacts: dict[IdentityName, IdentityContacts] = {}
+        for name, identity in TEST_IDENTITIES.items():
+            router = await stack.enter_async_context(mock_bt_contact_pool.acquire(wallet=identity.wallet))
+            id_contacts[name] = IdentityContacts(main=router._main_contact, archive=router._archive_contact)
+
+        yield SharedWorld(
+            open_access=IdentityContacts(
+                main=open_access_router._main_contact,
+                archive=open_access_router._archive_contact,
+            ),
+            identity_contacts=id_contacts,
+            default_latest_block=default_latest_block(),
+            default_neurons=default_neurons(
+                own_commitment_hotkey=EXPECTED_IDENTITIES[IdentityName("sn24")].hotkey_ss58,
+            ),
+            default_subnet_states=default_subnet_states(
+                own_commitment_hotkey=EXPECTED_IDENTITIES[IdentityName("sn24")].hotkey_ss58,
+            ),
+            default_commitments=default_commitments(),
+            default_revealed_commitments=default_revealed_commitments(
+                own_commitment_hotkey=EXPECTED_IDENTITIES[IdentityName("sn2")].hotkey_ss58,
+            ),
+        )
 
 
 @pytest.fixture(autouse=True)

@@ -1,6 +1,7 @@
 from .._unstable.responses import (  # noqa: F401
     GetAllRevealedCommitmentsResponse,
     GetExtrinsicResponse,
+    GetIdentitiesResponse,
     GetLatestBlockInfoResponse,
     GetNeuronsResponse,
     GetRevealedCommitmentsResponse,
@@ -21,6 +22,7 @@ __all__ = [
     "GetCommitmentResponse",
     "GetCommitmentsResponse",
     "GetExtrinsicResponse",
+    "GetIdentitiesResponse",
     "GetLatestBlockInfoResponse",
     "GetNeuronsResponse",
     "GetRevealedCommitmentsResponse",

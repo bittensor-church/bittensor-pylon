@@ -4,7 +4,7 @@ from pact import Pact
 from pylon_client.artanis import Hotkey
 from pylon_client.artanis.unstable import GetNeuronsResponse
 from tests.pact.builders import build_block, build_neuron
-from tests.pact.constants import HOTKEY_1, HOTKEY_2, IDENTITY_NAME, NETUID
+from tests.pact.constants import HOTKEY_1, HOTKEY_2, IDENTITY_NAME, IDENTITY_TOKEN, NETUID
 
 
 def test_get_latest_neurons_success(pact: Pact, get_neurons_response_matcher: dict, pylon_client_factory):
@@ -12,6 +12,7 @@ def test_get_latest_neurons_success(pact: Pact, get_neurons_response_matcher: di
         pact.upon_receiving("an identity request for latest neurons")
         .given("neurons exist", identity_name=IDENTITY_NAME, netuid=NETUID, neuron_count=2)
         .with_request("GET", f"/api/_unstable/identity/{IDENTITY_NAME}/subnet/{NETUID}/block/latest/neurons")
+        .with_header("Authorization", f"Bearer {IDENTITY_TOKEN}")
         .will_respond_with(codes.OK)
         .with_body(get_neurons_response_matcher, content_type="application/json")
     )

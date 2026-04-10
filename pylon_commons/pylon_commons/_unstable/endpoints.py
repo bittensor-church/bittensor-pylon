@@ -27,7 +27,7 @@ class Endpoint(BaseEndpoint):
     COMMITMENTS = (HTTPMethod.POST, "/commitments", "commitments")
     REVEALED_COMMITMENTS = (HTTPMethod.POST, "/commitments/revealed", "revealed_commitments")
     EXTRINSIC = (HTTPMethod.GET, "/block/{block_number:int}/extrinsic/{extrinsic_index:int}", "extrinsic")
-    IDENTITY_LOGIN = (HTTPMethod.POST, "/login/identity/{identity_name:str}", "identity_login")
+    IDENTITIES = (HTTPMethod.GET, "/identities", "identities")
     DRAND_LAST_STORED_ROUND = (HTTPMethod.GET, "/block/latest/drand/last_stored_round", "drand_last_stored_round")
     LATEST_BLOCK_INFO = (HTTPMethod.GET, "/block/latest", "latest_block_info")
     LATEST_COMMITMENTS = (HTTPMethod.GET, "/block/latest/commitments", "latest_commitments")

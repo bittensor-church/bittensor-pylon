@@ -1,5 +1,4 @@
 from .._unstable.bodies import (  # noqa: F401
-    LoginBody,
     PylonBody,
     SetCommitmentBody,
     SetRevealedCommitmentBody,
@@ -7,7 +6,6 @@ from .._unstable.bodies import (  # noqa: F401
 )
 
 __all__ = [
-    "LoginBody",
     "PylonBody",
     "SetCommitmentBody",
     "SetRevealedCommitmentBody",

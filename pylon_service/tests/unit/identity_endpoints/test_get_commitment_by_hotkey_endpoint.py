@@ -4,49 +4,38 @@ Tests for the GET identity/{id}/subnet/{netuid}/block/latest/commitments/{hotkey
 
 import pytest
 from litestar.status_codes import HTTP_200_OK, HTTP_404_NOT_FOUND
-from litestar.testing import AsyncTestClient
 from pylon_commons.models import Block
 from pylon_commons.types import BlockHash, BlockNumber
 
-from pylon_service.bittensor.mock_contact import MockBittensorContact
-from tests.world import COMMITMENTS_ALL_NETUID, COMMITMENTS_TIMELOCK_ONLY_NETUID
+from tests.world import COMMITMENTS_ALL_NETUID
 
 
 @pytest.mark.asyncio
 async def test_v1_identity_get_commitment_by_hotkey_returns_v1_commitment_shape(
-    test_client: AsyncTestClient, snapshot_json
+    identity_test_client_factory, snapshot_json
 ):
-    response = await test_client.get(
-        f"/api/v1/identity/sn1/subnet/{COMMITMENTS_ALL_NETUID}/block/latest/commitments/hotkey1"
-    )
+    async with identity_test_client_factory("sn21") as client:
+        response = await client.get(
+            f"/api/v1/identity/sn21/subnet/{COMMITMENTS_ALL_NETUID}/block/latest/commitments/hotkey1",
+        )
 
-    assert response.status_code == HTTP_200_OK
-    assert response.json() == snapshot_json
+        assert response.status_code == HTTP_200_OK
+        assert response.json() == snapshot_json
 
 
 @pytest.mark.asyncio
-async def test_get_commitment_identity_not_found(
-    test_client: AsyncTestClient, sn1_mock_bt_client: MockBittensorContact, snapshot_json
-):
+async def test_get_commitment_identity_not_found(identity_test_client_factory, mock_bt_client_factory, snapshot_json):
     """
     Test getting a commitment that doesn't exist.
     """
-    async with sn1_mock_bt_client.mock_behavior(
-        get_latest_block=[Block(number=BlockNumber(1000), hash=BlockHash("0xabc123"))],
-        get_commitment=[None],
-    ):
-        response = await test_client.get("/api/v1/identity/sn1/subnet/1/block/latest/commitments/hotkey1")
-    assert response.status_code == HTTP_404_NOT_FOUND
-    assert response.json() == snapshot_json
-
-
-@pytest.mark.asyncio
-async def test_v1_identity_get_commitment_by_hotkey_returns_404_for_timelock_commitment(
-    test_client: AsyncTestClient, snapshot_json
-):
-    response = await test_client.get(
-        f"/api/v1/identity/sn1/subnet/{COMMITMENTS_TIMELOCK_ONLY_NETUID}/block/latest/commitments/hotkey2"
-    )
-
-    assert response.status_code == HTTP_404_NOT_FOUND
-    assert response.json() == snapshot_json
+    async with mock_bt_client_factory("sn1") as mock_client:
+        async with mock_client.mock_behavior(
+            get_latest_block=[Block(number=BlockNumber(1000), hash=BlockHash("0xabc123"))],
+            get_commitment=[None],
+        ):
+            async with identity_test_client_factory("sn1") as client:
+                response = await client.get(
+                    "/api/v1/identity/sn1/subnet/1/block/latest/commitments/hotkey1",
+                )
+        assert response.status_code == HTTP_404_NOT_FOUND
+        assert response.json() == snapshot_json

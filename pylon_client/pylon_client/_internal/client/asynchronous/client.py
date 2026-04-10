@@ -44,17 +44,16 @@ class AbstractAsyncPylonClient(Generic[CommunicatorT], ABC):
 
     def __init__(self, config: AsyncConfig):
         self.config = config
-        self._open_access_communicator = self._communicator_cls(config)
-        self._identity_communicator = self._communicator_cls(config)
+        self._communicator = self._communicator_cls(config)
 
         self.v1 = ClientNamespace(
-            open_access=AsyncOpenAccessApi(self._open_access_communicator),
-            identity=AsyncIdentityApi(self._identity_communicator),
+            open_access=AsyncOpenAccessApi(self._communicator),
+            identity=AsyncIdentityApi(self._communicator),
         )
 
         self.unstable = ClientNamespace(
-            open_access=UnstableAsyncOpenAccessApi(self._open_access_communicator),
-            identity=UnstableAsyncIdentityApi(self._identity_communicator),
+            open_access=UnstableAsyncOpenAccessApi(self._communicator),
+            identity=UnstableAsyncIdentityApi(self._communicator),
         )
 
         self.is_open = False
@@ -95,8 +94,7 @@ class AbstractAsyncPylonClient(Generic[CommunicatorT], ABC):
             raise ValueError("The client is already open.")
         logger.debug(f"Opening client for the server {self.config.address}")
         self.is_open = True
-        await self._open_access_communicator.open()
-        await self._identity_communicator.open()
+        await self._communicator.open()
 
     async def close(self) -> None:
         """
@@ -109,8 +107,7 @@ class AbstractAsyncPylonClient(Generic[CommunicatorT], ABC):
             raise ValueError("The client is already closed.")
         logger.debug(f"Closing client for the server {self.config.address}")
         self.is_open = False
-        await self._open_access_communicator.close()
-        await self._identity_communicator.close()
+        await self._communicator.close()
 
 
 class AsyncPylonClient(AbstractAsyncPylonClient[AsyncHttpCommunicator]):

@@ -5,7 +5,7 @@ from pact import Pact
 from pylon_client.artanis import CommitmentDataHex, Hotkey
 from pylon_client.artanis.v1 import GetCommitmentsResponse
 from tests.pact.builders import build_block
-from tests.pact.constants import COMMITMENT_HEX, HOTKEY_1, HOTKEY_2, IDENTITY_NAME, NETUID
+from tests.pact.constants import COMMITMENT_HEX, HOTKEY_1, HOTKEY_2, IDENTITY_NAME, IDENTITY_TOKEN, NETUID
 
 
 @pytest.mark.asyncio
@@ -14,6 +14,7 @@ async def test_get_commitments_v1_success(pact: Pact, get_commitments_v1_respons
         pact.upon_receiving("a v1 identity request for all commitments")
         .given("commitments exist", identity_name=IDENTITY_NAME, netuid=NETUID, commitment_count=2)
         .with_request("GET", f"/api/v1/identity/{IDENTITY_NAME}/subnet/{NETUID}/block/latest/commitments")
+        .with_header("Authorization", f"Bearer {IDENTITY_TOKEN}")
         .will_respond_with(codes.OK)
         .with_body(get_commitments_v1_response_matcher, content_type="application/json")
     )

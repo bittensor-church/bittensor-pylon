@@ -5,7 +5,7 @@ from pact import Pact
 from pylon_client.artanis import BlockNumber
 from pylon_client.artanis.unstable import GetValidatorsResponse
 from tests.pact.builders import build_block, build_neuron
-from tests.pact.constants import BLOCK_NUMBER, HOTKEY_1, IDENTITY_NAME, NETUID
+from tests.pact.constants import BLOCK_NUMBER, HOTKEY_1, IDENTITY_NAME, IDENTITY_TOKEN, NETUID
 
 
 @pytest.mark.asyncio
@@ -20,6 +20,7 @@ async def test_get_validators_success(pact: Pact, get_validators_response_matche
             validator_count=2,
         )
         .with_request("GET", f"/api/_unstable/identity/{IDENTITY_NAME}/subnet/{NETUID}/block/{BLOCK_NUMBER}/validators")
+        .with_header("Authorization", f"Bearer {IDENTITY_TOKEN}")
         .will_respond_with(codes.OK)
         .with_body(get_validators_response_matcher, content_type="application/json")
     )

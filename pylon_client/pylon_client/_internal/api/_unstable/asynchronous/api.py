@@ -10,6 +10,7 @@ from pylon_client._internal.pylon_commons._unstable.requests import (
     GetCommitmentsRequest,
     GetDrandLastStoredRoundRequest,
     GetExtrinsicRequest,
+    GetIdentitiesRequest,
     GetLatestBlockInfoRequest,
     GetLatestNeuronsRequest,
     GetLatestValidatorsRequest,
@@ -19,14 +20,9 @@ from pylon_client._internal.pylon_commons._unstable.requests import (
     GetRecentNeuronsRequest,
     GetRevealedCommitmentsRequest,
     GetValidatorsRequest,
-    IdentityLoginRequest,
     SetCommitmentRequest,
     SetRevealedCommitmentRequest,
     SetWeightsRequest,
-)
-from pylon_client._internal.pylon_commons._unstable.responses import (
-    IdentityLoginResponse,
-    OpenAccessLoginResponse,
 )
 from pylon_client._internal.pylon_commons.apiver import ApiVersion
 from pylon_client._internal.pylon_commons.exceptions import PylonMisconfigured
@@ -42,15 +38,8 @@ from pylon_client._internal.pylon_commons.types import (
 )
 
 
-class AsyncOpenAccessApi(AbstractAsyncOpenAccessApi[OpenAccessLoginResponse]):
+class AsyncOpenAccessApi(AbstractAsyncOpenAccessApi):
     api_version = ApiVersion.UNSTABLE
-
-    async def _login(self) -> OpenAccessLoginResponse:
-        if self._communicator.config.open_access_token is None:
-            raise PylonMisconfigured("Can not use open access api - no open access token provided in config.")
-        # TODO: As part of BACT-168, when authentication is implemented,
-        #  make a real request to obtain the session cookie.
-        return OpenAccessLoginResponse()
 
     async def _get_neurons_request(self, netuid: NetUid, block_number: BlockNumber) -> GetNeuronsRequest:
         return GetNeuronsRequest(
@@ -94,53 +83,49 @@ class AsyncOpenAccessApi(AbstractAsyncOpenAccessApi[OpenAccessLoginResponse]):
         return GetDrandLastStoredRoundRequest()
 
 
-class AsyncIdentityApi(AbstractAsyncIdentityApi[IdentityLoginResponse]):
+class AsyncIdentityApi(AbstractAsyncIdentityApi):
     api_version = ApiVersion.UNSTABLE
 
-    async def _login(self) -> IdentityLoginResponse:
-        if not self._communicator.config.identity_name or not self._communicator.config.identity_token:
+    async def _fetch_netuid(self) -> None:
+        config = self._communicator.config
+        if not config.identity_name or not config.identity_token:
             raise PylonMisconfigured("Can not use identity api - no identity name or token provided in config.")
-        return await self._send_request(
-            IdentityLoginRequest(
-                token=self._communicator.config.identity_token, identity_name=self._communicator.config.identity_name
-            )
-        )
+        response = await self._send_request(GetIdentitiesRequest())
+        if config.identity_name not in response.identities:
+            raise PylonMisconfigured(f"Identity '{config.identity_name}' is not configured on the server.")
+        self._identity_name = config.identity_name
+        self._netuid = response.identities[config.identity_name]
 
     async def _get_neurons_request(self, block_number: BlockNumber) -> GetNeuronsRequest:
-        assert self._login_response, "Attempted api request without authentication."
         return GetNeuronsRequest(
-            netuid=self._login_response.netuid,
-            identity_name=self._login_response.identity_name,
+            netuid=self.netuid,
+            identity_name=self.identity_name,
             block_number=block_number,
         )
 
     async def _get_latest_neurons_request(self) -> GetLatestNeuronsRequest:
-        assert self._login_response, "Attempted api request without authentication."
         return GetLatestNeuronsRequest(
-            netuid=self._login_response.netuid,
-            identity_name=self._login_response.identity_name,
+            netuid=self.netuid,
+            identity_name=self.identity_name,
         )
 
     async def _get_recent_neurons_request(self) -> GetRecentNeuronsRequest:
-        assert self._login_response, "Attempted api request without authentication."
         return GetRecentNeuronsRequest(
-            netuid=self._login_response.netuid,
-            identity_name=self._login_response.identity_name,
+            netuid=self.netuid,
+            identity_name=self.identity_name,
         )
 
     async def _put_weights_request(self, weights: dict[Hotkey, Weight]) -> SetWeightsRequest:
-        assert self._login_response, "Attempted api request without authentication."
         return SetWeightsRequest(
-            netuid=self._login_response.netuid,
-            identity_name=self._login_response.identity_name,
+            netuid=self.netuid,
+            identity_name=self.identity_name,
             weights=weights,
         )
 
     async def _get_commitments_request(self) -> GetCommitmentsRequest:
-        assert self._login_response, "Attempted api request without authentication."
         return GetCommitmentsRequest(
-            netuid=self._login_response.netuid,
-            identity_name=self._login_response.identity_name,
+            netuid=self.netuid,
+            identity_name=self.identity_name,
         )
 
     async def _get_all_revealed_commitments_request(self) -> GetAllRevealedCommitmentsRequest:
@@ -151,10 +136,9 @@ class AsyncIdentityApi(AbstractAsyncIdentityApi[IdentityLoginResponse]):
         )
 
     async def _get_commitment_request(self, hotkey: Hotkey) -> GetCommitmentRequest:
-        assert self._login_response, "Attempted api request without authentication."
         return GetCommitmentRequest(
-            netuid=self._login_response.netuid,
-            identity_name=self._login_response.identity_name,
+            netuid=self.netuid,
+            identity_name=self.identity_name,
             hotkey=hotkey,
         )
 
@@ -167,10 +151,9 @@ class AsyncIdentityApi(AbstractAsyncIdentityApi[IdentityLoginResponse]):
         )
 
     async def _get_own_commitment_request(self) -> GetOwnCommitmentRequest:
-        assert self._login_response, "Attempted api request without authentication."
         return GetOwnCommitmentRequest(
-            netuid=self._login_response.netuid,
-            identity_name=self._login_response.identity_name,
+            netuid=self.netuid,
+            identity_name=self.identity_name,
         )
 
     async def _get_own_revealed_commitments_request(self) -> GetOwnRevealedCommitmentsRequest:
@@ -183,10 +166,9 @@ class AsyncIdentityApi(AbstractAsyncIdentityApi[IdentityLoginResponse]):
     async def _set_commitment_request(
         self, commitment: CommitmentDataBytes | CommitmentDataHex
     ) -> SetCommitmentRequest:
-        assert self._login_response, "Attempted api request without authentication."
         return SetCommitmentRequest(
-            netuid=self._login_response.netuid,
-            identity_name=self._login_response.identity_name,
+            netuid=self.netuid,
+            identity_name=self.identity_name,
             commitment=cast(CommitmentDataBytes, commitment),
         )
 
@@ -203,18 +185,16 @@ class AsyncIdentityApi(AbstractAsyncIdentityApi[IdentityLoginResponse]):
         )
 
     async def _get_validators_request(self, block_number: BlockNumber) -> GetValidatorsRequest:
-        assert self._login_response, "Attempted api request without authentication."
         return GetValidatorsRequest(
-            netuid=self._login_response.netuid,
-            identity_name=self._login_response.identity_name,
+            netuid=self.netuid,
+            identity_name=self.identity_name,
             block_number=block_number,
         )
 
     async def _get_latest_validators_request(self) -> GetLatestValidatorsRequest:
-        assert self._login_response, "Attempted api request without authentication."
         return GetLatestValidatorsRequest(
-            netuid=self._login_response.netuid,
-            identity_name=self._login_response.identity_name,
+            netuid=self.netuid,
+            identity_name=self.identity_name,
         )
 
     async def _get_latest_block_info_request(self) -> GetLatestBlockInfoRequest:
