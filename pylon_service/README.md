@@ -34,16 +34,28 @@ toward and should be used as the decision rule during refactors.
 The service is organized into four layers:
 
 ```text
-HTTP handlers
+HTTP handlers                             - Translates public models to Response models 
+    |\
+    | \
+    |  \
+    |   (optional versioned services)     }
+    |   /   |                 |           }
+    |  /    |                 |           } Implement logic, schedule tasks, optionally translate 
+    | /     |                 |           } from internal models to public models.
+    |/      |                 |           }
+services    |                 |           }
+    |\      |                 |
+    | \     |                 |
+    |  \    |                 |
+    |   Tasks                 |           - only when for deferred logic execution
+    |   /                     |
+    |  /                      |
+    | /                       |
+    |/                        |
+wallet-bound BittensorContactRouter       - chosses between lite and archive contacts
     |
     v
-versioned services
-    |
-    v
-wallet-bound BittensorContactRouter
-    |
-    v
-contacts
+contacts                                  - maintains a connection, reconnects and facilitates other necessary mechanisms
     |
     v
 turbobt / Bittensor / Subtensor
