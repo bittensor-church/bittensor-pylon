@@ -34,10 +34,10 @@ class StopRetrying(Exception):
     pass
 
 
-T = TypeVar("T")
+ReturnT = TypeVar("ReturnT")
 
 
-class BackgroundTask[T](ABC):
+class BackgroundTask[ReturnT](ABC):
     """
     Base class for background tasks with scheduling, tracking, retry loop, and done-callback lifecycle.
     """
@@ -59,19 +59,19 @@ class BackgroundTask[T](ABC):
             labels=metric_labels,
         )(cls.__call__)
 
-    def schedule(self) -> asyncio.Task[T]:
+    def schedule(self) -> asyncio.Task[ReturnT]:
         task = asyncio.create_task(self(), name=self.JOB_NAME)
         type(self).tasks_running.add(task)
         task.add_done_callback(self._on_task_done)
         return task
 
-    async def __call__(self) -> T:
+    async def __call__(self) -> ReturnT:
         return await self._submit_with_retries()
 
-    async def _submit_with_retries(self) -> T:
+    async def _submit_with_retries(self) -> ReturnT:
         prepared = False
 
-        async def attempt() -> T:
+        async def attempt() -> ReturnT:
             nonlocal prepared
             if not prepared:
                 await self._prepare()
@@ -104,7 +104,7 @@ class BackgroundTask[T](ABC):
         )
         logger.info("Retrying in %.1f seconds...", retry_state.next_action.sleep)
 
-    def _on_task_done(self, task: asyncio.Task[object]) -> None:
+    def _on_task_done(self, task: asyncio.Task[ReturnT]) -> None:
         type(self).tasks_running.discard(task)
         try:
             task.result()
@@ -126,7 +126,7 @@ class BackgroundTask[T](ABC):
     def _retry_delay_seconds(self) -> int: ...
 
     @abstractmethod
-    async def _single_attempt(self) -> T: ...
+    async def _single_attempt(self) -> ReturnT: ...
 
 
 class ApplyWeights(

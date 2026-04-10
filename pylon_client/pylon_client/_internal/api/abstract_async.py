@@ -517,9 +517,6 @@ class AbstractAsyncIdentityApi(AbstractAsyncApi[LoginResponseT], ABC):
         """
         Sets a commitment (model metadata) on-chain for the authenticated identity's wallet hotkey.
 
-        The commitment is applied asynchronously by the Pylon service. The method returns immediately after
-        scheduling the commitment update, without waiting for blockchain confirmation.
-
         Args:
             commitment: The commitment data to set. Can be bytes or hex string format (with or without 0x prefix).
 
@@ -532,13 +529,10 @@ class AbstractAsyncIdentityApi(AbstractAsyncApi[LoginResponseT], ABC):
         self, commitment: str, blocks_until_reveal: int = 360, block_time: int | float = 12
     ) -> SetRevealedCommitmentResponse:
         """
-        Sets a commitment (model metadata) on-chain for the authenticated identity's wallet hotkey.
-
-        The commitment is applied asynchronously by the Pylon service. The method returns immediately after
-        scheduling the commitment update, without waiting for blockchain confirmation.
+        Sets a time-encrypted commitment (model metadata) on-chain for the authenticated identity's wallet hotkey.
 
         Args:
-            commitment:
+            commitment: The commitment content to be set.
             blocks_until_reveal: Number of blocks from now after which the commitment should be revealed. Defaults to 360 blocks.
             block_time: Average block time in seconds. Defaults to 12 seconds.
 

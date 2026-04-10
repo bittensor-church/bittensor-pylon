@@ -42,7 +42,7 @@ class Endpoint(BaseEndpoint):
     LATEST_COMMITMENTS_REVEALED_SELF = (
         HTTPMethod.GET,
         "/block/latest/commitments/revealed/self",
-        "latest_commitments_revealed/self",
+        "latest_commitments_revealed_self",
     )
     LATEST_NEURONS = (HTTPMethod.GET, "/block/latest/neurons", "latest_neurons")
     LATEST_VALIDATORS = (HTTPMethod.GET, "/block/latest/validators", "latest_validators")
