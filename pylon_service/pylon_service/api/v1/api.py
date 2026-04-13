@@ -33,7 +33,7 @@ from pylon_service.dependencies import (
     recent_object_provider_open_access_dep,
 )
 from pylon_service.exceptions import BadGatewayException
-from pylon_service.guards import identity_auth_guard
+from pylon_service.guards import identity_auth_guard, open_access_auth_guard
 from pylon_service.identities import identities
 from pylon_service.services.errors import CommitmentNotFoundError
 
@@ -58,6 +58,7 @@ def identity_handler(endpoint: Endpoint, **kwargs):
 
 class OpenAccessController(Controller):
     path = "/subnet/{netuid:int}/"
+    guards = [open_access_auth_guard]
     dependencies = {
         "bt_contact_router": Provide(bt_contact_router_open_access_dep),
         "recent_object_provider": Provide(recent_object_provider_open_access_dep),

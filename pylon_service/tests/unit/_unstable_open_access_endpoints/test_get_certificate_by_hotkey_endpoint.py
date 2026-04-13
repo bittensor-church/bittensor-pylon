@@ -9,7 +9,7 @@ from pylon_commons.types import BlockHash, BlockNumber, PublicKey
 
 
 @pytest.mark.asyncio
-async def test_get_certificate_open_access_success(test_client, mock_bt_client_factory, snapshot_json):
+async def test_get_certificate_open_access_success(open_access_test_client, mock_bt_client_factory, snapshot_json):
     """
     Test getting a specific certificate successfully.
     """
@@ -25,14 +25,14 @@ async def test_get_certificate_open_access_success(test_client, mock_bt_client_f
             get_latest_block=[latest_block],
             get_certificate=[certificate],
         ):
-            response = await test_client.get(f"/api/_unstable/subnet/1/block/latest/certificates/{hotkey}")
+            response = await open_access_test_client.get(f"/api/_unstable/subnet/1/block/latest/certificates/{hotkey}")
 
             assert response.status_code == HTTP_200_OK
             assert response.json() == snapshot_json
 
 
 @pytest.mark.asyncio
-async def test_get_certificate_open_access_not_found(test_client, mock_bt_client_factory, snapshot_json):
+async def test_get_certificate_open_access_not_found(open_access_test_client, mock_bt_client_factory, snapshot_json):
     """
     Test getting a certificate that doesn't exist.
     """
@@ -44,7 +44,7 @@ async def test_get_certificate_open_access_not_found(test_client, mock_bt_client
             get_latest_block=[latest_block],
             get_certificate=[None],
         ):
-            response = await test_client.get(f"/api/_unstable/subnet/1/block/latest/certificates/{hotkey}")
+            response = await open_access_test_client.get(f"/api/_unstable/subnet/1/block/latest/certificates/{hotkey}")
 
             assert response.status_code == HTTP_404_NOT_FOUND
             assert response.json() == snapshot_json

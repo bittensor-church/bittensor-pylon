@@ -1,5 +1,5 @@
 import pytest
-from litestar.status_codes import HTTP_200_OK, HTTP_403_FORBIDDEN
+from litestar.status_codes import HTTP_200_OK, HTTP_401_UNAUTHORIZED, HTTP_403_FORBIDDEN
 from litestar.testing import AsyncTestClient
 
 from pylon_service.settings import settings
@@ -18,14 +18,14 @@ class TestMetricsEndpoint:
         assert response.json() == snapshot_json
 
     @pytest.mark.asyncio
-    async def test_metrics_without_authorization_header_returns_403(
+    async def test_metrics_without_authorization_header_returns_401(
         self, test_client: AsyncTestClient, monkeypatch, snapshot_json
     ):
         monkeypatch.setattr(settings, "metrics_token", "test-metrics-token")
 
         response = await test_client.get("/metrics")
 
-        assert response.status_code == HTTP_403_FORBIDDEN
+        assert response.status_code == HTTP_401_UNAUTHORIZED
         assert response.json() == snapshot_json
 
     @pytest.mark.asyncio
@@ -39,14 +39,14 @@ class TestMetricsEndpoint:
             pytest.param("", id="empty_string"),
         ],
     )
-    async def test_metrics_with_invalid_authorization_format_returns_403(
+    async def test_metrics_with_invalid_authorization_format_returns_401(
         self, test_client: AsyncTestClient, monkeypatch, auth_header: str, snapshot_json
     ):
         monkeypatch.setattr(settings, "metrics_token", "test-metrics-token")
 
         response = await test_client.get("/metrics", headers={"Authorization": auth_header})
 
-        assert response.status_code == HTTP_403_FORBIDDEN
+        assert response.status_code == HTTP_401_UNAUTHORIZED
         assert response.json() == snapshot_json
 
     @pytest.mark.asyncio

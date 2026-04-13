@@ -35,7 +35,7 @@ from pylon_service.dependencies import (
     recent_object_provider_open_access_dep,
 )
 from pylon_service.exceptions import BadGatewayException
-from pylon_service.guards import identity_auth_guard
+from pylon_service.guards import identity_auth_guard, open_access_auth_guard
 from pylon_service.identities import identities
 
 logger = logging.getLogger(__name__)
@@ -91,6 +91,7 @@ async def get_last_stored_round_endpoint(bt_contact_router: BittensorContactRout
 
 class OpenAccessController(Controller):
     path = "/subnet/{netuid:int}/"
+    guards = [open_access_auth_guard]
     dependencies = {
         "bt_contact_router": Provide(bt_contact_router_open_access_dep),
         "recent_object_provider": Provide(recent_object_provider_open_access_dep),

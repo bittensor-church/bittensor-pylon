@@ -4,7 +4,7 @@ from pact import Pact
 from pylon_client.artanis import BlockNumber, NetUid
 from pylon_client.artanis.unstable import GetValidatorsResponse
 from tests.pact.builders import build_block, build_neuron
-from tests.pact.constants import BLOCK_NUMBER, HOTKEY_1
+from tests.pact.constants import BLOCK_NUMBER, HOTKEY_1, OPEN_ACCESS_TOKEN
 
 
 def test_get_validators_success(pact: Pact, get_validators_response_matcher: dict, pylon_client_factory):
@@ -12,6 +12,7 @@ def test_get_validators_success(pact: Pact, get_validators_response_matcher: dic
         pact.upon_receiving("a request for validators at specific block")
         .given("validators exist at block", netuid=1, block_number=BLOCK_NUMBER, validator_count=2)
         .with_request("GET", f"/api/_unstable/subnet/1/block/{BLOCK_NUMBER}/validators")
+        .with_header("Authorization", f"Bearer {OPEN_ACCESS_TOKEN}")
         .will_respond_with(codes.OK)
         .with_body(get_validators_response_matcher, content_type="application/json")
     )
