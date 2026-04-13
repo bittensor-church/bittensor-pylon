@@ -7,19 +7,24 @@ from httpx import Request
 from pylon_client._internal.pylon_commons._unstable.endpoints import Endpoint as EndpointUnstable
 from pylon_client._internal.pylon_commons._unstable.requests import (
     AuthenticatedPylonRequest,
+    GetAllRevealedCommitmentsRequest,
     GetCommitmentRequest,
     GetCommitmentsRequest,
+    GetDrandLastStoredRoundRequest,
     GetExtrinsicRequest,
     GetLatestBlockInfoRequest,
     GetLatestNeuronsRequest,
     GetLatestValidatorsRequest,
     GetNeuronsRequest,
     GetOwnCommitmentRequest,
+    GetOwnRevealedCommitmentsRequest,
     GetRecentNeuronsRequest,
+    GetRevealedCommitmentsRequest,
     GetValidatorsRequest,
     IdentityLoginRequest,
     PylonRequest,
     SetCommitmentRequest,
+    SetRevealedCommitmentRequest,
     SetWeightsRequest,
 )
 from pylon_client._internal.pylon_commons.endpoints import Endpoint
@@ -79,10 +84,26 @@ class HttpTranslator(AbstractRequestTranslator[Request, HttpCommunicatorT]):
         url = self._build_url(self._endpoint_cls.LATEST_COMMITMENTS, request)
         return communicator.raw_client.build_request(method=self._endpoint_cls.LATEST_COMMITMENTS.method, url=url)
 
+    def _translate_get_all_revealed_commitments(
+        self, request: GetAllRevealedCommitmentsRequest, communicator: HttpCommunicatorT
+    ) -> Request:
+        url = self._build_url(self._endpoint_cls.LATEST_COMMITMENTS_REVEALED, request)
+        return communicator.raw_client.build_request(
+            method=self._endpoint_cls.LATEST_COMMITMENTS_REVEALED.method, url=url
+        )
+
     def _translate_get_commitment(self, request: GetCommitmentRequest, communicator: HttpCommunicatorT) -> Request:
         url = self._build_url(self._endpoint_cls.LATEST_COMMITMENTS_HOTKEY, request)
         return communicator.raw_client.build_request(
             method=self._endpoint_cls.LATEST_COMMITMENTS_HOTKEY.method, url=url
+        )
+
+    def _translate_get_revealed_commitments(
+        self, request: GetRevealedCommitmentsRequest, communicator: HttpCommunicatorT
+    ) -> Request:
+        url = self._build_url(self._endpoint_cls.LATEST_COMMITMENTS_REVEALED_HOTKEY, request)
+        return communicator.raw_client.build_request(
+            method=self._endpoint_cls.LATEST_COMMITMENTS_REVEALED_HOTKEY.method, url=url
         )
 
     def _translate_get_own_commitment(
@@ -90,6 +111,14 @@ class HttpTranslator(AbstractRequestTranslator[Request, HttpCommunicatorT]):
     ) -> Request:
         url = self._build_url(self._endpoint_cls.LATEST_COMMITMENTS_SELF, request)
         return communicator.raw_client.build_request(method=self._endpoint_cls.LATEST_COMMITMENTS_SELF.method, url=url)
+
+    def _translate_get_own_revealed_commitments(
+        self, request: GetOwnRevealedCommitmentsRequest, communicator: HttpCommunicatorT
+    ) -> Request:
+        url = self._build_url(self._endpoint_cls.LATEST_COMMITMENTS_REVEALED_SELF, request)
+        return communicator.raw_client.build_request(
+            method=self._endpoint_cls.LATEST_COMMITMENTS_REVEALED_SELF.method, url=url
+        )
 
     def _translate_set_weights(self, request: SetWeightsRequest, communicator: HttpCommunicatorT) -> Request:
         url = self._build_url(self._endpoint_cls.SUBNET_WEIGHTS, request)
@@ -107,6 +136,16 @@ class HttpTranslator(AbstractRequestTranslator[Request, HttpCommunicatorT]):
             json=request.model_dump(include={"commitment"}),
         )
 
+    def _translate_set_revealed_commitment(
+        self, request: SetRevealedCommitmentRequest, communicator: HttpCommunicatorT
+    ) -> Request:
+        url = self._build_url(self._endpoint_cls.REVEALED_COMMITMENTS, request)
+        return communicator.raw_client.build_request(
+            method=self._endpoint_cls.REVEALED_COMMITMENTS.method,
+            url=url,
+            json=request.model_dump(include={"commitment", "blocks_until_reveal", "block_time"}),
+        )
+
     def _translate_identity_login(self, request: IdentityLoginRequest, communicator: HttpCommunicatorT) -> Request:
         url = self._build_url(self._endpoint_cls.IDENTITY_LOGIN, request)
         return communicator.raw_client.build_request(
@@ -122,3 +161,9 @@ class HttpTranslator(AbstractRequestTranslator[Request, HttpCommunicatorT]):
     def _translate_get_extrinsic(self, request: GetExtrinsicRequest, communicator: HttpCommunicatorT) -> Request:
         url = self._build_url(self._endpoint_cls.EXTRINSIC, request)
         return communicator.raw_client.build_request(method=self._endpoint_cls.EXTRINSIC.method, url=url)
+
+    def _translate_get_drand_last_stored_round(
+        self, request: GetDrandLastStoredRoundRequest, communicator: HttpCommunicatorT
+    ) -> Request:
+        url = self._build_url(self._endpoint_cls.DRAND_LAST_STORED_ROUND, request)
+        return communicator.raw_client.build_request(method=self._endpoint_cls.DRAND_LAST_STORED_ROUND.method, url=url)

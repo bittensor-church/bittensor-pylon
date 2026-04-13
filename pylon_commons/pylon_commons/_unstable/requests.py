@@ -5,20 +5,24 @@ from pydantic import BaseModel, Field, field_validator
 
 from ..apiver import ApiVersion
 from ..types import BlockNumber, ExtrinsicIndex, Hotkey, IdentityName, NetUid
-from .bodies import LoginBody, SetCommitmentBody, SetWeightsBody
+from .bodies import LoginBody, SetCommitmentBody, SetRevealedCommitmentBody, SetWeightsBody
 from .models import CertificateAlgorithm
 from .responses import (
+    GetAllRevealedCommitmentsResponse,
     GetCommitmentResponse,
     GetCommitmentsResponse,
+    GetDrandLastStoredRoundResponse,
     GetExtrinsicResponse,
     GetLatestBlockInfoResponse,
     GetNeuronsResponse,
+    GetRevealedCommitmentsResponse,
     GetValidatorsResponse,
     IdentityLoginResponse,
     LoginResponse,
     OpenAccessLoginResponse,
     PylonResponse,
     SetCommitmentResponse,
+    SetRevealedCommitmentResponse,
     SetWeightsResponse,
 )
 
@@ -126,12 +130,29 @@ class GetCommitmentRequest(AuthenticatedPylonRequest[GetCommitmentResponse]):
     hotkey: Hotkey
 
 
+class GetRevealedCommitmentsRequest(AuthenticatedPylonRequest[GetRevealedCommitmentsResponse]):
+    """
+    Class used to fetch revealed commitments for a specific hotkey by the Pylon client.
+    """
+
+    response_cls = GetRevealedCommitmentsResponse
+    hotkey: Hotkey
+
+
 class GetCommitmentsRequest(AuthenticatedPylonRequest[GetCommitmentsResponse]):
     """
     Class used to fetch all commitments for the subnet by the Pylon client.
     """
 
     response_cls = GetCommitmentsResponse
+
+
+class GetAllRevealedCommitmentsRequest(AuthenticatedPylonRequest[GetAllRevealedCommitmentsResponse]):
+    """
+    Class used to fetch all revealed commitments for the subnet by the Pylon client.
+    """
+
+    response_cls = GetAllRevealedCommitmentsResponse
 
 
 class GetLatestBlockInfoRequest(PylonRequest[GetLatestBlockInfoResponse]):
@@ -155,6 +176,16 @@ class GetExtrinsicRequest(PylonRequest[GetExtrinsicResponse]):
 
     block_number: BlockNumber
     extrinsic_index: ExtrinsicIndex
+
+
+class GetDrandLastStoredRoundRequest(PylonRequest[GetDrandLastStoredRoundResponse]):
+    """
+    Class used to fetch the last stored round for drand by the Pylon client.
+
+    This request does not require subnet context as it is block-level data.
+    """
+
+    response_cls = GetDrandLastStoredRoundResponse
 
 
 # Request classes that require identity authentication.
@@ -184,12 +215,28 @@ class SetCommitmentRequest(SetCommitmentBody, IdentityPylonRequest[SetCommitment
     response_cls = SetCommitmentResponse
 
 
+class SetRevealedCommitmentRequest(SetRevealedCommitmentBody, IdentityPylonRequest[SetRevealedCommitmentResponse]):
+    """
+    Class used to set a revealed commitment (model metadata) on chain by the Pylon client.
+    """
+
+    response_cls = SetRevealedCommitmentResponse
+
+
 class GetOwnCommitmentRequest(IdentityPylonRequest[GetCommitmentResponse]):
     """
     Class used to fetch the commitment for the identity's wallet by the Pylon client.
     """
 
     response_cls = GetCommitmentResponse
+
+
+class GetOwnRevealedCommitmentsRequest(IdentityPylonRequest[GetRevealedCommitmentsResponse]):
+    """
+    Class used to fetch revealed commitments for the identity's wallet by the Pylon client.
+    """
+
+    response_cls = GetRevealedCommitmentsResponse
 
 
 class GenerateCertificateKeypairRequest(PylonRequest):

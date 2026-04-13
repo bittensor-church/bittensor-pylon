@@ -1,8 +1,8 @@
 from enum import IntEnum, StrEnum
 from ipaddress import IPv4Address, IPv6Address
-from typing import Any
+from typing import Annotated, Any, Generic, Literal, TypeAlias, TypeVar
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 
 from .currency import Currency, Token
 from .types import (
@@ -30,6 +30,7 @@ from .types import (
     PruningScore,
     PublicKey,
     Rank,
+    RevealedCommitmentData,
     Stake,
     SubnetActive,
     TaoStake,
@@ -188,15 +189,50 @@ class SubnetState(BittensorModel):
         }
 
 
-class Commitment(BittensorModel):
+class CommitmentKind(StrEnum):
+    HEX_DATA = "hex_data"
+    TIMELOCK_ENCRYPTED = "timelock_encrypted"
+
+
+CommitmentKindT = TypeVar("CommitmentKindT", bound=CommitmentKind)
+
+
+class Commitment(BittensorModel, Generic[CommitmentKindT]):
+    kind: CommitmentKindT
     commitment_block_number: BlockNumber
     hotkey: Hotkey
     commitment: CommitmentDataHex
 
 
+class HexDataCommitment(Commitment[Literal[CommitmentKind.HEX_DATA]]):
+    kind: Literal[CommitmentKind.HEX_DATA] = CommitmentKind.HEX_DATA
+
+
+class TimelockEncryptedCommitment(Commitment[Literal[CommitmentKind.TIMELOCK_ENCRYPTED]]):
+    kind: Literal[CommitmentKind.TIMELOCK_ENCRYPTED] = CommitmentKind.TIMELOCK_ENCRYPTED
+    reveal_round: int
+
+
+CommitmentVariant: TypeAlias = Annotated[
+    HexDataCommitment | TimelockEncryptedCommitment,
+    Field(discriminator="kind"),
+]
+
+
 class SubnetCommitments(BittensorModel):
     block: Block
-    commitments: dict[Hotkey, Commitment]
+    commitments: dict[Hotkey, CommitmentVariant]
+
+
+class RevealedCommitment(BittensorModel):
+    reveal_block_number: BlockNumber
+    hotkey: Hotkey
+    commitment: RevealedCommitmentData
+
+
+class SubnetRevealedCommitments(BittensorModel):
+    block: Block
+    commitments: dict[Hotkey, list[RevealedCommitment]]
 
 
 class ExtrinsicCallArg(BittensorModel):

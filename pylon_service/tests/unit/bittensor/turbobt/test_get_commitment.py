@@ -1,5 +1,5 @@
 import pytest
-from pylon_commons.models import Block, Commitment
+from pylon_commons.models import Block, HexDataCommitment
 from pylon_commons.types import BlockHash, BlockNumber, CommitmentDataHex, Hotkey
 
 
@@ -13,6 +13,7 @@ def subnet_spec(subnet_spec):
     subnet_spec.commitments.get.return_value = {
         "data": bytes.fromhex("deadbeef"),
         "block": 950,
+        "kind": "hex_data",
     }
     return subnet_spec
 
@@ -24,7 +25,7 @@ async def test_turbobt_client_get_commitment(turbobt_client, subnet_spec, test_b
     """
     hotkey = Hotkey("test_hotkey")
     result = await turbobt_client.get_commitment(netuid=1, block=test_block, hotkey=hotkey)
-    assert result == Commitment(
+    assert result == HexDataCommitment(
         commitment_block_number=BlockNumber(950),
         hotkey=hotkey,
         commitment=CommitmentDataHex("0xdeadbeef"),

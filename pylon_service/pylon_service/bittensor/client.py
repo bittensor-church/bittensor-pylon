@@ -15,17 +15,19 @@ from pylon_commons.models import (
     AxonProtocol,
     Block,
     CertificateAlgorithm,
-    Commitment,
+    CommitmentVariant,
     CommitReveal,
     Extrinsic,
     ExtrinsicCall,
     Neuron,
     NeuronCertificate,
     NeuronCertificateKeypair,
+    RevealedCommitment,
     Stakes,
     SubnetCommitments,
     SubnetHyperparams,
     SubnetNeurons,
+    SubnetRevealedCommitments,
     SubnetState,
     SubnetValidators,
 )
@@ -52,6 +54,7 @@ from pylon_commons.types import (
     PruningScore,
     PublicKey,
     Rank,
+    RevealedCommitmentData,
     RevealRound,
     Stake,
     Timestamp,
@@ -78,6 +81,7 @@ from turbobt.substrate.pallets.chain import Extrinsic as TurboBtExtrinsic
 from turbobt.substrate.pallets.chain import SignedBlock
 
 from pylon_service.bittensor.exceptions import ArchiveFallbackException
+from pylon_service.bittensor.utils import map_to_commitment, map_to_revealed_commitment
 from pylon_service.metrics import (
     Attr,
     Param,
@@ -201,9 +205,20 @@ class AbstractBittensorClient(ABC):
         """
 
     @abstractmethod
-    async def get_commitment(self, netuid: NetUid, block: Block, hotkey: Hotkey | None = None) -> Commitment | None:
+    async def get_commitment(
+        self, netuid: NetUid, block: Block, hotkey: Hotkey | None = None
+    ) -> CommitmentVariant | None:
         """
         Fetches commitment data for a hotkey in a subnet. If no hotkey is provided, the hotkey of the client's wallet
+        is used.
+        """
+
+    @abstractmethod
+    async def get_revealed_commitments(
+        self, netuid: NetUid, block: Block, hotkey: Hotkey | None = None
+    ) -> list[RevealedCommitment] | None:
+        """
+        Fetches revealed commitments for a hotkey in a subnet. If no hotkey is provided, the hotkey of the client's wallet
         is used.
         """
 
@@ -214,9 +229,26 @@ class AbstractBittensorClient(ABC):
         """
 
     @abstractmethod
+    async def get_all_revealed_commitments(self, netuid: NetUid, block: Block) -> SubnetRevealedCommitments:
+        """
+        Fetches all revealed commitments for a subnet at the given block.
+        """
+
+    @abstractmethod
     async def set_commitment(self, netuid: NetUid, data: CommitmentDataBytes) -> None:
         """
         Sets commitment data on chain for the wallet's hotkey.
+        """
+
+    @abstractmethod
+    async def set_revealed_commitment(
+        self, netuid: NetUid, commitment: RevealedCommitmentData, block_to_reveal: int, block_time: int | float
+    ) -> int:
+        """
+        Sets revealed commitment on chain with retry logic.
+
+        Returns:
+            Reveal round for revealed commitment created.
         """
 
     @abstractmethod
@@ -250,6 +282,18 @@ class AbstractBittensorClient(ABC):
 
         Returns:
             The decoded extrinsic if found, None if the index is out of bounds.
+        """
+
+    @abstractmethod
+    async def get_drand_last_stored_round(self, block: Block | None = None) -> int:
+        """
+        Fetches the last stored drand round from the blockchain.
+
+        Args:
+            block: The optional block to query the last stored round at.
+
+        Returns:
+            The last stored drand round.
         """
 
 
@@ -587,17 +631,37 @@ class TurboBtClient(AbstractBittensorClient):
             "hotkey": Attr("hotkey"),
         },
     )
-    async def get_commitment(self, netuid: NetUid, block: Block, hotkey: Hotkey | None = None) -> Commitment | None:
+    async def get_commitment(
+        self, netuid: NetUid, block: Block, hotkey: Hotkey | None = None
+    ) -> CommitmentVariant | None:
         hotkey = self._resolve_hotkey(hotkey)
         logger.debug(f"Fetching commitment for {hotkey} from subnet {netuid} at block {block.number}, {self.uri}")
         result = await self._protect_turbobt(lambda c: c.subnet(netuid).commitments.get(hotkey, block_hash=block.hash))
         if result is None:
             return None
-        return Commitment(
-            commitment_block_number=BlockNumber(result["block"]),
-            hotkey=hotkey,
-            commitment=CommitmentDataBytes(result["data"]).hex(),
+        return map_to_commitment(result, hotkey)
+
+    @track_operation(
+        bittensor_operation_duration,
+        labels={
+            "uri": Attr("uri"),
+            "netuid": Param("netuid"),
+            "hotkey": Attr("hotkey"),
+        },
+    )
+    async def get_revealed_commitments(
+        self, netuid: NetUid, block: Block, hotkey: Hotkey | None = None
+    ) -> list[RevealedCommitment] | None:
+        hotkey = self._resolve_hotkey(hotkey)
+        logger.debug(
+            f"Fetching revealed commitments for {hotkey} from subnet {netuid} at block {block.number}, {self.uri}"
         )
+        results = await self._protect_turbobt(
+            lambda c: c.subnet(netuid).commitments.get_revealed(hotkey, block_hash=block.hash)
+        )
+        if results is None:
+            return None
+        return [map_to_revealed_commitment(result, hotkey) for result in results]
 
     @track_operation(
         bittensor_operation_duration,
@@ -614,17 +678,35 @@ class TurboBtClient(AbstractBittensorClient):
             self.get_subnet_state(netuid, block),
         )
         registered_hotkeys = set(state.hotkeys)
-        commitments: dict[Hotkey, Commitment] = {}
-        for hotkey_str, result in raw_commitments.items():
+        commitments = {
+            hotkey: map_to_commitment(result, hotkey)
+            for hotkey_str, result in raw_commitments.items()
+            if (hotkey := Hotkey(hotkey_str)) in registered_hotkeys
+        }
+        return SubnetCommitments(block=block, commitments=commitments)
+
+    @track_operation(
+        bittensor_operation_duration,
+        labels={
+            "uri": Attr("uri"),
+            "netuid": Param("netuid"),
+            "hotkey": Attr("hotkey"),
+        },
+    )
+    async def get_all_revealed_commitments(self, netuid: NetUid, block: Block) -> SubnetRevealedCommitments:
+        logger.debug(f"Fetching all revealed commitments from subnet {netuid} at block {block.number}, {self.uri}")
+        raw_commitments, state = await asyncio.gather(
+            self._protect_turbobt(lambda c: c.subnet(netuid).commitments.fetch_revealed(block_hash=block.hash)),
+            self.get_subnet_state(netuid, block),
+        )
+        registered_hotkeys = set(state.hotkeys)
+        commitments: dict[Hotkey, list[RevealedCommitment]] = {}
+        for hotkey_str, results in raw_commitments.items():
             hotkey = Hotkey(hotkey_str)
             if hotkey not in registered_hotkeys:
                 continue
-            commitments[hotkey] = Commitment(
-                commitment_block_number=BlockNumber(result["block"]),
-                hotkey=hotkey,
-                commitment=CommitmentDataBytes(result["data"]).hex(),
-            )
-        return SubnetCommitments(block=block, commitments=commitments)
+            commitments[hotkey] = [map_to_revealed_commitment(result, hotkey) for result in results]
+        return SubnetRevealedCommitments(block=block, commitments=commitments)
 
     @track_operation(
         bittensor_operation_duration,
@@ -639,6 +721,22 @@ class TurboBtClient(AbstractBittensorClient):
         # Convert to plain bytes because scalecodec uses `type(value) is bytes` check
         # which fails for bytes subclasses like CommitmentDataBytes
         await self._protect_turbobt(lambda c: c.subnet(netuid).commitments.set(bytes(data)))
+
+    @track_operation(
+        bittensor_operation_duration,
+        labels={
+            "uri": Attr("uri"),
+            "netuid": Param("netuid"),
+            "hotkey": Attr("hotkey"),
+        },
+    )
+    async def set_revealed_commitment(
+        self, netuid: NetUid, commitment: RevealedCommitmentData, block_to_reveal: int, block_time: int | float
+    ) -> int:
+        logger.debug(f"Setting revealed commitment on subnet {netuid} at {self.uri}")
+        return await self._protect_turbobt(
+            lambda c: c.subnet(netuid).commitments.set_revealed(commitment, block_to_reveal, block_time)
+        )
 
     @track_operation(
         bittensor_operation_duration,
@@ -672,6 +770,10 @@ class TurboBtClient(AbstractBittensorClient):
 
         raw_extrinsic = extrinsics[extrinsic_index]
         return self._translate_extrinsic(raw_extrinsic, block.number, extrinsic_index)
+
+    async def get_drand_last_stored_round(self, block: Block | None = None) -> int:
+        logger.debug(f"Fetching last stored drand round at {self.uri}")
+        return await self._protect_turbobt(lambda c: c.drand.get_last_stored_round(block.hash if block else None))
 
     @staticmethod
     def _translate_extrinsic(
@@ -779,14 +881,37 @@ class BittensorClient[SubClient: AbstractBittensorClient](AbstractBittensorClien
     async def get_block_timestamp(self, block: Block) -> Timestamp:
         return await self._delegate(self.subclient_cls.get_block_timestamp, block=block)
 
-    async def get_commitment(self, netuid: NetUid, block: Block, hotkey: Hotkey | None = None) -> Commitment | None:
+    async def get_commitment(
+        self, netuid: NetUid, block: Block, hotkey: Hotkey | None = None
+    ) -> CommitmentVariant | None:
         return await self._delegate(self.subclient_cls.get_commitment, netuid=netuid, block=block, hotkey=hotkey)
+
+    async def get_revealed_commitments(
+        self, netuid: NetUid, block: Block, hotkey: Hotkey | None = None
+    ) -> list[RevealedCommitment] | None:
+        return await self._delegate(
+            self.subclient_cls.get_revealed_commitments, netuid=netuid, block=block, hotkey=hotkey
+        )
 
     async def get_commitments(self, netuid: NetUid, block: Block) -> SubnetCommitments:
         return await self._delegate(self.subclient_cls.get_commitments, netuid=netuid, block=block)
 
+    async def get_all_revealed_commitments(self, netuid: NetUid, block: Block) -> SubnetRevealedCommitments:
+        return await self._delegate(self.subclient_cls.get_all_revealed_commitments, netuid=netuid, block=block)
+
     async def set_commitment(self, netuid: NetUid, data: CommitmentDataBytes) -> None:
         return await self._delegate(self.subclient_cls.set_commitment, netuid=netuid, data=data)
+
+    async def set_revealed_commitment(
+        self, netuid: NetUid, commitment: RevealedCommitmentData, block_to_reveal: int, block_time: int | float
+    ) -> int:
+        return await self._delegate(
+            self.subclient_cls.set_revealed_commitment,
+            netuid=netuid,
+            commitment=commitment,
+            block_to_reveal=block_to_reveal,
+            block_time=block_time,
+        )
 
     async def get_validators(self, netuid: NetUid, block: Block) -> SubnetValidators:
         return await self._delegate(self.subclient_cls.get_validators, netuid=netuid, block=block)
@@ -796,6 +921,9 @@ class BittensorClient[SubClient: AbstractBittensorClient](AbstractBittensorClien
 
     async def get_extrinsic(self, block: Block, extrinsic_index: ExtrinsicIndex) -> Extrinsic | None:
         return await self._delegate(self.subclient_cls.get_extrinsic, block=block, extrinsic_index=extrinsic_index)
+
+    async def get_drand_last_stored_round(self, block: Block | None = None) -> int:
+        return await self._delegate(self.subclient_cls.get_drand_last_stored_round, block=block)
 
     async def _delegate[DelegateReturn](
         self, operation: Callable[..., Awaitable[DelegateReturn]], *args, block: Block | None = None, **kwargs

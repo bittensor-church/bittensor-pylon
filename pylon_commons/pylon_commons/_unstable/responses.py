@@ -1,13 +1,15 @@
 from pydantic import BaseModel
 
+from ..models import CommitmentVariant
 from ..types import IdentityName, NetUid
 from .models import (
     Block,
     BlockInfoBag,
-    Commitment,
     Extrinsic,
+    RevealedCommitment,
     SubnetCommitments,
     SubnetNeurons,
+    SubnetRevealedCommitments,
     SubnetValidators,
 )
 
@@ -82,17 +84,43 @@ class SetCommitmentResponse(PylonResponse):
     pass
 
 
-class GetCommitmentResponse(PylonResponse, Commitment):
+class SetRevealedCommitmentResponse(PylonResponse):
+    """
+    Response class that is returned for the SetRevealedCommitmentRequest.
+    """
+
+    reveal_round: int
+
+
+class GetCommitmentResponse(PylonResponse):
     """
     Response class that is returned for the GetCommitmentRequest.
     """
 
+    commitment: CommitmentVariant
+    block: Block
+
+
+class GetRevealedCommitmentsResponse(PylonResponse):
+    """
+    Response class that is returned for the GetRevealedCommitmentsRequest.
+    """
+
+    commitments: list[RevealedCommitment]
     block: Block
 
 
 class GetCommitmentsResponse(PylonResponse, SubnetCommitments):
     """
     Response class that is returned for the GetCommitmentsRequest.
+    """
+
+    pass
+
+
+class GetAllRevealedCommitmentsResponse(PylonResponse, SubnetRevealedCommitments):
+    """
+    Response class that is returned for the GetAllRevealedCommitmentsRequest.
     """
 
     pass
@@ -112,3 +140,11 @@ class GetExtrinsicResponse(PylonResponse, Extrinsic):
     """
 
     pass
+
+
+class GetDrandLastStoredRoundResponse(PylonResponse):
+    """
+    Response class that is returned for the GetDrandLastStoredRoundRequest.
+    """
+
+    last_stored_round: int

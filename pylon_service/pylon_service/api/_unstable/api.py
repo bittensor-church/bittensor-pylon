@@ -3,22 +3,26 @@ import logging
 from litestar import Controller, Response, status_codes
 from litestar.di import Provide
 from litestar.exceptions import NotFoundException, ServiceUnavailableException
-from pylon_commons._unstable.bodies import LoginBody, SetCommitmentBody, SetWeightsBody
+from pylon_commons._unstable.bodies import LoginBody, SetCommitmentBody, SetRevealedCommitmentBody, SetWeightsBody
 from pylon_commons._unstable.endpoints import Endpoint
 from pylon_commons._unstable.requests import GenerateCertificateKeypairRequest
 from pylon_commons._unstable.responses import (
+    GetAllRevealedCommitmentsResponse,
     GetCommitmentResponse,
     GetCommitmentsResponse,
+    GetDrandLastStoredRoundResponse,
     GetExtrinsicResponse,
     GetLatestBlockInfoResponse,
     GetNeuronsResponse,
+    GetRevealedCommitmentsResponse,
     GetValidatorsResponse,
     IdentityLoginResponse,
+    SetRevealedCommitmentResponse,
 )
 from pylon_commons.models import Hotkey, NeuronCertificate, SubnetNeurons
 from pylon_commons.types import BlockNumber, ExtrinsicIndex, NetUid
 
-from pylon_service.api._unstable.tasks import ApplyWeights, SetCommitment
+from pylon_service.api._unstable.tasks import ApplyWeights, SetCommitment, SetRevealedCommitment
 from pylon_service.api.utils import handler
 from pylon_service.bittensor.client import AbstractBittensorClient
 from pylon_service.bittensor.recent import RecentObjectMissing, RecentObjectProvider, RecentObjectStale
@@ -81,6 +85,18 @@ async def get_extrinsic_endpoint(
     if extrinsic is None:
         raise NotFoundException(detail=f"Extrinsic {block_number}-{extrinsic_index} not found.")
     return GetExtrinsicResponse.model_validate(extrinsic, from_attributes=True)
+
+
+@handler(
+    Endpoint.DRAND_LAST_STORED_ROUND,
+    dependencies={"bt_client": Provide(bt_client_open_access_dep)},
+)
+async def get_last_stored_round_endpoint(bt_client: AbstractBittensorClient) -> GetDrandLastStoredRoundResponse:
+    """
+    Get the last stored drand round from the blockchain.
+    """
+    last_stored_round = await bt_client.get_drand_last_stored_round()
+    return GetDrandLastStoredRoundResponse(last_stored_round=last_stored_round)
 
 
 class OpenAccessController(Controller):
@@ -190,6 +206,17 @@ class OpenAccessController(Controller):
         result = await bt_client.get_commitments(netuid, block)
         return GetCommitmentsResponse.model_validate(result, from_attributes=True)
 
+    @handler(Endpoint.LATEST_COMMITMENTS_REVEALED)
+    async def get_all_revealed_commitments_endpoint(
+        self, bt_client: AbstractBittensorClient, netuid: NetUid
+    ) -> GetAllRevealedCommitmentsResponse:
+        """
+        Get all revealed commitments for the subnet.
+        """
+        block = await bt_client.get_latest_block()
+        result = await bt_client.get_all_revealed_commitments(netuid, block)
+        return GetAllRevealedCommitmentsResponse.model_validate(result, from_attributes=True)
+
     @handler(Endpoint.LATEST_COMMITMENTS_HOTKEY)
     async def get_commitment_endpoint(
         self, hotkey: Hotkey, bt_client: AbstractBittensorClient, netuid: NetUid
@@ -204,7 +231,23 @@ class OpenAccessController(Controller):
         commitment = await bt_client.get_commitment(netuid, block, hotkey=hotkey)
         if commitment is None:
             raise NotFoundException(detail="Commitment not found.")
-        return GetCommitmentResponse(block=block, **commitment.model_dump())
+        return GetCommitmentResponse(block=block, commitment=commitment)
+
+    @handler(Endpoint.LATEST_COMMITMENTS_REVEALED_HOTKEY)
+    async def get_revealed_commitments_endpoint(
+        self, hotkey: Hotkey, bt_client: AbstractBittensorClient, netuid: NetUid
+    ) -> GetRevealedCommitmentsResponse:
+        """
+        Get revealed commitments for a hotkey.
+
+        Raises:
+            NotFoundException: If commitments could not be found in the blockchain.
+        """
+        block = await bt_client.get_latest_block()
+        commitments = await bt_client.get_revealed_commitments(netuid, block, hotkey=hotkey)
+        if commitments is None:
+            raise NotFoundException(detail="Commitments not found.")
+        return GetRevealedCommitmentsResponse(block=block, commitments=commitments)
 
 
 class IdentityController(OpenAccessController):
@@ -251,6 +294,24 @@ class IdentityController(OpenAccessController):
             status_code=status_codes.HTTP_201_CREATED,
         )
 
+    @handler(Endpoint.REVEALED_COMMITMENTS)
+    async def set_revealed_commitment_endpoint(
+        self, bt_client: AbstractBittensorClient, data: SetRevealedCommitmentBody, netuid: NetUid
+    ) -> SetRevealedCommitmentResponse:
+        """
+        Set a revealed commitment (model metadata) on chain for the wallet's hotkey.
+
+        Raises:
+            BadGatewayException: When commitment could not be set after all retries.
+        """
+        try:
+            reveal_round = await SetRevealedCommitment(
+                bt_client, netuid, data.commitment, data.blocks_until_reveal, data.block_time
+            )()
+        except Exception as exc:
+            raise BadGatewayException(detail=str(exc)) from exc
+        return SetRevealedCommitmentResponse(reveal_round=reveal_round)
+
     @handler(Endpoint.CERTIFICATES_SELF)
     async def get_own_certificate_endpoint(self, bt_client: AbstractBittensorClient, netuid: NetUid) -> Response:
         """
@@ -280,7 +341,23 @@ class IdentityController(OpenAccessController):
         commitment = await bt_client.get_commitment(netuid, block)
         if commitment is None:
             raise NotFoundException(detail="Commitment not found.")
-        return GetCommitmentResponse(block=block, **commitment.model_dump())
+        return GetCommitmentResponse(block=block, commitment=commitment)
+
+    @handler(Endpoint.LATEST_COMMITMENTS_REVEALED_SELF)
+    async def get_own_revealed_commitments_endpoint(
+        self, bt_client: AbstractBittensorClient, netuid: NetUid
+    ) -> GetRevealedCommitmentsResponse:
+        """
+        Get revealed commitments for the identity's wallet.
+
+        Raises:
+            NotFoundException: If commitments could not be found in the blockchain.
+        """
+        block = await bt_client.get_latest_block()
+        commitments = await bt_client.get_revealed_commitments(netuid, block)
+        if commitments is None:
+            raise NotFoundException(detail="Commitments not found.")
+        return GetRevealedCommitmentsResponse(block=block, commitments=commitments)
 
     @handler(Endpoint.CERTIFICATES_GENERATE)
     async def generate_certificate_keypair_endpoint(

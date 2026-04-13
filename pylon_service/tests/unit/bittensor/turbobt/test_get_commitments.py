@@ -1,5 +1,5 @@
 import pytest
-from pylon_commons.models import Block, Commitment, SubnetCommitments
+from pylon_commons.models import Block, HexDataCommitment, SubnetCommitments
 from pylon_commons.types import BlockHash, BlockNumber, CommitmentDataHex, Hotkey
 
 
@@ -11,8 +11,8 @@ def test_block():
 @pytest.fixture
 def subnet_spec(subnet_spec):
     subnet_spec.commitments.fetch.return_value = {
-        "hotkey1": {"data": bytes.fromhex("deadbeef"), "block": 950},
-        "hotkey2": {"data": bytes.fromhex("cafebabe"), "block": 950},
+        "hotkey1": {"data": bytes.fromhex("deadbeef"), "block": 950, "kind": "hex_data"},
+        "hotkey2": {"data": bytes.fromhex("cafebabe"), "block": 950, "kind": "hex_data"},
     }
     subnet_spec.get_state.return_value = {
         "netuid": 1,
@@ -46,12 +46,12 @@ async def test_turbobt_client_get_commitments(turbobt_client, subnet_spec, test_
     assert result == SubnetCommitments(
         block=test_block,
         commitments={
-            Hotkey("hotkey1"): Commitment(
+            Hotkey("hotkey1"): HexDataCommitment(
                 commitment_block_number=BlockNumber(950),
                 hotkey=Hotkey("hotkey1"),
                 commitment=CommitmentDataHex("0xdeadbeef"),
             ),
-            Hotkey("hotkey2"): Commitment(
+            Hotkey("hotkey2"): HexDataCommitment(
                 commitment_block_number=BlockNumber(950),
                 hotkey=Hotkey("hotkey2"),
                 commitment=CommitmentDataHex("0xcafebabe"),
@@ -81,20 +81,20 @@ async def test_turbobt_client_get_commitments_filters_unregistered_hotkeys(turbo
     Test that get_commitments filters out commitments from deregistered hotkeys.
     """
     subnet_spec.commitments.fetch.return_value = {
-        "hotkey1": {"data": bytes.fromhex("deadbeef"), "block": 950},
-        "hotkey2": {"data": bytes.fromhex("cafebabe"), "block": 950},
-        "hotkey3": {"data": bytes.fromhex("baadf00d"), "block": 960},
+        "hotkey1": {"data": bytes.fromhex("deadbeef"), "block": 950, "kind": "hex_data"},
+        "hotkey2": {"data": bytes.fromhex("cafebabe"), "block": 950, "kind": "hex_data"},
+        "hotkey3": {"data": bytes.fromhex("baadf00d"), "block": 960, "kind": "hex_data"},
     }
     result = await turbobt_client.get_commitments(netuid=1, block=test_block)
     assert result == SubnetCommitments(
         block=test_block,
         commitments={
-            Hotkey("hotkey1"): Commitment(
+            Hotkey("hotkey1"): HexDataCommitment(
                 commitment_block_number=BlockNumber(950),
                 hotkey=Hotkey("hotkey1"),
                 commitment=CommitmentDataHex("0xdeadbeef"),
             ),
-            Hotkey("hotkey2"): Commitment(
+            Hotkey("hotkey2"): HexDataCommitment(
                 commitment_block_number=BlockNumber(950),
                 hotkey=Hotkey("hotkey2"),
                 commitment=CommitmentDataHex("0xcafebabe"),

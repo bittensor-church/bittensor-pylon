@@ -1,11 +1,11 @@
 import asyncio
 import logging
 from abc import ABC, abstractmethod
-from typing import ClassVar
+from typing import ClassVar, TypeVar
 
 from prometheus_client import Histogram
 from pylon_commons.models import Block, CommitReveal
-from pylon_commons.types import CommitmentDataBytes, Hotkey, NetUid, Weight
+from pylon_commons.types import CommitmentDataBytes, Hotkey, NetUid, RevealedCommitmentData, Weight
 from tenacity import (
     AsyncRetrying,
     RetryCallState,
@@ -22,6 +22,7 @@ from pylon_service.metrics import (
     apply_weights_attempt_duration,
     apply_weights_job_duration,
     set_commitment_job_duration,
+    set_revealed_commitment_job_duration,
     track_operation,
 )
 from pylon_service.settings import settings
@@ -33,13 +34,16 @@ class StopRetrying(Exception):
     pass
 
 
-class BackgroundTask(ABC):
+ReturnT = TypeVar("ReturnT")
+
+
+class BackgroundTask[ReturnT](ABC):
     """
     Base class for background tasks with scheduling, tracking, retry loop, and done-callback lifecycle.
     """
 
     JOB_NAME: ClassVar[str]
-    tasks_running: ClassVar[set[asyncio.Task]]
+    tasks_running: ClassVar[set[asyncio.Task[object]]]
 
     def __init_subclass__(
         cls,
@@ -55,24 +59,24 @@ class BackgroundTask(ABC):
             labels=metric_labels,
         )(cls.__call__)
 
-    def schedule(self) -> asyncio.Task:
+    def schedule(self) -> asyncio.Task[ReturnT]:
         task = asyncio.create_task(self(), name=self.JOB_NAME)
         type(self).tasks_running.add(task)
         task.add_done_callback(self._on_task_done)
         return task
 
-    async def __call__(self) -> None:
-        await self._submit_with_retries()
+    async def __call__(self) -> ReturnT:
+        return await self._submit_with_retries()
 
-    async def _submit_with_retries(self) -> None:
+    async def _submit_with_retries(self) -> ReturnT:
         prepared = False
 
-        async def attempt() -> None:
+        async def attempt() -> ReturnT:
             nonlocal prepared
             if not prepared:
                 await self._prepare()
                 prepared = True
-            await self._single_attempt()
+            return await self._single_attempt()
 
         retrying = AsyncRetrying(
             stop=stop_after_attempt(self._retry_attempts + 1),
@@ -84,7 +88,7 @@ class BackgroundTask(ABC):
             before_sleep=self._log_retry,
             reraise=True,
         )
-        await retrying(attempt)
+        return await retrying(attempt)
 
     @staticmethod
     def _log_retry(retry_state: RetryCallState) -> None:
@@ -100,7 +104,7 @@ class BackgroundTask(ABC):
         )
         logger.info("Retrying in %.1f seconds...", retry_state.next_action.sleep)
 
-    def _on_task_done(self, task: asyncio.Task[None]) -> None:
+    def _on_task_done(self, task: asyncio.Task[ReturnT]) -> None:
         type(self).tasks_running.discard(task)
         try:
             task.result()
@@ -122,11 +126,11 @@ class BackgroundTask(ABC):
     def _retry_delay_seconds(self) -> int: ...
 
     @abstractmethod
-    async def _single_attempt(self) -> None: ...
+    async def _single_attempt(self) -> ReturnT: ...
 
 
 class ApplyWeights(
-    BackgroundTask,
+    BackgroundTask[None],
     duration_metric=apply_weights_job_duration,
     metric_labels={"netuid": Attr("_netuid"), "hotkey": Attr("_hotkey")},
 ):
@@ -193,7 +197,7 @@ class ApplyWeights(
 
 
 class SetCommitment(
-    BackgroundTask,
+    BackgroundTask[None],
     duration_metric=set_commitment_job_duration,
     metric_labels={"netuid": Attr("_netuid")},
 ):
@@ -225,5 +229,53 @@ class SetCommitment(
         logger.info("Set commitment attempt")
         await asyncio.wait_for(
             asyncio.shield(self._client.set_commitment(self._netuid, self._data)),
+            timeout=120,
+        )
+
+
+class SetRevealedCommitment(
+    BackgroundTask[int],
+    duration_metric=set_revealed_commitment_job_duration,
+    metric_labels={"netuid": Attr("_netuid")},
+):
+    """
+    Sets revealed commitment on chain with retry logic.
+
+    Returns:
+            Reveal round for revealed commitment created.
+    """
+
+    JOB_NAME: ClassVar[str] = "set_revealed_commitment"
+
+    def __init__(
+        self,
+        client: AbstractBittensorClient,
+        netuid: NetUid,
+        commitment: RevealedCommitmentData,
+        blocks_to_reveal: int,
+        block_time: int | float,
+    ):
+        self._client = client
+        self._netuid = netuid
+        self._commitment = commitment
+        self._blocks_to_reveal = blocks_to_reveal
+        self._block_time = block_time
+
+    @property
+    def _retry_attempts(self) -> int:
+        return settings.commitment_retry_attempts
+
+    @property
+    def _retry_delay_seconds(self) -> int:
+        return settings.commitment_retry_delay_seconds
+
+    async def _single_attempt(self) -> int:
+        logger.info("Set revealed commitment attempt")
+        return await asyncio.wait_for(
+            asyncio.shield(
+                self._client.set_revealed_commitment(
+                    self._netuid, self._commitment, self._blocks_to_reveal, self._block_time
+                )
+            ),
             timeout=120,
         )

@@ -4,7 +4,13 @@ from abc import ABC, abstractmethod
 from typing import TYPE_CHECKING, Any, ClassVar, Literal
 from unittest.mock import AsyncMock
 
-from pylon_commons.models import Commitment, SubnetCommitments, SubnetNeurons, SubnetValidators
+from pylon_commons.models import (
+    CommitmentVariant,
+    HexDataCommitment,
+    SubnetCommitments,
+    SubnetNeurons,
+    SubnetValidators,
+)
 from pylon_commons.types import BlockNumber, CommitmentDataHex, Hotkey, Timestamp
 
 from pylon_service.bittensor.exceptions import ArchiveFallbackException
@@ -166,8 +172,8 @@ class CommitmentsExistHandler(StateHandler):
 
     def setup(self, parameters: dict[str, Any]) -> None:
         block = BlockFactory.build()
-        commitments = {
-            Hotkey(f"h{i}"): Commitment(
+        commitments: dict[Hotkey, CommitmentVariant] = {
+            Hotkey(f"h{i}"): HexDataCommitment(
                 commitment_block_number=BlockNumber(block.number - 50),
                 hotkey=Hotkey(f"h{i}"),
                 commitment=CommitmentDataHex("0xaabbccdd"),
@@ -187,7 +193,7 @@ class CommitmentExistsHandler(StateHandler):
     def setup(self, parameters: dict[str, Any]) -> None:
         block = BlockFactory.build()
         hotkey = Hotkey(parameters["hotkey"])
-        commitment = Commitment(
+        commitment = HexDataCommitment(
             commitment_block_number=BlockNumber(block.number - 50),
             hotkey=hotkey,
             commitment=CommitmentDataHex("0xaabbccdd"),
@@ -204,7 +210,7 @@ class OwnCommitmentExistsHandler(StateHandler):
     def setup(self, parameters: dict[str, Any]) -> None:
         block = BlockFactory.build()
         hotkey = Hotkey(parameters["hotkey"])
-        commitment = Commitment(
+        commitment = HexDataCommitment(
             commitment_block_number=BlockNumber(block.number - 50),
             hotkey=hotkey,
             commitment=CommitmentDataHex("0xaabbccdd"),
