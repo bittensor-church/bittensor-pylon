@@ -7,12 +7,14 @@
     "hotkey1": {
       "commitment": "0xaaaa",
       "commitment_block_number": 699,
-      "hotkey": "hotkey1"
+      "hotkey": "hotkey1",
+      "kind": "hex_data"
     },
     "hotkey2": {
       "commitment": "0xbbbb",
       "commitment_block_number": 699,
-      "hotkey": "hotkey2"
+      "hotkey": "hotkey2",
+      "kind": "hex_data"
     }
   }
 }
