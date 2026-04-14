@@ -96,8 +96,8 @@ class CommitmentService:
         self, contact_router: BittensorPort, netuid: NetUid, hotkey: Hotkey
     ) -> GetCommitmentResponse:
         block, commitment = await self._domain.get_commitment(contact_router, netuid, hotkey)
-        return GetCommitmentResponse(block=block, **commitment.model_dump())
+        return GetCommitmentResponse(block=block, commitment=commitment)
 
     async def get_own_commitment(self, contact_router: BittensorPort, netuid: NetUid) -> GetCommitmentResponse:
         block, commitment = await self._domain.get_own_commitment(contact_router, netuid)
-        return GetCommitmentResponse(block=block, **commitment.model_dump())
+        return GetCommitmentResponse(block=block, commitment=commitment)

@@ -3,7 +3,16 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 from pylon_commons.currency import Currency, CurrencyRao, Token
-from pylon_commons.models import Block, Commitment, Neuron, Stakes, SubnetCommitments, SubnetNeurons, SubnetState
+from pylon_commons.models import (
+    Block,
+    Commitment,
+    HexDataCommitment,
+    Neuron,
+    Stakes,
+    SubnetCommitments,
+    SubnetNeurons,
+    SubnetState,
+)
 from pylon_commons.types import (
     AlphaStake,
     AlphaStakeRao,
@@ -230,24 +239,24 @@ def default_subnet_states(*, own_commitment_hotkey: str) -> dict[NetUid, SubnetS
 def default_commitments() -> dict[NetUid, dict[Hotkey, Commitment]]:
     return {
         COMMITMENTS_ALL_NETUID: {
-            Hotkey("hotkey1"): Commitment(
+            Hotkey("hotkey1"): HexDataCommitment(
                 commitment_block_number=BlockNumber(699),
                 hotkey=Hotkey("hotkey1"),
                 commitment=CommitmentDataHex("0xaaaa"),
             ),
-            Hotkey("hotkey2"): Commitment(
+            Hotkey("hotkey2"): HexDataCommitment(
                 commitment_block_number=BlockNumber(699),
                 hotkey=Hotkey("hotkey2"),
                 commitment=CommitmentDataHex("0xbbbb"),
             ),
         },
         COMMITMENTS_FILTERED_NETUID: {
-            Hotkey("hotkey1"): Commitment(
+            Hotkey("hotkey1"): HexDataCommitment(
                 commitment_block_number=BlockNumber(700),
                 hotkey=Hotkey("hotkey1"),
                 commitment=CommitmentDataHex("0xaaaa"),
             ),
-            Hotkey("foreign-hotkey"): Commitment(
+            Hotkey("foreign-hotkey"): HexDataCommitment(
                 commitment_block_number=BlockNumber(700),
                 hotkey=Hotkey("foreign-hotkey"),
                 commitment=CommitmentDataHex("0xffff"),
@@ -264,7 +273,7 @@ def _resolve_commitment(
     commitments: dict[NetUid, dict[Hotkey, Commitment]],
 ) -> Commitment | None:
     if netuid == OWN_COMMITMENT_NETUID:
-        return Commitment(
+        return HexDataCommitment(
             commitment_block_number=BlockNumber(999),
             hotkey=hotkey,
             commitment=CommitmentDataHex("0x0f0e0d0c"),

@@ -4,7 +4,17 @@ import logging
 from collections.abc import Awaitable, Callable
 
 from bittensor_wallet import Wallet
-from pylon_commons.types import ArchiveBlocksCutoff, CommitmentDataBytes, ExtrinsicIndex, NetUid, NeuronUid, Weight
+from pylon_commons.models import CommitmentVariant, RevealedCommitment, SubnetRevealedCommitments
+from pylon_commons.types import (
+    ArchiveBlocksCutoff,
+    CommitmentDataBytes,
+    ExtrinsicIndex,
+    Hotkey,
+    NetUid,
+    NeuronUid,
+    RevealedCommitmentData,
+    Weight,
+)
 from turbobt.substrate.exceptions import UnknownBlock
 from turbobt.substrate.pallets.chain import SignedBlock
 
@@ -13,7 +23,6 @@ from pylon_service.bittensor.exceptions import ArchiveFallbackException
 from pylon_service.bittensor.models import (
     Block,
     CertificateAlgorithm,
-    Commitment,
     Extrinsic,
     Neuron,
     NeuronCertificate,
@@ -202,7 +211,7 @@ class BittensorContactRouter:
             block=block,
         )
 
-    async def get_commitment(self, netuid: NetUid, block: Block, hotkey=None) -> Commitment | None:
+    async def get_commitment(self, netuid: NetUid, block: Block, hotkey=None) -> CommitmentVariant | None:
         return await self._delegate(
             "get_commitment",
             main_call=lambda: self._main_contact.get_commitment(netuid, block, hotkey),
@@ -238,5 +247,44 @@ class BittensorContactRouter:
             "get_extrinsic",
             main_call=lambda: self._main_contact.get_extrinsic(block, extrinsic_index),
             archive_call=lambda: self._archive_contact.get_extrinsic(block, extrinsic_index),
+            block=block,
+        )
+
+    async def get_revealed_commitments(
+        self, netuid: NetUid, block: Block, hotkey: Hotkey | None = None
+    ) -> list[RevealedCommitment] | None:
+        return await self._delegate(
+            "get_revealed_commitments",
+            main_call=lambda: self._main_contact.get_revealed_commitments(netuid, block, hotkey),
+            archive_call=lambda: self._archive_contact.get_revealed_commitments(netuid, block, hotkey),
+            block=block,
+        )
+
+    async def get_all_revealed_commitments(self, netuid: NetUid, block: Block) -> SubnetRevealedCommitments:
+        return await self._delegate(
+            "get_all_revealed_commitments",
+            main_call=lambda: self._main_contact.get_all_revealed_commitments(netuid, block),
+            archive_call=lambda: self._archive_contact.get_all_revealed_commitments(netuid, block),
+            block=block,
+        )
+
+    async def set_revealed_commitment(
+        self, netuid: NetUid, commitment: RevealedCommitmentData, block_to_reveal: int, block_time: int | float
+    ) -> int:
+        return await self._delegate(
+            "set_revealed_commitment",
+            main_call=lambda: self._main_contact.set_revealed_commitment(
+                netuid, commitment, block_to_reveal, block_time
+            ),
+            archive_call=lambda: self._archive_contact.set_revealed_commitment(
+                netuid, commitment, block_to_reveal, block_time
+            ),
+        )
+
+    async def get_drand_last_stored_round(self, block: Block | None = None) -> int:
+        return await self._delegate(
+            "get_drand_last_stored_round",
+            main_call=lambda: self._main_contact.get_drand_last_stored_round(block),
+            archive_call=lambda: self._archive_contact.get_drand_last_stored_round(block),
             block=block,
         )

@@ -12,6 +12,7 @@ from typing import Any, Protocol
 from bittensor_wallet import Wallet
 from pylon_commons.constants import LATEST_BLOCK_MARK
 from pylon_commons.currency import Currency, Token
+from pylon_commons.models import CommitmentVariant, RevealedCommitment, SubnetRevealedCommitments
 from pylon_commons.types import (
     BittensorNetwork,
     BlockHash,
@@ -34,6 +35,7 @@ from pylon_commons.types import (
     PruningScore,
     PublicKey,
     Rank,
+    RevealedCommitmentData,
     RevealRound,
     Stake,
     Timestamp,
@@ -59,7 +61,6 @@ from pylon_service.bittensor.models import (
     AxonProtocol,
     Block,
     CertificateAlgorithm,
-    Commitment,
     CommitReveal,
     Extrinsic,
     ExtrinsicCall,
@@ -72,6 +73,7 @@ from pylon_service.bittensor.models import (
     SubnetNeurons,
     SubnetState,
 )
+from pylon_service.bittensor.utils import map_to_commitment, map_to_revealed_commitment
 from pylon_service.metrics import Attr, Param, bittensor_operation_duration, track_operation
 from tests.behave import Behave, Behavior
 
@@ -148,7 +150,51 @@ class AbstractBittensorContact(ABC):
     async def get_neurons(self, netuid: NetUid, block: Block) -> SubnetNeurons: ...
 
     @abstractmethod
-    async def get_commitment(self, netuid: NetUid, block: Block, hotkey: Hotkey | None = None) -> Commitment | None: ...
+    async def get_commitment(
+        self, netuid: NetUid, block: Block, hotkey: Hotkey | None = None
+    ) -> CommitmentVariant | None:
+        """
+        Fetches commitment data for a hotkey in a subnet. If no hotkey is provided, the hotkey of the client's wallet
+        is used.
+        """
+
+    @abstractmethod
+    async def get_revealed_commitments(
+        self, netuid: NetUid, block: Block, hotkey: Hotkey | None = None
+    ) -> list[RevealedCommitment] | None:
+        """
+        Fetches revealed commitments for a hotkey in a subnet. If no hotkey is provided, the hotkey of the client's wallet
+        is used.
+        """
+
+    @abstractmethod
+    async def get_all_revealed_commitments(self, netuid: NetUid, block: Block) -> SubnetRevealedCommitments:
+        """
+        Fetches all revealed commitments for a subnet at the given block.
+        """
+
+    @abstractmethod
+    async def set_revealed_commitment(
+        self, netuid: NetUid, commitment: RevealedCommitmentData, block_to_reveal: int, block_time: int | float
+    ) -> int:
+        """
+        Sets revealed commitment on chain with retry logic.
+
+        Returns:
+            Reveal round for revealed commitment created.
+        """
+
+    @abstractmethod
+    async def get_drand_last_stored_round(self, block: Block | None = None) -> int:
+        """
+        Fetches the last stored drand round from the blockchain.
+
+        Args:
+            block: The optional block to query the last stored round at.
+
+        Returns:
+            The last stored drand round.
+        """
 
     @abstractmethod
     async def get_commitments(self, netuid: NetUid, block: Block) -> SubnetCommitments: ...
@@ -183,11 +229,25 @@ class BittensorPort(Protocol):
     async def commit_weights(self, netuid: NetUid, weights: dict[NeuronUid, Weight]) -> RevealRound: ...
     async def set_weights(self, netuid: NetUid, weights: dict[NeuronUid, Weight]) -> None: ...
     async def get_neurons(self, netuid: NetUid, block: Block) -> SubnetNeurons: ...
-    async def get_commitment(self, netuid: NetUid, block: Block, hotkey: Hotkey | None = None) -> Commitment | None: ...
+    async def get_commitment(
+        self, netuid: NetUid, block: Block, hotkey: Hotkey | None = None
+    ) -> CommitmentVariant | None: ...
     async def get_commitments(self, netuid: NetUid, block: Block) -> SubnetCommitments: ...
     async def set_commitment(self, netuid: NetUid, data: CommitmentDataBytes) -> None: ...
     async def get_signed_block(self, block: Block) -> SignedBlock | None: ...
     async def get_extrinsic(self, block: Block, extrinsic_index: ExtrinsicIndex) -> Extrinsic | None: ...
+
+    async def get_revealed_commitments(
+        self, netuid: NetUid, block: Block, hotkey: Hotkey | None = None
+    ) -> list[RevealedCommitment] | None: ...
+
+    async def get_all_revealed_commitments(self, netuid: NetUid, block: Block) -> SubnetRevealedCommitments: ...
+
+    async def set_revealed_commitment(
+        self, netuid: NetUid, commitment: RevealedCommitmentData, block_to_reveal: int, block_time: int | float
+    ) -> int: ...
+
+    async def get_drand_last_stored_round(self, block: Block | None = None) -> int: ...
 
 
 class TurboBtContact(AbstractBittensorContact):
@@ -484,18 +544,32 @@ class TurboBtContact(AbstractBittensorContact):
         bittensor_operation_duration,
         labels={"uri": Attr("uri"), "netuid": Param("netuid"), "hotkey": Attr("hotkey")},
     )
-    async def get_commitment(self, netuid: NetUid, block: Block, hotkey: Hotkey | None = None) -> Commitment | None:
+    async def get_commitment(
+        self, netuid: NetUid, block: Block, hotkey: Hotkey | None = None
+    ) -> CommitmentVariant | None:
         resolved_hotkey = self._resolve_hotkey(hotkey)
         result = await self._protect_turbobt(
             "get_commitment", lambda c: c.subnet(netuid).commitments.get(resolved_hotkey, block_hash=block.hash)
         )
         if result is None:
             return None
-        return Commitment(
-            commitment_block_number=BlockNumber(result["block"]),
-            hotkey=resolved_hotkey,
-            commitment=CommitmentDataBytes(result["data"]).hex(),
+        return map_to_commitment(result, resolved_hotkey)
+
+    @track_operation(
+        bittensor_operation_duration,
+        labels={"uri": Attr("uri"), "netuid": Param("netuid"), "hotkey": Attr("hotkey")},
+    )
+    async def get_revealed_commitments(
+        self, netuid: NetUid, block: Block, hotkey: Hotkey | None = None
+    ) -> list[RevealedCommitment] | None:
+        resolved_hotkey = self._resolve_hotkey(hotkey)
+        raw_commitments = await self._protect_turbobt(
+            "get_revealed_commitments",
+            lambda c: c.subnet(netuid).commitments.get_revealed(resolved_hotkey, block_hash=block.hash),
         )
+        if raw_commitments is None:
+            return None
+        return [map_to_revealed_commitment(result, resolved_hotkey) for result in raw_commitments]
 
     @track_operation(
         bittensor_operation_duration,
@@ -506,14 +580,51 @@ class TurboBtContact(AbstractBittensorContact):
             "get_commitments", lambda c: c.subnet(netuid).commitments.fetch(block_hash=block.hash)
         )
         commitments = {
-            Hotkey(hotkey): Commitment(
-                commitment_block_number=BlockNumber(result["block"]),
-                hotkey=Hotkey(hotkey),
-                commitment=CommitmentDataBytes(result["data"]).hex(),
-            )
-            for hotkey, result in raw_commitments.items()
+            Hotkey(hotkey_str): map_to_commitment(result, Hotkey(hotkey_str))
+            for hotkey_str, result in raw_commitments.items()
         }
         return SubnetCommitments(block=block, commitments=commitments)
+
+    @track_operation(
+        bittensor_operation_duration,
+        labels={"uri": Attr("uri"), "netuid": Param("netuid"), "hotkey": Attr("hotkey")},
+    )
+    async def get_all_revealed_commitments(self, netuid: NetUid, block: Block) -> SubnetRevealedCommitments:
+        raw_commitments = await self._protect_turbobt(
+            "get_revealed_commitments", lambda c: c.subnet(netuid).commitments.fetch_revealed(block_hash=block.hash)
+        )
+        commitments: dict[Hotkey, list[RevealedCommitment]] = {}
+        for hotkey_str, results in raw_commitments.items():
+            hotkey = Hotkey(hotkey_str)
+            commitments[hotkey] = [map_to_revealed_commitment(result, hotkey) for result in results]
+        return SubnetRevealedCommitments(block=block, commitments=commitments)
+
+    @track_operation(
+        bittensor_operation_duration,
+        labels={
+            "uri": Attr("uri"),
+            "netuid": Param("netuid"),
+            "hotkey": Attr("hotkey"),
+        },
+    )
+    async def set_revealed_commitment(
+        self, netuid: NetUid, commitment: RevealedCommitmentData, block_to_reveal: int, block_time: int | float
+    ) -> int:
+        return await self._protect_turbobt(
+            "set_revealed_commitment",
+            lambda c: c.subnet(netuid).commitments.set_revealed(commitment, block_to_reveal, block_time),
+        )
+
+    @track_operation(
+        bittensor_operation_duration,
+        labels={"uri": Attr("uri"), "hotkey": Attr("hotkey")},
+    )
+    async def get_drand_last_stored_round(self, block: Block | None = None) -> int:
+        logger.debug(f"Fetching last stored drand round at {self.uri}")
+        return await self._protect_turbobt(
+            "get_drand_last_stored_round",
+            lambda c: c.drand.get_last_stored_round(block.hash if block else None),
+        )
 
     @track_operation(
         bittensor_operation_duration,
@@ -654,7 +765,9 @@ class MockBittensorContact(AbstractBittensorContact):
     async def get_neurons(self, netuid: NetUid, block: Block) -> SubnetNeurons:
         return await self._execute_behavior("get_neurons", netuid, block)
 
-    async def get_commitment(self, netuid: NetUid, block: Block, hotkey: Hotkey | None = None) -> Commitment | None:
+    async def get_commitment(
+        self, netuid: NetUid, block: Block, hotkey: Hotkey | None = None
+    ) -> CommitmentVariant | None:
         return await self._execute_behavior("get_commitment", netuid, block, hotkey)
 
     async def get_commitments(self, netuid: NetUid, block: Block) -> SubnetCommitments:
@@ -668,6 +781,22 @@ class MockBittensorContact(AbstractBittensorContact):
 
     async def get_extrinsic(self, block: Block, extrinsic_index: ExtrinsicIndex) -> Extrinsic | None:
         return await self._execute_behavior("get_extrinsic", block, extrinsic_index)
+
+    async def get_revealed_commitments(
+        self, netuid: NetUid, block: Block, hotkey: Hotkey | None = None
+    ) -> list[RevealedCommitment] | None:
+        return await self._execute_behavior("get_revealed_commitments", netuid, block, hotkey)
+
+    async def get_all_revealed_commitments(self, netuid: NetUid, block: Block) -> SubnetRevealedCommitments:
+        return await self._execute_behavior("get_all_revealed_commitments", netuid, block)
+
+    async def set_revealed_commitment(
+        self, netuid: NetUid, commitment: RevealedCommitmentData, block_to_reveal: int, block_time: int | float
+    ) -> int:
+        return await self._execute_behavior("set_revealed_commitment", netuid, commitment, block_to_reveal, block_time)
+
+    async def get_drand_last_stored_round(self, block: Block | None = None) -> int:
+        return await self._execute_behavior("get_drand_last_stored_round", block)
 
 
 @dataclass(slots=True)

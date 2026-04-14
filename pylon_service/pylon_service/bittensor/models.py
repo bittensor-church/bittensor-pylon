@@ -1,3 +1,4 @@
+# pyright: reportWildcardImportFromLibrary=false
 from pylon_commons._unstable.models import *  # noqa: F403
 
 # Contact models intentionally start as pass-through exports of the latest canonical models.

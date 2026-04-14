@@ -1,9 +1,10 @@
+from pylon_commons.models import CommitmentVariant
 from pylon_commons.types import Hotkey, NetUid
 from pylon_commons.v1.responses import GetCommitmentResponse, GetCommitmentsResponse
 
 from pylon_service.api._unstable.services import BlockService, CertificateService, NeuronService  # noqa: F401
 from pylon_service.bittensor.contact import BittensorPort
-from pylon_service.bittensor.models import Block, Commitment
+from pylon_service.bittensor.models import Block
 from pylon_service.services.commitments import CommitmentService as DomainCommitmentService
 
 
@@ -30,5 +31,5 @@ class CommitmentService:
         return self._wrap_commitment(block, commitment)
 
     @staticmethod
-    def _wrap_commitment(block: Block, commitment: Commitment) -> GetCommitmentResponse:
+    def _wrap_commitment(block: Block, commitment: CommitmentVariant) -> GetCommitmentResponse:
         return GetCommitmentResponse(block=block, **commitment.model_dump())

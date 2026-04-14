@@ -71,16 +71,16 @@ def assert_test_fixture_contract(*, settings, identities) -> None:
             "token": expected.token,
         }
         if actual_fields != expected_fields:
-            errors.append(
-                f"identity {identity_name!r} mismatch: expected {expected_fields!r}, got {actual_fields!r}"
-            )
+            errors.append(f"identity {identity_name!r} mismatch: expected {expected_fields!r}, got {actual_fields!r}")
 
         wallet = getattr(identity, "wallet", None)
         if wallet is not None:
             try:
                 actual_hotkey = wallet.hotkey.ss58_address
             except Exception as exc:
-                errors.append(f"identity {identity_name!r} wallet could not resolve hotkey: {type(exc).__name__}: {exc}")
+                errors.append(
+                    f"identity {identity_name!r} wallet could not resolve hotkey: {type(exc).__name__}: {exc}"
+                )
             else:
                 if actual_hotkey != expected.hotkey_ss58:
                     errors.append(

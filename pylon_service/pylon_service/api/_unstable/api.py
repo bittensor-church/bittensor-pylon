@@ -3,18 +3,21 @@ import logging
 from litestar import Controller, Response, status_codes
 from litestar.di import Provide
 from litestar.exceptions import NotFoundException
-from pylon_commons._unstable.bodies import LoginBody, SetCommitmentBody, SetWeightsBody, SetRevealedCommitmentBody
+from pylon_commons._unstable.bodies import LoginBody, SetCommitmentBody, SetRevealedCommitmentBody, SetWeightsBody
 from pylon_commons._unstable.endpoints import Endpoint
 from pylon_commons._unstable.requests import GenerateCertificateKeypairRequest
 from pylon_commons._unstable.responses import (
+    GetAllRevealedCommitmentsResponse,
     GetCommitmentResponse,
     GetCommitmentsResponse,
+    GetDrandLastStoredRoundResponse,
     GetExtrinsicResponse,
     GetLatestBlockInfoResponse,
     GetNeuronsResponse,
+    GetRevealedCommitmentsResponse,
     GetValidatorsResponse,
-    IdentityLoginResponse, GetRevealedCommitmentsResponse, SetRevealedCommitmentResponse,
-    GetAllRevealedCommitmentsResponse, GetDrandLastStoredRoundResponse,
+    IdentityLoginResponse,
+    SetRevealedCommitmentResponse,
 )
 from pylon_commons.models import Hotkey, NeuronCertificate
 from pylon_commons.types import BlockNumber, ExtrinsicIndex, NetUid
@@ -82,7 +85,7 @@ async def get_last_stored_round_endpoint(bt_contact_router: BittensorContactRout
     """
     Get the last stored drand round from the blockchain.
     """
-    last_stored_round = await bt_client.get_drand_last_stored_round()
+    last_stored_round = await bt_contact_router.get_drand_last_stored_round()
     return GetDrandLastStoredRoundResponse(last_stored_round=last_stored_round)
 
 
@@ -150,8 +153,8 @@ class OpenAccessController(Controller):
         """
         Get all revealed commitments for the subnet.
         """
-        block = await bt_client.get_latest_block()
-        result = await bt_client.get_all_revealed_commitments(netuid, block)
+        block = await bt_contact_router.get_latest_block()
+        result = await bt_contact_router.get_all_revealed_commitments(netuid, block)
         return GetAllRevealedCommitmentsResponse.model_validate(result, from_attributes=True)
 
     @handler(Endpoint.LATEST_COMMITMENTS_REVEALED_HOTKEY)
@@ -164,8 +167,8 @@ class OpenAccessController(Controller):
         Raises:
             NotFoundException: If commitments could not be found in the blockchain.
         """
-        block = await bt_client.get_latest_block()
-        commitments = await bt_client.get_revealed_commitments(netuid, block, hotkey=hotkey)
+        block = await bt_contact_router.get_latest_block()
+        commitments = await bt_contact_router.get_revealed_commitments(netuid, block, hotkey=hotkey)
         if commitments is None:
             raise NotFoundException(detail="Commitments not found.")
         return GetRevealedCommitmentsResponse(block=block, commitments=commitments)
@@ -191,7 +194,7 @@ class IdentityController(Controller):
         """
         try:
             reveal_round = await SetRevealedCommitment(
-                bt_client, netuid, data.commitment, data.blocks_until_reveal, data.block_time
+                bt_contact_router, netuid, data.commitment, data.blocks_until_reveal, data.block_time
             )()
         except Exception as exc:
             raise BadGatewayException(detail=str(exc)) from exc
@@ -207,8 +210,8 @@ class IdentityController(Controller):
         Raises:
             NotFoundException: If commitments could not be found in the blockchain.
         """
-        block = await bt_client.get_latest_block()
-        commitments = await bt_client.get_revealed_commitments(netuid, block)
+        block = await bt_contact_router.get_latest_block()
+        commitments = await bt_contact_router.get_revealed_commitments(netuid, block)
         if commitments is None:
             raise NotFoundException(detail="Commitments not found.")
         return GetRevealedCommitmentsResponse(block=block, commitments=commitments)

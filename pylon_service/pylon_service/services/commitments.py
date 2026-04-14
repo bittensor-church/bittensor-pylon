@@ -1,7 +1,8 @@
+from pylon_commons.models import CommitmentVariant
 from pylon_commons.types import CommitmentDataBytes, NetUid
 
 from pylon_service.bittensor.contact import BittensorPort
-from pylon_service.bittensor.models import Block, Commitment, SubnetCommitments
+from pylon_service.bittensor.models import Block, SubnetCommitments
 
 from .errors import CommitmentNotFoundError
 
@@ -20,14 +21,18 @@ class CommitmentService:
         block = await contact_router.get_latest_block()
         return await self.get_commitments(contact_router, netuid, block)
 
-    async def get_commitment(self, contact_router: BittensorPort, netuid: NetUid, hotkey) -> tuple[Block, Commitment]:
+    async def get_commitment(
+        self, contact_router: BittensorPort, netuid: NetUid, hotkey
+    ) -> tuple[Block, CommitmentVariant]:
         block = await contact_router.get_latest_block()
         commitment = await contact_router.get_commitment(netuid, block, hotkey=hotkey)
         if commitment is None:
             raise CommitmentNotFoundError("Commitment not found.")
         return block, commitment
 
-    async def get_own_commitment(self, contact_router: BittensorPort, netuid: NetUid) -> tuple[Block, Commitment]:
+    async def get_own_commitment(
+        self, contact_router: BittensorPort, netuid: NetUid
+    ) -> tuple[Block, CommitmentVariant]:
         block = await contact_router.get_latest_block()
         commitment = await contact_router.get_commitment(netuid, block)
         if commitment is None:

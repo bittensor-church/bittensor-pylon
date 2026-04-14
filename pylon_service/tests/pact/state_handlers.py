@@ -10,7 +10,6 @@ from pylon_commons.models import (
     HexDataCommitment,
     SubnetCommitments,
     SubnetNeurons,
-    SubnetValidators,
 )
 from pylon_commons.types import BlockNumber, CommitmentDataHex, Hotkey, Timestamp
 
