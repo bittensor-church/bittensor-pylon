@@ -1,14 +1,14 @@
 """
-Tests for the GET /identity/{identity_name}/subnet/{netuid}/block/{block_number}/neurons endpoint.
+Tests for the GET /identity/{identity_name}/subnet/{netuid}/block/{block_number}/validators endpoint.
 """
 
 from ipaddress import IPv4Address
 
 import pytest
-from litestar.status_codes import HTTP_200_OK, HTTP_404_NOT_FOUND
+from litestar.status_codes import HTTP_200_OK
 from litestar.testing import AsyncTestClient
 from pylon_commons.currency import Currency, Token
-from pylon_commons.models import AxonInfo, AxonProtocol, Block, Neuron, Stakes, SubnetNeurons
+from pylon_commons.models import AxonInfo, AxonProtocol, Block, Neuron, Stakes, SubnetValidators
 from pylon_commons.types import (
     AlphaStake,
     BlockHash,
@@ -42,7 +42,6 @@ def _build_neuron(
     uid: int,
     coldkey: str,
     hotkey: str,
-    active: bool,
     ip: str,
     port: int,
     protocol: AxonProtocol,
@@ -55,7 +54,6 @@ def _build_neuron(
     validator_trust: float,
     dividends: float,
     last_update: int,
-    validator_permit: bool,
     pruning_score: int,
     alpha_stake: float,
     tao_stake: float,
@@ -65,7 +63,7 @@ def _build_neuron(
         uid=NeuronUid(uid),
         coldkey=Coldkey(coldkey),
         hotkey=Hotkey(hotkey),
-        active=NeuronActive(active),
+        active=NeuronActive(True),
         axon_info=AxonInfo(ip=IPv4Address(ip), port=Port(port), protocol=protocol),
         stake=Stake(stake),
         rank=Rank(rank),
@@ -76,7 +74,7 @@ def _build_neuron(
         validator_trust=ValidatorTrust(validator_trust),
         dividends=Dividends(dividends),
         last_update=Timestamp(last_update),
-        validator_permit=ValidatorPermit(validator_permit),
+        validator_permit=ValidatorPermit(True),
         pruning_score=PruningScore(pruning_score),
         stakes=Stakes(
             alpha=AlphaStake(Currency[Token.ALPHA](alpha_stake)),
@@ -92,93 +90,71 @@ def block() -> Block:
 
 
 @pytest.fixture
-def subnet_neurons(block: Block) -> SubnetNeurons:
-    neuron_a = _build_neuron(
-        uid=10,
-        coldkey="coldkey-a",
-        hotkey="hotkey-a",
-        active=True,
-        ip="192.168.1.10",
-        port=8080,
-        protocol=AxonProtocol.HTTP,
-        stake=1.5,
-        rank=0.11,
-        emission=2.5,
-        incentive=0.22,
-        consensus=0.33,
-        trust=0.44,
-        validator_trust=0.55,
-        dividends=0.66,
-        last_update=111,
-        validator_permit=True,
-        pruning_score=7,
-        alpha_stake=3.5,
-        tao_stake=4.5,
-        total_stake=8.0,
+def subnet_validators(block: Block) -> SubnetValidators:
+    return SubnetValidators(
+        block=block,
+        validators=[
+            _build_neuron(
+                uid=10,
+                coldkey="coldkey-a",
+                hotkey="hotkey-a",
+                ip="192.168.1.10",
+                port=8080,
+                protocol=AxonProtocol.HTTP,
+                stake=1.5,
+                rank=0.11,
+                emission=2.5,
+                incentive=0.22,
+                consensus=0.33,
+                trust=0.44,
+                validator_trust=0.55,
+                dividends=0.66,
+                last_update=111,
+                pruning_score=7,
+                alpha_stake=3.5,
+                tao_stake=4.5,
+                total_stake=8.0,
+            ),
+            _build_neuron(
+                uid=11,
+                coldkey="coldkey-b",
+                hotkey="hotkey-b",
+                ip="10.0.0.2",
+                port=9090,
+                protocol=AxonProtocol.TCP,
+                stake=9.5,
+                rank=0.77,
+                emission=1.25,
+                incentive=0.88,
+                consensus=0.99,
+                trust=0.12,
+                validator_trust=0.34,
+                dividends=0.56,
+                last_update=222,
+                pruning_score=8,
+                alpha_stake=5.5,
+                tao_stake=6.5,
+                total_stake=12.0,
+            ),
+        ],
     )
-    neuron_b = _build_neuron(
-        uid=11,
-        coldkey="coldkey-b",
-        hotkey="hotkey-b",
-        active=False,
-        ip="10.0.0.2",
-        port=9090,
-        protocol=AxonProtocol.TCP,
-        stake=9.5,
-        rank=0.77,
-        emission=1.25,
-        incentive=0.88,
-        consensus=0.99,
-        trust=0.12,
-        validator_trust=0.34,
-        dividends=0.56,
-        last_update=222,
-        validator_permit=False,
-        pruning_score=8,
-        alpha_stake=5.5,
-        tao_stake=6.5,
-        total_stake=12.0,
-    )
-    return SubnetNeurons(block=block, neurons={neuron_a.hotkey: neuron_a, neuron_b.hotkey: neuron_b})
 
 
 @pytest.mark.asyncio
-@pytest.mark.parametrize(
-    "invalid_block_number",
-    [
-        pytest.param("not_a_number", id="string_value"),
-        pytest.param("123.456", id="float_string"),
-        pytest.param("true", id="boolean_string"),
-    ],
-)
-async def test_get_neurons_identity_invalid_block_number_type(test_client: AsyncTestClient, invalid_block_number: str):
-    """
-    Test that invalid block number types return 404.
-    """
-    response = await test_client.get(f"/api/v1/identity/sn1/subnet/1/block/{invalid_block_number}/neurons")
-
-    assert response.status_code == HTTP_404_NOT_FOUND, response.content
-    assert response.json() == {
-        "status_code": HTTP_404_NOT_FOUND,
-        "detail": "Not Found",
-    }
-
-
-@pytest.mark.asyncio
-async def test_get_neurons_identity_success(
+async def test_get_validators_identity_success(
     test_client: AsyncTestClient,
     sn1_mock_bt_client: MockBittensorClient,
     block: Block,
-    subnet_neurons: SubnetNeurons,
+    subnet_validators: SubnetValidators,
 ):
-    async with sn1_mock_bt_client.mock_behavior(get_block=[block], get_neurons=[subnet_neurons]):
-        response = await test_client.get(f"/api/v1/identity/sn1/subnet/1/block/{block.number}/neurons")
+    async with sn1_mock_bt_client.mock_behavior(get_block=[block], get_validators=[subnet_validators]):
+        response = await test_client.get(f"/api/v1/identity/sn1/subnet/1/block/{block.number}/validators")
 
         assert response.status_code == HTTP_200_OK, response.content
         assert response.json() == {
             "block": {"number": 123, "hash": "0xabc123"},
-            "neurons": {
-                "hotkey-a": {
+            "validators": [
+                {
                     "uid": 10,
                     "coldkey": "coldkey-a",
                     "hotkey": "hotkey-a",
@@ -197,11 +173,11 @@ async def test_get_neurons_identity_success(
                     "pruning_score": 7,
                     "stakes": {"alpha": 3.5, "tao": 4.5, "total": 8.0},
                 },
-                "hotkey-b": {
+                {
                     "uid": 11,
                     "coldkey": "coldkey-b",
                     "hotkey": "hotkey-b",
-                    "active": False,
+                    "active": True,
                     "axon_info": {"ip": "10.0.0.2", "port": 9090, "protocol": 0},
                     "stake": 9.5,
                     "rank": 0.77,
@@ -212,32 +188,32 @@ async def test_get_neurons_identity_success(
                     "validator_trust": 0.34,
                     "dividends": 0.56,
                     "last_update": 222,
-                    "validator_permit": False,
+                    "validator_permit": True,
                     "pruning_score": 8,
                     "stakes": {"alpha": 5.5, "tao": 6.5, "total": 12.0},
                 },
-            },
+            ],
         }
 
     assert sn1_mock_bt_client.calls["get_block"] == [(block.number,)]
-    assert sn1_mock_bt_client.calls["get_neurons"] == [(NetUid(1), block)]
+    assert sn1_mock_bt_client.calls["get_validators"] == [(NetUid(1), block)]
 
 
 @pytest.mark.asyncio
-async def test_get_latest_neurons_identity_success(
+async def test_get_latest_validators_identity_success(
     test_client: AsyncTestClient,
     sn1_mock_bt_client: MockBittensorClient,
     block: Block,
-    subnet_neurons: SubnetNeurons,
+    subnet_validators: SubnetValidators,
 ):
-    async with sn1_mock_bt_client.mock_behavior(get_latest_block=[block], get_neurons=[subnet_neurons]):
-        response = await test_client.get("/api/v1/identity/sn1/subnet/1/block/latest/neurons")
+    async with sn1_mock_bt_client.mock_behavior(get_latest_block=[block], get_validators=[subnet_validators]):
+        response = await test_client.get("/api/v1/identity/sn1/subnet/1/block/latest/validators")
 
         assert response.status_code == HTTP_200_OK, response.content
         assert response.json() == {
             "block": {"number": 123, "hash": "0xabc123"},
-            "neurons": {
-                "hotkey-a": {
+            "validators": [
+                {
                     "uid": 10,
                     "coldkey": "coldkey-a",
                     "hotkey": "hotkey-a",
@@ -256,11 +232,11 @@ async def test_get_latest_neurons_identity_success(
                     "pruning_score": 7,
                     "stakes": {"alpha": 3.5, "tao": 4.5, "total": 8.0},
                 },
-                "hotkey-b": {
+                {
                     "uid": 11,
                     "coldkey": "coldkey-b",
                     "hotkey": "hotkey-b",
-                    "active": False,
+                    "active": True,
                     "axon_info": {"ip": "10.0.0.2", "port": 9090, "protocol": 0},
                     "stake": 9.5,
                     "rank": 0.77,
@@ -271,31 +247,12 @@ async def test_get_latest_neurons_identity_success(
                     "validator_trust": 0.34,
                     "dividends": 0.56,
                     "last_update": 222,
-                    "validator_permit": False,
+                    "validator_permit": True,
                     "pruning_score": 8,
                     "stakes": {"alpha": 5.5, "tao": 6.5, "total": 12.0},
                 },
-            },
+            ],
         }
 
     assert sn1_mock_bt_client.calls["get_latest_block"] == [()]
-    assert sn1_mock_bt_client.calls["get_neurons"] == [(NetUid(1), block)]
-
-
-@pytest.mark.asyncio
-async def test_get_neurons_identity_block_not_found(
-    test_client: AsyncTestClient, sn1_mock_bt_client: MockBittensorClient
-):
-    """
-    Test that non-existent block returns 404.
-    """
-    async with sn1_mock_bt_client.mock_behavior(get_block=[None]):
-        response = await test_client.get("/api/v1/identity/sn1/subnet/1/block/123/neurons")
-
-        assert response.status_code == HTTP_404_NOT_FOUND, response.content
-        assert response.json() == {
-            "status_code": HTTP_404_NOT_FOUND,
-            "detail": "Block 123 not found.",
-        }
-
-    assert sn1_mock_bt_client.calls["get_block"] == [(123,)]
+    assert sn1_mock_bt_client.calls["get_validators"] == [(NetUid(1), block)]
