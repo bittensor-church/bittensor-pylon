@@ -5,7 +5,12 @@ from httpx import Response, codes
 
 from pylon_client._internal.pylon_commons._unstable.endpoints import Endpoint as EndpointUnstable
 from pylon_client.artanis import BlockHash, BlockNumber, CommitmentDataHex, Hotkey
-from pylon_client.artanis.unstable import Block, Commitment, GetCommitmentsResponse
+from pylon_client.artanis.unstable import (
+    Block,
+    CommitmentVariant,
+    GetCommitmentsResponse,
+    HexDataCommitment,
+)
 from tests.unit.synchronous.base_test import IdentityEndpointTest
 
 
@@ -23,13 +28,13 @@ class TestSyncIdentityGetCommitments(IdentityEndpointTest):
 
     @pytest.fixture
     def success_response(self, block: Block) -> GetCommitmentsResponse:
-        commitments = {
-            Hotkey("hotkey1"): Commitment(
+        commitments: dict[Hotkey, CommitmentVariant] = {
+            Hotkey("hotkey1"): HexDataCommitment(
                 commitment_block_number=BlockNumber(999),
                 hotkey=Hotkey("hotkey1"),
                 commitment=CommitmentDataHex("0xaabbccdd"),
             ),
-            Hotkey("hotkey2"): Commitment(
+            Hotkey("hotkey2"): HexDataCommitment(
                 commitment_block_number=BlockNumber(999),
                 hotkey=Hotkey("hotkey2"),
                 commitment=CommitmentDataHex("0x11223344"),

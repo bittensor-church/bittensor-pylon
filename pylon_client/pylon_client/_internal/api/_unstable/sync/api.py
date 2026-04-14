@@ -5,18 +5,23 @@ from pylon_client._internal.api.abstract_sync import (
     AbstractOpenAccessApi,
 )
 from pylon_client._internal.pylon_commons._unstable.requests import (
+    GetAllRevealedCommitmentsRequest,
     GetCommitmentRequest,
     GetCommitmentsRequest,
+    GetDrandLastStoredRoundRequest,
     GetExtrinsicRequest,
     GetLatestBlockInfoRequest,
     GetLatestNeuronsRequest,
     GetLatestValidatorsRequest,
     GetNeuronsRequest,
     GetOwnCommitmentRequest,
+    GetOwnRevealedCommitmentsRequest,
     GetRecentNeuronsRequest,
+    GetRevealedCommitmentsRequest,
     GetValidatorsRequest,
     IdentityLoginRequest,
     SetCommitmentRequest,
+    SetRevealedCommitmentRequest,
     SetWeightsRequest,
 )
 from pylon_client._internal.pylon_commons._unstable.responses import (
@@ -32,6 +37,7 @@ from pylon_client._internal.pylon_commons.types import (
     ExtrinsicIndex,
     Hotkey,
     NetUid,
+    RevealedCommitmentData,
     Weight,
 )
 
@@ -59,8 +65,14 @@ class OpenAccessApi(AbstractOpenAccessApi[OpenAccessLoginResponse]):
     def _get_commitments_request(self, netuid: NetUid) -> GetCommitmentsRequest:
         return GetCommitmentsRequest(netuid=netuid)
 
+    def _get_all_revealed_commitments_request(self, netuid: NetUid) -> GetAllRevealedCommitmentsRequest:
+        return GetAllRevealedCommitmentsRequest(netuid=netuid)
+
     def _get_commitment_request(self, netuid: NetUid, hotkey: Hotkey) -> GetCommitmentRequest:
         return GetCommitmentRequest(netuid=netuid, hotkey=hotkey)
+
+    def _get_revealed_commitments_request(self, netuid: NetUid, hotkey: Hotkey) -> GetRevealedCommitmentsRequest:
+        return GetRevealedCommitmentsRequest(netuid=netuid, hotkey=hotkey)
 
     def _get_validators_request(self, netuid: NetUid, block_number: BlockNumber) -> GetValidatorsRequest:
         return GetValidatorsRequest(netuid=netuid, block_number=block_number)
@@ -73,6 +85,9 @@ class OpenAccessApi(AbstractOpenAccessApi[OpenAccessLoginResponse]):
 
     def _get_extrinsic_request(self, block_number: BlockNumber, extrinsic_index: ExtrinsicIndex) -> GetExtrinsicRequest:
         return GetExtrinsicRequest(block_number=block_number, extrinsic_index=extrinsic_index)
+
+    def _get_drand_last_stored_round_request(self) -> GetDrandLastStoredRoundRequest:
+        return GetDrandLastStoredRoundRequest()
 
 
 class IdentityApi(AbstractIdentityApi[IdentityLoginResponse]):
@@ -124,9 +139,24 @@ class IdentityApi(AbstractIdentityApi[IdentityLoginResponse]):
             identity_name=self._login_response.identity_name,
         )
 
+    def _get_all_revealed_commitments_request(self) -> GetAllRevealedCommitmentsRequest:
+        assert self._login_response, "Attempted api request without authentication."
+        return GetAllRevealedCommitmentsRequest(
+            netuid=self._login_response.netuid,
+            identity_name=self._login_response.identity_name,
+        )
+
     def _get_commitment_request(self, hotkey: Hotkey) -> GetCommitmentRequest:
         assert self._login_response, "Attempted api request without authentication."
         return GetCommitmentRequest(
+            netuid=self._login_response.netuid,
+            identity_name=self._login_response.identity_name,
+            hotkey=hotkey,
+        )
+
+    def _get_revealed_commitments_request(self, hotkey: Hotkey) -> GetRevealedCommitmentsRequest:
+        assert self._login_response, "Attempted api request without authentication."
+        return GetRevealedCommitmentsRequest(
             netuid=self._login_response.netuid,
             identity_name=self._login_response.identity_name,
             hotkey=hotkey,
@@ -139,12 +169,31 @@ class IdentityApi(AbstractIdentityApi[IdentityLoginResponse]):
             identity_name=self._login_response.identity_name,
         )
 
+    def _get_own_revealed_commitments_request(self) -> GetOwnRevealedCommitmentsRequest:
+        assert self._login_response, "Attempted api request without authentication."
+        return GetOwnRevealedCommitmentsRequest(
+            netuid=self._login_response.netuid,
+            identity_name=self._login_response.identity_name,
+        )
+
     def _set_commitment_request(self, commitment: CommitmentDataBytes | CommitmentDataHex) -> SetCommitmentRequest:
         assert self._login_response, "Attempted api request without authentication."
         return SetCommitmentRequest(
             netuid=self._login_response.netuid,
             identity_name=self._login_response.identity_name,
             commitment=cast(CommitmentDataBytes, commitment),
+        )
+
+    def _set_revealed_commitment_request(
+        self, commitment: str, blocks_until_reveal: int = 360, block_time: int | float = 12
+    ) -> SetRevealedCommitmentRequest:
+        assert self._login_response, "Attempted api request without authentication."
+        return SetRevealedCommitmentRequest(
+            netuid=self._login_response.netuid,
+            identity_name=self._login_response.identity_name,
+            commitment=RevealedCommitmentData(commitment),
+            blocks_until_reveal=blocks_until_reveal,
+            block_time=block_time,
         )
 
     def _get_validators_request(self, block_number: BlockNumber) -> GetValidatorsRequest:
@@ -167,3 +216,6 @@ class IdentityApi(AbstractIdentityApi[IdentityLoginResponse]):
 
     def _get_extrinsic_request(self, block_number: BlockNumber, extrinsic_index: ExtrinsicIndex) -> GetExtrinsicRequest:
         return GetExtrinsicRequest(block_number=block_number, extrinsic_index=extrinsic_index)
+
+    def _get_drand_last_stored_round_request(self) -> GetDrandLastStoredRoundRequest:
+        return GetDrandLastStoredRoundRequest()

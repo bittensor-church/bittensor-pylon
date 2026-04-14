@@ -74,9 +74,12 @@ def validators_response_matcher(hotkey_1: str, hotkey_2: str) -> dict:
 def commitment_response_matcher(hotkey: str) -> dict:
     return {
         "block": block_matcher(),
-        "commitment_block_number": match.int(BLOCK_NUMBER),
-        "hotkey": match.str(hotkey),
-        "commitment": match.str(COMMITMENT_HEX),
+        "commitment": {
+            "commitment_block_number": match.int(BLOCK_NUMBER),
+            "hotkey": match.str(hotkey),
+            "commitment": match.str(COMMITMENT_HEX),
+            "kind": "hex_data",
+        },
     }
 
 
@@ -101,6 +104,7 @@ def commitments_response_matcher(hotkey_1: str, hotkey_2: str) -> dict:
         "commitment_block_number": match.int(BLOCK_NUMBER),
         "hotkey": match.str(hotkey_1),
         "commitment": match.str(COMMITMENT_HEX),
+        "kind": "hex_data",
     }
     return {
         "block": block_matcher(),
@@ -111,11 +115,13 @@ def commitments_response_matcher(hotkey_1: str, hotkey_2: str) -> dict:
                         "commitment_block_number": match.int(BLOCK_NUMBER),
                         "hotkey": match.str(hotkey_1),
                         "commitment": match.str(COMMITMENT_HEX),
+                        "kind": "hex_data",
                     },
                     hotkey_2: {
                         "commitment_block_number": match.int(BLOCK_NUMBER),
                         "hotkey": match.str(hotkey_2),
                         "commitment": match.str(COMMITMENT_HEX),
+                        "kind": "hex_data",
                     },
                 },
                 rules=match.str(hotkey_1),

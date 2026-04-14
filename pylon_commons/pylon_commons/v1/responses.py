@@ -1,5 +1,4 @@
 from .._unstable.responses import (  # noqa: F401
-    GetCommitmentResponse,
     GetExtrinsicResponse,
     GetLatestBlockInfoResponse,
     GetNeuronsResponse,
@@ -12,7 +11,7 @@ from .._unstable.responses import (  # noqa: F401
     SetWeightsResponse,
 )
 from ..types import CommitmentDataHex, Hotkey
-from .models import Block
+from .models import Block, Commitment
 
 __all__ = [
     "GetCommitmentResponse",
@@ -37,3 +36,11 @@ class GetCommitmentsResponse(PylonResponse):
 
     block: Block
     commitments: dict[Hotkey, CommitmentDataHex]
+
+
+class GetCommitmentResponse(PylonResponse, Commitment):
+    """
+    V1 response class that is returned for the GetCommitmentRequest.
+    """
+
+    block: Block

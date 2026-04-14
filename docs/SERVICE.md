@@ -230,6 +230,7 @@ Labels: `operation`, `status`, `netuid`, `hotkey`.
 | Metric | Type | Description |
 |--------|------|-------------|
 | `pylon_set_commitment_job_duration_seconds` | Histogram | Duration of entire SetCommitment job |
+| `pylon_set_revealed_commitment_job_duration_seconds` | Histogram | Duration of entire SetRevealedCommitment job |
 
 Labels: `operation`, `status`, `netuid`.
 

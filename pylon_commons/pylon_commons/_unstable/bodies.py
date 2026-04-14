@@ -1,6 +1,6 @@
 from pydantic import BaseModel, field_serializer, field_validator
 
-from ..types import CommitmentDataBytes, CommitmentDataHex, Hotkey, PylonAuthToken, Weight
+from ..types import CommitmentDataBytes, CommitmentDataHex, Hotkey, PylonAuthToken, RevealedCommitmentData, Weight
 
 
 class PylonBody(BaseModel):
@@ -64,3 +64,13 @@ class SetCommitmentBody(PylonBody):
     @field_serializer("commitment")
     def serialize_commitment(self, commitment: CommitmentDataBytes) -> CommitmentDataHex:
         return commitment.hex()
+
+
+class SetRevealedCommitmentBody(PylonBody):
+    """
+    Class used to perform setting revealed commitment via the API.
+    """
+
+    commitment: RevealedCommitmentData
+    blocks_until_reveal: int
+    block_time: int | float

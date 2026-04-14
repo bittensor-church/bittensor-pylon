@@ -47,6 +47,7 @@ IdentityName = NewType("IdentityName", str)
 ExtrinsicIndex = NewType("ExtrinsicIndex", int)
 ExtrinsicHash = NewType("ExtrinsicHash", str)
 ExtrinsicLength = NewType("ExtrinsicLength", int)
+RevealedCommitmentData = NewType("RevealedCommitmentData", str)
 
 
 class CommitmentDataHex(str):

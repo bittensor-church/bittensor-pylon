@@ -2,7 +2,7 @@ from httpx import codes
 from pact import Pact
 
 from pylon_client.artanis import BlockNumber, CommitmentDataHex, Hotkey
-from pylon_client.artanis.unstable import GetCommitmentResponse
+from pylon_client.artanis.unstable import GetCommitmentResponse, HexDataCommitment
 from tests.pact.builders import build_block
 from tests.pact.constants import BLOCK_NUMBER, COMMITMENT_HEX, HOTKEY_1, IDENTITY_NAME, NETUID
 
@@ -23,7 +23,9 @@ def test_get_own_commitment_success(pact: Pact, get_commitment_response_matcher:
 
     assert response == GetCommitmentResponse(
         block=build_block(),
-        commitment_block_number=BlockNumber(BLOCK_NUMBER),
-        hotkey=Hotkey(HOTKEY_1),
-        commitment=CommitmentDataHex(COMMITMENT_HEX),
+        commitment=HexDataCommitment(
+            commitment_block_number=BlockNumber(BLOCK_NUMBER),
+            hotkey=Hotkey(HOTKEY_1),
+            commitment=CommitmentDataHex(COMMITMENT_HEX),
+        ),
     )
