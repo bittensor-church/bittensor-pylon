@@ -3,7 +3,7 @@ import time
 from abc import ABC, abstractmethod
 from types import SimpleNamespace
 from typing import TYPE_CHECKING, Any, ClassVar, Literal
-from unittest.mock import AsyncMock
+from unittest.mock import Mock
 
 from pylon_commons.models import (
     CommitmentVariant,
@@ -257,7 +257,7 @@ class WeightsCanBeSetHandler(StateHandler):
     name = "weights can be set"
 
     def setup(self, parameters: dict[str, Any]) -> None:
-        self.monkeypatch.setattr("pylon_service.api._unstable.api.ApplyWeights.schedule", AsyncMock())
+        self.monkeypatch.setattr("pylon_service.api._unstable.api.ApplyWeights.schedule", Mock())
 
 
 class BlockDataUnavailableHandler(StateHandler):
