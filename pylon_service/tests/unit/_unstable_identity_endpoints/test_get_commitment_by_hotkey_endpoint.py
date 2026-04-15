@@ -9,7 +9,7 @@ from pylon_commons.models import Block
 from pylon_commons.types import BlockHash, BlockNumber
 
 from pylon_service.bittensor.contact import MockBittensorContact
-from tests.world import COMMITMENTS_ALL_NETUID
+from tests.world import COMMITMENTS_ALL_NETUID, COMMITMENTS_MIXED_NETUID
 
 
 @pytest.mark.asyncio
@@ -18,6 +18,18 @@ async def test_unstable_identity_get_commitment_by_hotkey_returns_commitment_obj
 ):
     response = await test_client.get(
         f"/api/_unstable/identity/sn1/subnet/{COMMITMENTS_ALL_NETUID}/block/latest/commitments/hotkey1"
+    )
+
+    assert response.status_code == HTTP_200_OK
+    assert response.json() == snapshot_json
+
+
+@pytest.mark.asyncio
+async def test_unstable_identity_get_commitment_by_hotkey_returns_timelock_variant(
+    test_client: AsyncTestClient, snapshot_json
+):
+    response = await test_client.get(
+        f"/api/_unstable/identity/sn1/subnet/{COMMITMENTS_MIXED_NETUID}/block/latest/commitments/hotkey2"
     )
 
     assert response.status_code == HTTP_200_OK

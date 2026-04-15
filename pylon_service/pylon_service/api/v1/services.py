@@ -1,4 +1,4 @@
-from pylon_commons.models import CommitmentVariant, CommitmentKind
+from pylon_commons.models import CommitmentKind, CommitmentVariant
 from pylon_commons.types import Hotkey, NetUid
 from pylon_commons.v1.responses import GetCommitmentResponse, GetCommitmentsResponse
 
@@ -18,7 +18,11 @@ class CommitmentService:
         commitments = await self._domain.get_commitments(contact_router, netuid, block)
         return GetCommitmentsResponse(
             block=commitments.block,
-            commitments={hotkey: c.commitment for hotkey, c in c.commitments.items() if c.kind == CommitmentKind.HEX_DATA},
+            commitments={
+                hotkey: commitment.commitment
+                for hotkey, commitment in commitments.commitments.items()
+                if commitment.kind == CommitmentKind.HEX_DATA
+            },
         )
 
     async def get_commitment(

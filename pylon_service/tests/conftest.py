@@ -30,6 +30,7 @@ from tests.world import (
     default_commitments,
     default_latest_block,
     default_neurons,
+    default_revealed_commitments,
     default_subnet_states,
 )
 
@@ -179,6 +180,9 @@ async def shared_world(mock_bt_contact_pool) -> AsyncGenerator[SharedWorld]:
                         own_commitment_hotkey=EXPECTED_IDENTITIES[IdentityName("sn2")].hotkey_ss58,
                     ),
                     default_commitments=default_commitments(),
+                    default_revealed_commitments=default_revealed_commitments(
+                        own_commitment_hotkey=EXPECTED_IDENTITIES[IdentityName("sn2")].hotkey_ss58,
+                    ),
                 )
 
 
