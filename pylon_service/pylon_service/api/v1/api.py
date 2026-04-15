@@ -1,15 +1,19 @@
 from litestar import Controller, Response, status_codes
 from litestar.di import Provide
-from pylon_commons._unstable.bodies import SetCommitmentBody, SetWeightsBody
+from litestar.exceptions import NotFoundException
 from pylon_commons._unstable.requests import GenerateCertificateKeypairRequest
 from pylon_commons.models import Hotkey, NeuronCertificate
 from pylon_commons.types import BlockNumber, NetUid
+from pylon_commons.v1.bodies import SetCommitmentBody, SetRevealedCommitmentBody, SetWeightsBody
 from pylon_commons.v1.endpoints import Endpoint
 from pylon_commons.v1.responses import (
+    GetAllRevealedCommitmentsResponse,
     GetCommitmentResponse,
     GetCommitmentsResponse,
     GetNeuronsResponse,
+    GetRevealedCommitmentsResponse,
     GetValidatorsResponse,
+    SetRevealedCommitmentResponse,
 )
 
 from pylon_service.api._unstable.api import (
@@ -17,7 +21,7 @@ from pylon_service.api._unstable.api import (
     get_latest_block_info_endpoint,
     identity_login,
 )
-from pylon_service.api._unstable.tasks import ApplyWeights, SetCommitment
+from pylon_service.api._unstable.tasks import ApplyWeights, SetCommitment, SetRevealedCommitment
 from pylon_service.api.utils import handler
 from pylon_service.bittensor.contact_router import BittensorContactRouter
 from pylon_service.bittensor.recent import RecentObjectProvider
@@ -29,6 +33,7 @@ from pylon_service.dependencies import (
     recent_object_provider_open_access_dep,
 )
 from pylon_service.exceptions import BadGatewayException
+from pylon_service.services.errors import CommitmentNotFoundError
 
 from . import services
 
@@ -97,6 +102,21 @@ class OpenAccessController(Controller):
         self, hotkey: Hotkey, bt_contact_router: BittensorContactRouter, netuid: NetUid
     ) -> GetCommitmentResponse:
         return await commitment_service.get_commitment(bt_contact_router, netuid, hotkey)
+
+    @handler(Endpoint.LATEST_COMMITMENTS_REVEALED)
+    async def get_all_revealed_commitments_endpoint(
+        self, bt_contact_router: BittensorContactRouter, netuid: NetUid
+    ) -> GetAllRevealedCommitmentsResponse:
+        return await commitment_service.get_all_revealed_commitments(bt_contact_router, netuid)
+
+    @handler(Endpoint.LATEST_COMMITMENTS_REVEALED_HOTKEY)
+    async def get_revealed_commitments_endpoint(
+        self, hotkey: Hotkey, bt_contact_router: BittensorContactRouter, netuid: NetUid
+    ) -> GetRevealedCommitmentsResponse:
+        try:
+            return await commitment_service.get_revealed_commitments(bt_contact_router, netuid, hotkey)
+        except CommitmentNotFoundError as exc:
+            raise NotFoundException(detail="Commitments not found.") from exc
 
 
 class IdentityController(Controller):
@@ -177,6 +197,15 @@ class IdentityController(Controller):
     ) -> GetCommitmentResponse:
         return await commitment_service.get_own_commitment(bt_contact_router, netuid)
 
+    @identity_handler(Endpoint.LATEST_COMMITMENTS_REVEALED_SELF)
+    async def get_own_revealed_commitments_endpoint(
+        self, bt_contact_router: BittensorContactRouter, netuid: NetUid
+    ) -> GetRevealedCommitmentsResponse:
+        try:
+            return await commitment_service.get_revealed_commitments(bt_contact_router, netuid)
+        except CommitmentNotFoundError as exc:
+            raise NotFoundException(detail="Commitments not found.") from exc
+
     @identity_handler(Endpoint.SUBNET_WEIGHTS)
     async def put_weights_endpoint(
         self, data: SetWeightsBody, bt_contact_router: BittensorContactRouter, netuid: NetUid
@@ -195,6 +224,18 @@ class IdentityController(Controller):
         except Exception as exc:
             raise BadGatewayException(detail=str(exc)) from exc
         return Response({"detail": "Commitment set successfully."}, status_code=status_codes.HTTP_201_CREATED)
+
+    @identity_handler(Endpoint.REVEALED_COMMITMENTS)
+    async def set_revealed_commitment_endpoint(
+        self, bt_contact_router: BittensorContactRouter, data: SetRevealedCommitmentBody, netuid: NetUid
+    ) -> SetRevealedCommitmentResponse:
+        try:
+            reveal_round = await SetRevealedCommitment(
+                bt_contact_router, netuid, data.commitment, data.blocks_until_reveal, data.block_time
+            )()
+        except Exception as exc:
+            raise BadGatewayException(detail=str(exc)) from exc
+        return SetRevealedCommitmentResponse(reveal_round=reveal_round)
 
 
 __all__ = [
