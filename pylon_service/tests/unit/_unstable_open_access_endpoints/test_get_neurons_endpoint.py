@@ -6,7 +6,7 @@ import pytest
 from litestar.status_codes import HTTP_200_OK, HTTP_404_NOT_FOUND
 from litestar.testing import AsyncTestClient
 
-from pylon_service.bittensor.contact import MockBittensorContact
+from pylon_service.bittensor.mock_contact import MockBittensorContact
 
 
 @pytest.mark.asyncio

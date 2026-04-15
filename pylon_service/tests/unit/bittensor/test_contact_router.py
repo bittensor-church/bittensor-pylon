@@ -31,9 +31,9 @@ from pylon_commons.types import (
 )
 from turbobt.substrate.exceptions import UnknownBlock
 
-from pylon_service.bittensor.contact import MockBittensorContact
 from pylon_service.bittensor.contact_router import BittensorContactRouter
 from pylon_service.bittensor.exceptions import ArchiveFallbackException
+from pylon_service.bittensor.mock_contact import MockBittensorContact
 
 
 @pytest.fixture

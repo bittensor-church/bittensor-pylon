@@ -12,7 +12,7 @@ from pylon_commons.models import (
     PublicKey,
 )
 
-from pylon_service.bittensor.contact import MockBittensorContact
+from pylon_service.bittensor.mock_contact import MockBittensorContact
 
 
 @pytest.mark.asyncio

@@ -43,7 +43,7 @@ from pylon_commons.types import (
     ValidatorPermit,
 )
 
-from pylon_service.bittensor.contact import MockBittensorContact
+from pylon_service.bittensor.mock_contact import MockBittensorContact
 from tests.factories import NeuronFactory
 
 VALIDATORS_NETUID = NetUid(11)
