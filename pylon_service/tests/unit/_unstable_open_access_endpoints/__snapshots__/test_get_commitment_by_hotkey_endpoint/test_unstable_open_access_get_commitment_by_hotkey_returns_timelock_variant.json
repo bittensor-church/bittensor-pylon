@@ -1,0 +1,13 @@
+{
+  "block": {
+    "hash": "0xshared-latest-block",
+    "number": 1000
+  },
+  "commitment": {
+    "commitment": "0xbeef",
+    "commitment_block_number": 702,
+    "hotkey": "hotkey2",
+    "kind": "timelock_encrypted",
+    "reveal_round": 321
+  }
+}

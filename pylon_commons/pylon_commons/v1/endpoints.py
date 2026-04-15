@@ -22,16 +22,32 @@ class Endpoint(BaseEndpoint):
     CERTIFICATES_HOTKEY = (HTTPMethod.GET, "/block/latest/certificates/{hotkey:str}", "certificates_hotkey_v1")
     CERTIFICATES_SELF = (HTTPMethod.GET, "/block/latest/certificates/self", "certificates_self_v1")
     COMMITMENTS = (HTTPMethod.POST, "/commitments", "commitments_v1")
+    REVEALED_COMMITMENTS = (HTTPMethod.POST, "/commitments/revealed", "revealed_commitments_v1")
     EXTRINSIC = (HTTPMethod.GET, "/block/{block_number:int}/extrinsic/{extrinsic_index:int}", "extrinsic_v1")
     IDENTITY_LOGIN = (HTTPMethod.POST, "/login/identity/{identity_name:str}", "identity_login_v1")
     LATEST_BLOCK_INFO = (HTTPMethod.GET, "/block/latest", "latest_block_info")
     LATEST_COMMITMENTS = (HTTPMethod.GET, "/block/latest/commitments", "latest_commitments_v1")
+    LATEST_COMMITMENTS_REVEALED = (
+        HTTPMethod.GET,
+        "/block/latest/commitments/revealed",
+        "latest_commitments_revealed_v1",
+    )
     LATEST_COMMITMENTS_HOTKEY = (
         HTTPMethod.GET,
         "/block/latest/commitments/{hotkey:str}",
         "latest_commitments_hotkey_v1",
     )
+    LATEST_COMMITMENTS_REVEALED_HOTKEY = (
+        HTTPMethod.GET,
+        "/block/latest/commitments/revealed/{hotkey:str}",
+        "latest_commitments_revealed_hotkey_v1",
+    )
     LATEST_COMMITMENTS_SELF = (HTTPMethod.GET, "/block/latest/commitments/self", "latest_commitments_self_v1")
+    LATEST_COMMITMENTS_REVEALED_SELF = (
+        HTTPMethod.GET,
+        "/block/latest/commitments/revealed/self",
+        "latest_commitments_revealed_self_v1",
+    )
     LATEST_NEURONS = (HTTPMethod.GET, "/block/latest/neurons", "latest_neurons_v1")
     LATEST_VALIDATORS = (HTTPMethod.GET, "/block/latest/validators", "latest_validators_v1")
     NEURONS = (HTTPMethod.GET, "/block/{block_number:int}/neurons", "neurons_v1")

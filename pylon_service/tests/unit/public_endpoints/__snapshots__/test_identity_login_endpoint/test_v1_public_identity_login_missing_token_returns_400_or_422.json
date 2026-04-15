@@ -1,0 +1,10 @@
+{
+  "detail": "Validation failed for POST /api/v1/login/identity/sn1",
+  "extra": [
+    {
+      "key": "token",
+      "message": "Field required"
+    }
+  ],
+  "status_code": 400
+}

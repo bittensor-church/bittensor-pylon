@@ -1,0 +1,62 @@
+{
+  "block": {
+    "hash": "DPdgNytkzUuFNKnPEfqb",
+    "number": 2201
+  },
+  "neurons": {
+    "HaTJYLBNWCrJNXWvVVfG": {
+      "active": false,
+      "axon_info": {
+        "ip": "211.222.84.158",
+        "port": 5450,
+        "protocol": 4
+      },
+      "coldkey": "DPdgNytkzUuFNKnPEfqb",
+      "consensus": 6014.10199271823,
+      "dividends": -86530633904315.9,
+      "emission": 79054544.579247,
+      "hotkey": "HaTJYLBNWCrJNXWvVVfG",
+      "incentive": 6782828.55608283,
+      "last_update": 9472,
+      "pruning_score": 2791,
+      "rank": -8085185732.66228,
+      "stake": -519.209037370698,
+      "stakes": {
+        "alpha": 251265201364.12,
+        "tao": 25.9645896495972,
+        "total": 70456597155.5633
+      },
+      "trust": 2746401.6991917,
+      "uid": 2201,
+      "validator_permit": false,
+      "validator_trust": -5.66048134101382
+    },
+    "vaCOrFPHCjeCSWbXdTxN": {
+      "active": true,
+      "axon_info": {
+        "ip": "113.192.119.36",
+        "port": 3024,
+        "protocol": 1
+      },
+      "coldkey": "sVIFLtSXWAgOkXzsCWvQ",
+      "consensus": -48320042330124.6,
+      "dividends": 3.55916255954165,
+      "emission": 4824.96442209146,
+      "hotkey": "vaCOrFPHCjeCSWbXdTxN",
+      "incentive": -508707754.119737,
+      "last_update": 2399,
+      "pruning_score": 2625,
+      "rank": -722276682770.279,
+      "stake": -74641570.175605,
+      "stakes": {
+        "alpha": 8494460.91023214,
+        "tao": 73108686.3701049,
+        "total": 8463.32001135738
+      },
+      "trust": 33.4458643181171,
+      "uid": 9466,
+      "validator_permit": true,
+      "validator_trust": 988.47504764367
+    }
+  }
+}

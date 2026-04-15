@@ -7,8 +7,8 @@ from pylon_service.bittensor.recent.adapter import CacheKey, _CacheEntry
 
 
 @pytest.fixture
-def update_task(mock_recent_objects_store, mock_bt_client_pool) -> UpdateRecentNeurons:
-    return UpdateRecentNeurons(mock_recent_objects_store, mock_bt_client_pool)
+def update_task(mock_recent_objects_store, mock_bt_contact_pool) -> UpdateRecentNeurons:
+    return UpdateRecentNeurons(mock_recent_objects_store, mock_bt_contact_pool)
 
 
 @pytest.mark.asyncio
@@ -36,7 +36,7 @@ async def test_execute(
 
     data = _CacheEntry(data=neurons.model_dump_json(), timestamp=timestamp).model_dump_json()
 
-    assert open_access_mock_bt_client.calls["get_latest_block"] == [()]
+    assert open_access_mock_bt_client.calls["get_latest_block"] == [(), (), ()]
     assert open_access_mock_bt_client.calls["get_block_timestamp"] == [(block,)]
     assert open_access_mock_bt_client.calls["get_neurons"] == [(NetUid(1), block)]
     assert mock_recent_objects_store.behave.calls["set"] == [(CacheKey(SubnetNeurons, NetUid(1), None), data, None)]

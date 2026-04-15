@@ -8,12 +8,12 @@ from litestar.testing import AsyncTestClient
 from pylon_commons.models import Block, CertificateAlgorithm, NeuronCertificate
 from pylon_commons.types import BlockHash, BlockNumber, PublicKey
 
-from tests.mock_bittensor_client import MockBittensorClient
+from pylon_service.bittensor.contact import MockBittensorContact
 
 
 @pytest.mark.asyncio
 async def test_get_own_certificate_identity_success(
-    test_client: AsyncTestClient, sn1_mock_bt_client: MockBittensorClient
+    test_client: AsyncTestClient, sn1_mock_bt_client: MockBittensorContact, snapshot_json
 ):
     """
     Test getting own certificate successfully.
@@ -31,15 +31,12 @@ async def test_get_own_certificate_identity_success(
         response = await test_client.get("/api/v1/identity/sn1/subnet/1/block/latest/certificates/self")
 
         assert response.status_code == HTTP_200_OK
-        assert response.json() == {
-            "algorithm": 1,
-            "public_key": "0xabcdef1234567890",
-        }
+        assert response.json() == snapshot_json
 
 
 @pytest.mark.asyncio
 async def test_get_own_certificate_identity_not_found(
-    test_client: AsyncTestClient, sn2_mock_bt_client: MockBittensorClient
+    test_client: AsyncTestClient, sn2_mock_bt_client: MockBittensorContact, snapshot_json
 ):
     """
     Test getting own certificate when it doesn't exist.
@@ -53,7 +50,12 @@ async def test_get_own_certificate_identity_not_found(
         response = await test_client.get("/api/v1/identity/sn2/subnet/2/block/latest/certificates/self")
 
         assert response.status_code == HTTP_404_NOT_FOUND
-        assert response.json() == {
-            "detail": "Certificate not found or error fetching.",
-            "status_code": HTTP_404_NOT_FOUND,
-        }
+        assert response.json() == snapshot_json
+
+
+@pytest.mark.asyncio
+async def test_v1_identity_get_own_certificate_unknown_identity_returns_404(test_client, snapshot_json):
+    response = await test_client.get("/api/v1/identity/unknown/subnet/1/block/latest/certificates/self")
+
+    assert response.status_code == HTTP_404_NOT_FOUND
+    assert response.json() == snapshot_json

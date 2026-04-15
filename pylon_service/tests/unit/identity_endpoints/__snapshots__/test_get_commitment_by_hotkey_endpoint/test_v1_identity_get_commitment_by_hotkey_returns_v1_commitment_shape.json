@@ -1,0 +1,9 @@
+{
+  "block": {
+    "hash": "0xshared-latest-block",
+    "number": 1000
+  },
+  "commitment": "0xaaaa",
+  "commitment_block_number": 699,
+  "hotkey": "hotkey1"
+}

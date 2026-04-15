@@ -18,6 +18,7 @@ dependencies = [
 [project.optional-dependencies]
 dev = [
     "pytest",
+    "pytest-cov>=6,<7",
     "pytest-asyncio>=1.0.0",
     "polyfactory>=2.22.2",
     "pact-python>=2.0.0",
@@ -27,6 +28,9 @@ dev = [
     "ruff",
     "pyright",
     "nox",
+    "paramiko",
+    "syrupy>=4,<5",
+    "dirty-equals==0.11",
 ]
 
 [project.urls]

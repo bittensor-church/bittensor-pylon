@@ -1,0 +1,9 @@
+{
+  "block": {
+    "hash": "0xshared-latest-block",
+    "number": 1000
+  },
+  "commitments": {
+    "hotkey1": "0xcafe"
+  }
+}

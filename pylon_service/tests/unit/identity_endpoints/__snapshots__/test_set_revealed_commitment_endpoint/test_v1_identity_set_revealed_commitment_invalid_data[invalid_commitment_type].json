@@ -1,0 +1,10 @@
+{
+  "detail": "Validation failed for POST /api/v1/identity/sn1/subnet/1/commitments/revealed",
+  "extra": [
+    {
+      "key": "commitment",
+      "message": "Input should be a valid string"
+    }
+  ],
+  "status_code": 400
+}

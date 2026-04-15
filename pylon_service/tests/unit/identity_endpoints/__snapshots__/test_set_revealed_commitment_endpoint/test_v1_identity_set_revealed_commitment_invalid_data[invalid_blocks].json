@@ -1,0 +1,10 @@
+{
+  "detail": "Validation failed for POST /api/v1/identity/sn1/subnet/1/commitments/revealed",
+  "extra": [
+    {
+      "key": "blocks_until_reveal",
+      "message": "Input should be a valid integer, unable to parse string as an integer"
+    }
+  ],
+  "status_code": 400
+}

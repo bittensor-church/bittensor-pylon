@@ -1,0 +1,18 @@
+{
+  "block": {
+    "hash": "0xshared-latest-block",
+    "number": 1000
+  },
+  "commitments": [
+    {
+      "commitment": "self-model-a",
+      "hotkey": "5FHneW46xGXgs5mUiveU4sbTyGBzmstUspZC92UhjJM694ty",
+      "reveal_block_number": 705
+    },
+    {
+      "commitment": "self-model-b",
+      "hotkey": "5FHneW46xGXgs5mUiveU4sbTyGBzmstUspZC92UhjJM694ty",
+      "reveal_block_number": 706
+    }
+  ]
+}

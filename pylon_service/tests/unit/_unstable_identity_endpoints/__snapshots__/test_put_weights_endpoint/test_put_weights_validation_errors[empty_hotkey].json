@@ -1,0 +1,10 @@
+{
+  "detail": "Validation failed for PUT /api/_unstable/identity/sn1/subnet/1/weights",
+  "extra": [
+    {
+      "key": "weights",
+      "message": "Value error, Invalid hotkey: '' must be a non-empty string"
+    }
+  ],
+  "status_code": 400
+}

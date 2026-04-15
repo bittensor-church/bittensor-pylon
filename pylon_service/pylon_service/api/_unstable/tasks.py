@@ -4,7 +4,7 @@ from abc import ABC, abstractmethod
 from typing import ClassVar, TypeVar
 
 from prometheus_client import Histogram
-from pylon_commons.models import Block, CommitReveal
+from pylon_commons.models import Block
 from pylon_commons.types import CommitmentDataBytes, Hotkey, NetUid, RevealedCommitmentData, Weight
 from tenacity import (
     AsyncRetrying,
@@ -15,7 +15,7 @@ from tenacity import (
 )
 
 from pylon_service.api._unstable.utils import Epoch, get_epoch_containing_block
-from pylon_service.bittensor.client import AbstractBittensorClient
+from pylon_service.bittensor.contact import BittensorPort
 from pylon_service.metrics import (
     Attr,
     LabelSource,
@@ -25,9 +25,13 @@ from pylon_service.metrics import (
     set_revealed_commitment_job_duration,
     track_operation,
 )
+from pylon_service.services.commitments import CommitmentService
+from pylon_service.services.weights import WeightsService
 from pylon_service.settings import settings
 
 logger = logging.getLogger(__name__)
+commitment_service = CommitmentService()
+weights_service = WeightsService()
 
 
 class StopRetrying(Exception):
@@ -138,7 +142,7 @@ class ApplyWeights(
 
     def __init__(
         self,
-        client: AbstractBittensorClient,
+        client: BittensorPort,
         weights: dict[Hotkey, Weight],
         netuid: NetUid,
     ):
@@ -184,16 +188,8 @@ class ApplyWeights(
         },
     )
     async def _apply_weights(self, latest_block: Block) -> None:
-        hyperparams = await self._client.get_hyperparams(self._netuid, latest_block)
-        if hyperparams is None:
-            raise RuntimeError("Failed to fetch hyperparameters")
-        commit_reveal_enabled = hyperparams.commit_reveal_weights_enabled
-        if commit_reveal_enabled and commit_reveal_enabled != CommitReveal.DISABLED:
-            logger.info(f"Commit weights (reveal enabled: {commit_reveal_enabled})")
-            await self._client.commit_weights(self._netuid, self._weights)
-        else:
-            logger.info("Set weights (reveal disabled)")
-            await self._client.set_weights(self._netuid, self._weights)
+        logger.info("Applying weights via weights service")
+        await weights_service.apply_weights(self._client, self._netuid, self._weights)
 
 
 class SetCommitment(
@@ -209,7 +205,7 @@ class SetCommitment(
 
     def __init__(
         self,
-        client: AbstractBittensorClient,
+        client: BittensorPort,
         netuid: NetUid,
         data: CommitmentDataBytes,
     ):
@@ -228,7 +224,7 @@ class SetCommitment(
     async def _single_attempt(self) -> None:
         logger.info("Set commitment attempt")
         await asyncio.wait_for(
-            asyncio.shield(self._client.set_commitment(self._netuid, self._data)),
+            asyncio.shield(commitment_service.set_commitment(self._client, self._netuid, self._data)),
             timeout=120,
         )
 
@@ -249,7 +245,7 @@ class SetRevealedCommitment(
 
     def __init__(
         self,
-        client: AbstractBittensorClient,
+        client: BittensorPort,
         netuid: NetUid,
         commitment: RevealedCommitmentData,
         blocks_to_reveal: int,

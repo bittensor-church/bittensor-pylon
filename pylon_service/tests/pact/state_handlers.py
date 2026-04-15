@@ -1,15 +1,15 @@
 import asyncio
 import time
 from abc import ABC, abstractmethod
+from types import SimpleNamespace
 from typing import TYPE_CHECKING, Any, ClassVar, Literal
-from unittest.mock import AsyncMock
+from unittest.mock import Mock
 
 from pylon_commons.models import (
     CommitmentVariant,
     HexDataCommitment,
     SubnetCommitments,
     SubnetNeurons,
-    SubnetValidators,
 )
 from pylon_commons.types import BlockNumber, CommitmentDataHex, Hotkey, Timestamp
 
@@ -22,7 +22,7 @@ from tests.mock_store import MockStore
 if TYPE_CHECKING:
     from pytest import MonkeyPatch
 
-    from tests.mock_bittensor_client import MockBittensorClient
+    from pylon_service.bittensor.contact import MockBittensorContact
 
 _registry: dict[str, type["StateHandler"]] = {}
 
@@ -42,9 +42,9 @@ class StateHandler(ABC):
 
     def __init__(
         self,
-        open_access_client: "MockBittensorClient",
-        sn1_client: "MockBittensorClient",
-        sn2_client: "MockBittensorClient",
+        open_access_client: "MockBittensorContact",
+        sn1_client: "MockBittensorContact",
+        sn2_client: "MockBittensorContact",
         mock_stores: dict[StoreName, MockStore],
         monkeypatch: "MonkeyPatch",
     ) -> None:
@@ -73,9 +73,13 @@ class StateHandler(ABC):
         elif action == "teardown":
             self.teardown(parameters)
 
-    def _get_client(self, parameters: dict[str, Any]) -> "MockBittensorClient":
+    def _get_client(self, parameters: dict[str, Any]) -> "MockBittensorContact":
         identity_name = parameters.get("identity_name")
         return self._clients[identity_name]
+
+    @staticmethod
+    def _set_default_latest_block(client: "MockBittensorContact", block) -> None:
+        client.set_default("get_latest_block", block)
 
     @abstractmethod
     def setup(self, parameters: dict[str, Any]) -> None:
@@ -91,9 +95,9 @@ class StateHandler(ABC):
     @classmethod
     def create_all(
         cls,
-        open_access_client: "MockBittensorClient",
-        sn1_client: "MockBittensorClient",
-        sn2_client: "MockBittensorClient",
+        open_access_client: "MockBittensorContact",
+        sn1_client: "MockBittensorContact",
+        sn2_client: "MockBittensorContact",
         mock_stores: dict[StoreName, MockStore],
         monkeypatch: "MonkeyPatch",
     ) -> dict[str, "StateHandler"]:
@@ -112,7 +116,7 @@ class NeuronsExistHandler(StateHandler):
         subnet_neurons = SubnetNeurons(block=block, neurons={n.hotkey: n for n in neurons})
 
         client = self._get_client(parameters)
-        client.add_behavior("get_latest_block", block)
+        self._set_default_latest_block(client, block)
         client.add_behavior("get_neurons", subnet_neurons)
 
 
@@ -125,6 +129,7 @@ class NeuronsExistAtBlockHandler(StateHandler):
         subnet_neurons = SubnetNeurons(block=block, neurons={n.hotkey: n for n in neurons})
 
         client = self._get_client(parameters)
+        self._set_default_latest_block(client, block)
         client.add_behavior("get_block", block)
         client.add_behavior("get_neurons", subnet_neurons)
 
@@ -146,12 +151,12 @@ class ValidatorsExistHandler(StateHandler):
 
     def setup(self, parameters: dict[str, Any]) -> None:
         block = BlockFactory.build()
-        validators = NeuronFactory.batch(parameters.get("validator_count", 1))
-        subnet_validators = SubnetValidators(block=block, validators=validators)
+        validators = NeuronFactory.batch(parameters.get("validator_count", 1), validator_permit=True)
+        subnet_neurons = SubnetNeurons(block=block, neurons={validator.hotkey: validator for validator in validators})
 
         client = self._get_client(parameters)
-        client.add_behavior("get_latest_block", block)
-        client.add_behavior("get_validators", subnet_validators)
+        self._set_default_latest_block(client, block)
+        client.add_behavior("get_neurons", subnet_neurons)
 
 
 class ValidatorsExistAtBlockHandler(StateHandler):
@@ -159,12 +164,13 @@ class ValidatorsExistAtBlockHandler(StateHandler):
 
     def setup(self, parameters: dict[str, Any]) -> None:
         block = BlockFactory.build(number=parameters["block_number"])
-        validators = NeuronFactory.batch(parameters.get("validator_count", 1))
-        subnet_validators = SubnetValidators(block=block, validators=validators)
+        validators = NeuronFactory.batch(parameters.get("validator_count", 1), validator_permit=True)
+        subnet_neurons = SubnetNeurons(block=block, neurons={validator.hotkey: validator for validator in validators})
 
         client = self._get_client(parameters)
+        self._set_default_latest_block(client, block)
         client.add_behavior("get_block", block)
-        client.add_behavior("get_validators", subnet_validators)
+        client.add_behavior("get_neurons", subnet_neurons)
 
 
 class CommitmentsExistHandler(StateHandler):
@@ -183,8 +189,9 @@ class CommitmentsExistHandler(StateHandler):
         subnet_commitments = SubnetCommitments(block=block, commitments=commitments)
 
         client = self._get_client(parameters)
-        client.add_behavior("get_latest_block", block)
+        self._set_default_latest_block(client, block)
         client.add_behavior("get_commitments", subnet_commitments)
+        client.add_behavior("get_subnet_state", SimpleNamespace(hotkeys=list(commitments)))
 
 
 class CommitmentExistsHandler(StateHandler):
@@ -200,7 +207,7 @@ class CommitmentExistsHandler(StateHandler):
         )
 
         client = self._get_client(parameters)
-        client.add_behavior("get_latest_block", block)
+        self._set_default_latest_block(client, block)
         client.add_behavior("get_commitment", commitment)
 
 
@@ -217,7 +224,7 @@ class OwnCommitmentExistsHandler(StateHandler):
         )
 
         client = self._get_client(parameters)
-        client.add_behavior("get_latest_block", block)
+        self._set_default_latest_block(client, block)
         client.add_behavior("get_commitment", commitment)
 
 
@@ -226,7 +233,7 @@ class LatestBlockInfoExistsHandler(StateHandler):
 
     def setup(self, parameters: dict[str, Any]) -> None:
         client = self._get_client(parameters)
-        client.add_behavior("get_latest_block", BlockFactory.build())
+        self._set_default_latest_block(client, BlockFactory.build())
         client.add_behavior("get_block_timestamp", Timestamp(1700000000))
 
 
@@ -241,6 +248,7 @@ class ExtrinsicExistsHandler(StateHandler):
         )
 
         client = self._get_client(parameters)
+        self._set_default_latest_block(client, block)
         client.add_behavior("get_block", block)
         client.add_behavior("get_extrinsic", extrinsic)
 
@@ -249,7 +257,7 @@ class WeightsCanBeSetHandler(StateHandler):
     name = "weights can be set"
 
     def setup(self, parameters: dict[str, Any]) -> None:
-        self.monkeypatch.setattr("pylon_service.api._unstable.api.ApplyWeights.schedule", AsyncMock())
+        self.monkeypatch.setattr("pylon_service.api._unstable.api.ApplyWeights.schedule", Mock())
 
 
 class BlockDataUnavailableHandler(StateHandler):
@@ -259,6 +267,7 @@ class BlockDataUnavailableHandler(StateHandler):
         block = BlockFactory.build(number=parameters["block_number"])
 
         client = self._get_client(parameters)
+        self._set_default_latest_block(client, block)
         client.add_behavior("get_block", block)
         client.add_behavior(
             "get_neurons",
@@ -274,7 +283,7 @@ class CommitmentCanBeSetHandler(StateHandler):
     def setup(self, parameters: dict[str, Any]) -> None:
         block = BlockFactory.build()
         client = self._get_client(parameters)
-        client.add_behavior("get_latest_block", block)
+        self._set_default_latest_block(client, block)
         client.add_behavior("set_commitment", None)
 
 

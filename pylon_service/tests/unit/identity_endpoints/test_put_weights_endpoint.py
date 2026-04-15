@@ -3,18 +3,20 @@ Tests for the PUT /subnet/weights endpoint.
 """
 
 import pytest
-from litestar.status_codes import HTTP_200_OK, HTTP_400_BAD_REQUEST
+from litestar.status_codes import HTTP_200_OK, HTTP_400_BAD_REQUEST, HTTP_404_NOT_FOUND
 from litestar.testing import AsyncTestClient
 from pylon_commons.models import Block, CommitReveal, SubnetHyperparams
-from pylon_commons.types import BlockHash, BlockNumber, RevealRound
+from pylon_commons.types import BlockHash, BlockNumber, NeuronUid, RevealRound
 
 from pylon_service.api._unstable.tasks import ApplyWeights
+from pylon_service.bittensor.contact import MockBittensorContact
 from tests.helpers import wait_for_background_tasks
-from tests.mock_bittensor_client import MockBittensorClient
 
 
 @pytest.mark.asyncio
-async def test_put_weights_commit_reveal_enabled(test_client: AsyncTestClient, sn1_mock_bt_client: MockBittensorClient):
+async def test_put_weights_commit_reveal_enabled(
+    test_client: AsyncTestClient, sn1_mock_bt_client: MockBittensorContact, snapshot_json
+):
     """
     Test setting weights when commit-reveal is enabled.
     """
@@ -40,23 +42,27 @@ async def test_put_weights_commit_reveal_enabled(test_client: AsyncTestClient, s
         )
 
         assert response.status_code == HTTP_200_OK, response.content
-        assert response.json() == {
-            "detail": "weights update scheduled",
-            "count": 3,
-        }
+        assert response.json() == snapshot_json
 
         # Wait for the background task to complete
         await wait_for_background_tasks(ApplyWeights.tasks_running)
 
     # Verify the commit_weights was called with correct arguments
     assert sn1_mock_bt_client.calls["commit_weights"] == [
-        (1, weights),
+        (
+            1,
+            {
+                NeuronUid(1): 0.5,
+                NeuronUid(2): 0.3,
+                NeuronUid(3): 0.2,
+            },
+        ),
     ]
 
 
 @pytest.mark.asyncio
 async def test_put_weights_commit_reveal_disabled(
-    test_client: AsyncTestClient, sn2_mock_bt_client: MockBittensorClient
+    test_client: AsyncTestClient, sn2_mock_bt_client: MockBittensorContact, snapshot_json
 ):
     """
     Test setting weights when commit-reveal is disabled.
@@ -81,23 +87,29 @@ async def test_put_weights_commit_reveal_disabled(
         )
 
         assert response.status_code == HTTP_200_OK, response.content
-        assert response.json() == {
-            "detail": "weights update scheduled",
-            "count": 2,
-        }
+        assert response.json() == snapshot_json
 
         # Wait for the background task to complete
         await wait_for_background_tasks(ApplyWeights.tasks_running)
 
     # Verify set_weights was called with correct arguments
     assert sn2_mock_bt_client.calls["set_weights"] == [
-        (2, weights),
+        (
+            2,
+            {
+                NeuronUid(1): 0.7,
+                NeuronUid(2): 0.3,
+            },
+        ),
     ]
 
 
 @pytest.mark.asyncio
 async def test_put_weights_retries_when_prepare_fails(
-    test_client: AsyncTestClient, sn1_mock_bt_client: MockBittensorClient, monkeypatch: pytest.MonkeyPatch
+    test_client: AsyncTestClient,
+    sn1_mock_bt_client: MockBittensorContact,
+    monkeypatch: pytest.MonkeyPatch,
+    snapshot_json,
 ):
     monkeypatch.setattr("pylon_service.settings.settings.weights_retry_attempts", 3)
     monkeypatch.setattr("pylon_service.settings.settings.weights_retry_delay_seconds", 0)
@@ -120,49 +132,45 @@ async def test_put_weights_retries_when_prepare_fails(
         )
 
         assert response.status_code == HTTP_200_OK, response.content
-        assert response.json() == {
-            "detail": "weights update scheduled",
-            "count": 2,
-        }
+        assert response.json() == snapshot_json
 
         await wait_for_background_tasks(ApplyWeights.tasks_running)
 
-    assert len(sn1_mock_bt_client.calls["get_latest_block"]) == 4
-    assert sn1_mock_bt_client.calls["set_weights"] == [(1, weights)]
+    assert len(sn1_mock_bt_client.calls["get_latest_block"]) == 8
+    assert sn1_mock_bt_client.calls["set_weights"] == [
+        (
+            1,
+            {
+                NeuronUid(1): 0.5,
+                NeuronUid(2): 0.5,
+            },
+        )
+    ]
 
 
 @pytest.mark.asyncio
 @pytest.mark.parametrize(
-    "json_data,expected_extra",
+    "json_data",
     [
         pytest.param(
             {},
-            [{"message": "Field required", "key": "weights"}],
             id="missing_weights_field",
         ),
         pytest.param(
             {"weights": {}},
-            [{"message": "Value error, No weights provided", "key": "weights"}],
             id="empty_weights",
         ),
         pytest.param(
             {"weights": {"hotkey1": "invalid"}},
-            [
-                {
-                    "message": "Input should be a valid number, unable to parse string as a number",
-                    "key": "weights.hotkey1",
-                }
-            ],
             id="invalid_weight_value",
         ),
         pytest.param(
             {"weights": {"": 0.5}},
-            [{"message": "Value error, Invalid hotkey: '' must be a non-empty string", "key": "weights"}],
             id="empty_hotkey",
         ),
     ],
 )
-async def test_put_weights_validation_errors(test_client: AsyncTestClient, json_data: dict, expected_extra: list):
+async def test_put_weights_validation_errors(test_client: AsyncTestClient, json_data: dict, snapshot_json):
     """
     Test that invalid weight data fails validation.
     """
@@ -172,8 +180,15 @@ async def test_put_weights_validation_errors(test_client: AsyncTestClient, json_
     )
 
     assert response.status_code == HTTP_400_BAD_REQUEST, response.content
-    assert response.json() == {
-        "status_code": 400,
-        "detail": "Validation failed for PUT /api/v1/identity/sn1/subnet/1/weights",
-        "extra": expected_extra,
-    }
+    assert response.json() == snapshot_json
+
+
+@pytest.mark.asyncio
+async def test_v1_identity_put_weights_unknown_identity_returns_404(test_client: AsyncTestClient, snapshot_json):
+    response = await test_client.put(
+        "/api/v1/identity/unknown/subnet/1/weights",
+        json={"weights": {"hotkey1": 1.0}},
+    )
+
+    assert response.status_code == HTTP_404_NOT_FOUND
+    assert response.json() == snapshot_json

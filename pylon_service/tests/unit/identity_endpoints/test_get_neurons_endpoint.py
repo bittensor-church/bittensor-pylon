@@ -3,10 +3,10 @@ Tests for the GET /identity/{identity_name}/subnet/{netuid}/block/{block_number}
 """
 
 import pytest
-from litestar.status_codes import HTTP_404_NOT_FOUND
+from litestar.status_codes import HTTP_200_OK, HTTP_404_NOT_FOUND
 from litestar.testing import AsyncTestClient
 
-from tests.mock_bittensor_client import MockBittensorClient
+from pylon_service.bittensor.contact import MockBittensorContact
 
 
 @pytest.mark.asyncio
@@ -18,22 +18,37 @@ from tests.mock_bittensor_client import MockBittensorClient
         pytest.param("true", id="boolean_string"),
     ],
 )
-async def test_get_neurons_identity_invalid_block_number_type(test_client: AsyncTestClient, invalid_block_number: str):
+async def test_get_neurons_identity_invalid_block_number_type(
+    test_client: AsyncTestClient, invalid_block_number: str, snapshot_json
+):
     """
     Test that invalid block number types return 404.
     """
     response = await test_client.get(f"/api/v1/identity/sn1/subnet/1/block/{invalid_block_number}/neurons")
 
     assert response.status_code == HTTP_404_NOT_FOUND, response.content
-    assert response.json() == {
-        "status_code": HTTP_404_NOT_FOUND,
-        "detail": "Not Found",
-    }
+    assert response.json() == snapshot_json
+
+
+@pytest.mark.asyncio
+async def test_v1_identity_get_neurons_returns_block_neurons(test_client: AsyncTestClient, snapshot_json):
+    response = await test_client.get("/api/v1/identity/sn1/subnet/1/block/123/neurons")
+
+    assert response.status_code == HTTP_200_OK
+    assert response.json() == snapshot_json
+
+
+@pytest.mark.asyncio
+async def test_v1_identity_get_latest_neurons_returns_latest_neurons(test_client: AsyncTestClient, snapshot_json):
+    response = await test_client.get("/api/v1/identity/sn1/subnet/1/block/latest/neurons")
+
+    assert response.status_code == HTTP_200_OK
+    assert response.json() == snapshot_json
 
 
 @pytest.mark.asyncio
 async def test_get_neurons_identity_block_not_found(
-    test_client: AsyncTestClient, sn1_mock_bt_client: MockBittensorClient
+    test_client: AsyncTestClient, sn1_mock_bt_client: MockBittensorContact, snapshot_json
 ):
     """
     Test that non-existent block returns 404.
@@ -42,9 +57,14 @@ async def test_get_neurons_identity_block_not_found(
         response = await test_client.get("/api/v1/identity/sn1/subnet/1/block/123/neurons")
 
         assert response.status_code == HTTP_404_NOT_FOUND, response.content
-        assert response.json() == {
-            "status_code": HTTP_404_NOT_FOUND,
-            "detail": "Block 123 not found.",
-        }
+        assert response.json() == snapshot_json
 
     assert sn1_mock_bt_client.calls["get_block"] == [(123,)]
+
+
+@pytest.mark.asyncio
+async def test_v1_identity_any_identity_scoped_endpoint_unknown_identity_returns_404(test_client, snapshot_json):
+    response = await test_client.get("/api/v1/identity/unknown/subnet/1/block/latest/neurons")
+
+    assert response.status_code == HTTP_404_NOT_FOUND
+    assert response.json() == snapshot_json

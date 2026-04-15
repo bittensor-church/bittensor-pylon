@@ -1,0 +1,10 @@
+{
+  "detail": "Validation failed for POST /api/_unstable/identity/sn1/subnet/1/certificates/self",
+  "extra": [
+    {
+      "key": "algorithm",
+      "message": "Value error, Currently, only algorithm equals 1 is supported which is EdDSA using Ed25519 curve"
+    }
+  ],
+  "status_code": 400
+}

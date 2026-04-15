@@ -8,12 +8,12 @@ from litestar.testing import AsyncTestClient
 from pylon_commons.models import Block, CertificateAlgorithm, NeuronCertificate
 from pylon_commons.types import BlockHash, BlockNumber, PublicKey
 
-from tests.mock_bittensor_client import MockBittensorClient
+from pylon_service.bittensor.contact import MockBittensorContact
 
 
 @pytest.mark.asyncio
 @pytest.mark.parametrize(
-    "certificates_input,expected_response",
+    "certificates_input",
     [
         pytest.param(
             {
@@ -26,20 +26,9 @@ from tests.mock_bittensor_client import MockBittensorClient
                     public_key=PublicKey("0xfedcba0987654321"),
                 ),
             },
-            {
-                "hotkey1": {
-                    "algorithm": 1,
-                    "public_key": "0x1234567890abcdef",
-                },
-                "hothey2": {
-                    "algorithm": 1,
-                    "public_key": "0xfedcba0987654321",
-                },
-            },
             id="multiple_certificates",
         ),
         pytest.param(
-            {},
             {},
             id="empty_certificates",
         ),
@@ -47,9 +36,9 @@ from tests.mock_bittensor_client import MockBittensorClient
 )
 async def test_get_certificates_identity(
     test_client: AsyncTestClient,
-    sn1_mock_bt_client: MockBittensorClient,
+    sn1_mock_bt_client: MockBittensorContact,
     certificates_input: dict,
-    expected_response: dict,
+    snapshot_json,
 ):
     """
     Test getting certificates from the subnet.
@@ -62,4 +51,4 @@ async def test_get_certificates_identity(
         response = await test_client.get("/api/v1/identity/sn1/subnet/1/block/latest/certificates")
 
         assert response.status_code == HTTP_200_OK
-        assert response.json() == expected_response
+        assert response.json() == snapshot_json

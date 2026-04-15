@@ -1,0 +1,14 @@
+{
+  "block": {
+    "hash": "0xshared-latest-block",
+    "number": 1000
+  },
+  "commitments": {
+    "hotkey1": {
+      "commitment": "0xaaaa",
+      "commitment_block_number": 700,
+      "hotkey": "hotkey1",
+      "kind": "hex_data"
+    }
+  }
+}

@@ -1,0 +1,12 @@
+{
+  "address": null,
+  "block_number": 100,
+  "call": {
+    "call_args": [],
+    "call_function": "set",
+    "call_module": "Timestamp"
+  },
+  "extrinsic_hash": "0xhash0",
+  "extrinsic_index": 0,
+  "extrinsic_length": 10
+}
