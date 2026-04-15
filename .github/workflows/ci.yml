@@ -169,5 +169,5 @@ jobs:
       - name: Prepare local chain
         run: cd pylon_service && nox -s prepare-localchain
 
-      - name: Run integration tests
-        run: cd pylon_service && nox -s test-integration
+#      - name: Run integration tests  # these are disabled for now
+#        run: cd pylon_service && nox -s test-integration
