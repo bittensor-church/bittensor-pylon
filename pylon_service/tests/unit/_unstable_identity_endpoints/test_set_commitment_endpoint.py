@@ -84,8 +84,11 @@ async def test_set_commitment_identity_retries_on_failure(
 
     assert response.status_code == HTTP_201_CREATED
     assert response.json() == snapshot_json
-    # Verify set_commitment was called 3 times (2 failures + 1 success)
-    assert len(sn1_mock_bt_client.calls["set_commitment"]) == 3
+    assert sn1_mock_bt_client.calls["set_commitment"] == [
+        (1, bytes.fromhex(commitment_data)),
+        (1, bytes.fromhex(commitment_data)),
+        (1, bytes.fromhex(commitment_data)),
+    ]
 
 
 @pytest.mark.asyncio

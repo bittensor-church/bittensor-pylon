@@ -39,7 +39,11 @@ async def test_set_revealed_commitment_identity_retries_on_failure(
 
     assert response.status_code == HTTP_201_CREATED
     assert response.json() == snapshot_json
-    assert len(sn1_mock_bt_client.calls["set_revealed_commitment"]) == 3
+    assert sn1_mock_bt_client.calls["set_revealed_commitment"] == [
+        (1, "model-a", 12, 12),
+        (1, "model-a", 12, 12),
+        (1, "model-a", 12, 12),
+    ]
 
 
 @pytest.mark.asyncio
