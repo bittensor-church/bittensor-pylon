@@ -1,12 +1,15 @@
+import re
 from functools import wraps
 from inspect import iscoroutinefunction
 
-from litestar import Response
+from litestar import Request, Response
 from litestar.exceptions import HTTPException
 from litestar.handlers.http_handlers import decorators as http_decorators
+from litestar.response import Redirect
 from pylon_commons.endpoints import Endpoint
 
 from pylon_service.bittensor.exceptions import BittensorTransportError
+from pylon_service.identities import identities
 from pylon_service.services.errors import (
     BlockNotFoundError,
     CertificateGenerationFailedError,
@@ -37,6 +40,16 @@ def _response_for_exception(exc: Exception) -> Response | None:
             content["extra"] = exc.extra
         return Response(status_code=exc.status_code, content=content, headers=exc.headers)
 
+    return None
+
+
+async def check_identity_netuid(request: Request) -> Response | None:
+    identity_name = request.path_params["identity_name"]
+    netuid = request.path_params["netuid"]
+    identity = identities.get(identity_name)
+    if identity and identity.netuid != netuid:
+        correct_path = re.sub(r"/subnet/\d+", f"/subnet/{identity.netuid}", request.url.path, count=1)
+        return Redirect(path=correct_path, status_code=308)
     return None
 
 

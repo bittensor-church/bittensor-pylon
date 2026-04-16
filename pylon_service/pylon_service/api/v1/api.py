@@ -1,9 +1,6 @@
-import re
-
-from litestar import Controller, Request, Response, status_codes
+from litestar import Controller, Response, status_codes
 from litestar.di import Provide
 from litestar.exceptions import NotFoundException
-from litestar.response import Redirect
 from pylon_commons._unstable.requests import GenerateCertificateKeypairRequest
 from pylon_commons.models import Hotkey, NeuronCertificate
 from pylon_commons.types import BlockNumber, NetUid
@@ -25,7 +22,7 @@ from pylon_service.api._unstable.api import (
     get_latest_block_info_endpoint,
 )
 from pylon_service.api._unstable.tasks import ApplyWeights, SetCommitment, SetRevealedCommitment
-from pylon_service.api.utils import handler
+from pylon_service.api.utils import check_identity_netuid, handler
 from pylon_service.bittensor.contact_router import BittensorContactRouter
 from pylon_service.bittensor.recent import RecentObjectProvider
 from pylon_service.dependencies import (
@@ -132,20 +129,10 @@ class OpenAccessController(Controller):
             raise NotFoundException(detail="Commitments not found.") from exc
 
 
-async def _check_identity_netuid(request: Request) -> Response | None:
-    identity_name = request.path_params["identity_name"]
-    netuid = request.path_params["netuid"]
-    identity = identities.get(identity_name)
-    if identity and identity.netuid != netuid:
-        correct_path = re.sub(r"/subnet/\d+", f"/subnet/{identity.netuid}", request.url.path, count=1)
-        return Redirect(path=correct_path, status_code=308)
-    return None
-
-
 class IdentityController(Controller):
     path = "/identity/{identity_name:str}/subnet/{netuid:int}"
     guards = [identity_auth_guard]
-    before_request = _check_identity_netuid
+    before_request = check_identity_netuid
     dependencies = {
         "identity": Provide(identity_dep),
         "bt_contact_router": Provide(bt_contact_router_identity_dep),
