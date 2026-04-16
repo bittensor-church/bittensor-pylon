@@ -2,7 +2,12 @@ import logging
 import secrets
 
 from litestar.connection import ASGIConnection
-from litestar.exceptions import InternalServerException, NotAuthorizedException, NotFoundException, PermissionDeniedException
+from litestar.exceptions import (
+    InternalServerException,
+    NotAuthorizedException,
+    NotFoundException,
+    PermissionDeniedException,
+)
 from litestar.handlers import BaseRouteHandler
 
 from pylon_service.identities import identities
