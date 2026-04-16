@@ -2,7 +2,7 @@ import logging
 import secrets
 
 from litestar.connection import ASGIConnection
-from litestar.exceptions import NotAuthorizedException, PermissionDeniedException
+from litestar.exceptions import NotAuthorizedException, NotFoundException, PermissionDeniedException
 from litestar.handlers import BaseRouteHandler
 
 from pylon_service.identities import identities
@@ -16,6 +16,7 @@ def identity_auth_guard(connection: ASGIConnection, _: BaseRouteHandler) -> None
 
     Raises:
         NotAuthorizedException: If no Authorization header is provided or format is invalid (401).
+        NotFoundException: If the identity does not exist (404).
         PermissionDeniedException: If the token doesn't match the identity's configured token (403).
     """
     auth_header = connection.headers.get("Authorization")
@@ -33,8 +34,7 @@ def identity_auth_guard(connection: ASGIConnection, _: BaseRouteHandler) -> None
 
     identity = identities.get(identity_name)
     if identity is None:
-        # Let identity_dep handle 404 for unknown identities
-        return
+        raise NotFoundException(detail=f"Identity '{identity_name}' not found")
 
     if not secrets.compare_digest(token, identity.token):
         raise PermissionDeniedException(detail="Invalid authorization token")
