@@ -59,11 +59,22 @@ class GetIdentitiesRequest(PylonRequest[GetIdentitiesResponse]):
 
 class AuthenticatedPylonRequest(PylonRequest[PylonResponseT], typing.Generic[PylonResponseT]):
     """
-    Request that requires the authentication, either by open access or identity.
+    Request that requires authentication, either by open access or identity.
+
+    The ``identity_name`` field determines the authentication mode used by the
+    request translator (e.g. ``HttpTranslator``):
+
+    - **Open access** (``identity_name is None``): the translator uses
+      ``open_access_token`` from the client config as a Bearer token and builds
+      a URL without the ``/identity/`` segment
+      (e.g. ``/api/v1/subnet/{netuid}/...``).
+    - **Identity access** (``identity_name`` is set): the translator uses
+      ``identity_token`` from the client config as a Bearer token and embeds
+      the identity name in the URL path
+      (e.g. ``/api/v1/identity/{identity_name}/subnet/{netuid}/...``).
     """
 
     netuid: NetUid
-    # None == open access
     identity_name: IdentityName | None = None
 
 

@@ -65,6 +65,43 @@ config = AsyncConfig(
 )
 ```
 
+### Authentication Flow
+
+Authentication depends on which API you use — `client.v1.open_access` or
+`client.v1.identity`. Here is how a request flows through the client:
+
+```
+ You call an API method
+ e.g. client.v1.identity.get_latest_neurons()
+          │
+          ▼
+ API layer creates an AuthenticatedPylonRequest
+ with netuid and identity_name (or None for open access)
+          │
+          ▼
+ HttpTranslator receives the request and checks identity_name
+          │
+          ├─ identity_name is set ──────────────────────────┐
+          │  • URL: /api/v1/identity/{name}/subnet/{netuid}/...
+          │  • Header: Authorization: Bearer {identity_token}
+          │                                                 │
+          ├─ identity_name is None ─────────────────────────┤
+          │  • URL: /api/v1/subnet/{netuid}/...             │
+          │  • Header: Authorization: Bearer {open_access_token}
+          │                                                 │
+          ▼                                                 ▼
+                      HTTP request is sent
+```
+
+So the `identity_name` field on the request object is what drives the difference —
+the translator sees it and picks the matching token from the config and the
+matching URL structure.
+
+When using `client.v1.open_access`, the API layer sets `identity_name=None` and
+you pass `netuid` explicitly to each method. When using `client.v1.identity`, the
+API layer sets `identity_name` from the config and resolves `netuid` automatically
+from the server (cached after the first request).
+
 ### Creating the Client
 
 The client is available in two variants:
