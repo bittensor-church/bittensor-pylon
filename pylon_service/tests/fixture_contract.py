@@ -67,6 +67,13 @@ EXPECTED_IDENTITIES = {
         token=PylonAuthToken("sn24_token"),
         hotkey_ss58="5FHneW46xGXgs5mUiveU4sbTyGBzmstUspZC92UhjJM694ty",
     ),
+    IdentityName("sn25"): ExpectedIdentity(
+        wallet_name=WalletName("alice"),
+        hotkey_name=HotkeyName("default"),
+        netuid=NetUid(25),
+        token=PylonAuthToken("sn25_token"),
+        hotkey_ss58="5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY",
+    ),
 }
 
 

@@ -23,7 +23,7 @@ class AsyncOpenAccessApi(UnstableAsyncOpenAccessApi):
         Returns:
             GetCommitmentsResponse: containing data mapping hotkeys to data commitments.
         """
-        return await self._send_authenticated_request(partial(self._get_commitments_request, netuid))
+        return await self._send_request(await self._get_commitments_request(netuid))
 
     async def get_commitment(self, netuid: NetUid, hotkey: Hotkey) -> GetCommitmentResponse:  # type: ignore[reportIncompatibleMethodOverride]
         """
@@ -39,7 +39,7 @@ class AsyncOpenAccessApi(UnstableAsyncOpenAccessApi):
         Throws:
             PylonNotFound: If a commitment could not be found or there is only a timelock encrypted commitment.
         """
-        return await self._send_authenticated_request(partial(self._get_commitment_request, netuid, hotkey))
+        return await self._send_request(await self._get_commitment_request(netuid, hotkey))
 
     async def _get_commitments_request(self, netuid: NetUid) -> GetCommitmentsRequest:  # type: ignore[reportIncompatibleMethodOverride]
         return GetCommitmentsRequest(netuid=netuid)
@@ -59,7 +59,7 @@ class AsyncIdentityApi(UnstableAsyncIdentityApi):
         Returns:
             GetCommitmentsResponse: containing data mapping hotkeys to data commitments.
         """
-        return await self._send_authenticated_request(self._get_commitments_request)
+        return await self._send_identity_request(self._get_commitments_request)
 
     async def get_commitment(self, hotkey: Hotkey) -> GetCommitmentResponse:  # type: ignore[reportIncompatibleMethodOverride]
         """
@@ -74,7 +74,7 @@ class AsyncIdentityApi(UnstableAsyncIdentityApi):
         Raises:
             PylonNotFound: If a data commitment could not be found or there is only a timelock encrypted commitment.
         """
-        return await self._send_authenticated_request(partial(self._get_commitment_request, hotkey))
+        return await self._send_identity_request(partial(self._get_commitment_request, hotkey))
 
     async def get_own_commitment(self) -> GetCommitmentResponse:  # type: ignore[reportIncompatibleMethodOverride]
         """
@@ -86,7 +86,7 @@ class AsyncIdentityApi(UnstableAsyncIdentityApi):
         Raises:
             PylonNotFound: If a commitment could not be found or there is only a timelock encrypted commitment.
         """
-        return await self._send_authenticated_request(self._get_own_commitment_request)
+        return await self._send_identity_request(self._get_own_commitment_request)
 
     async def _get_commitments_request(self) -> GetCommitmentsRequest:  # type: ignore[reportIncompatibleMethodOverride]
         return GetCommitmentsRequest(
@@ -95,16 +95,14 @@ class AsyncIdentityApi(UnstableAsyncIdentityApi):
         )
 
     async def _get_commitment_request(self, hotkey: Hotkey) -> GetCommitmentRequest:  # type: ignore[reportIncompatibleMethodOverride]
-        assert self._login_response, "Attempted api request without authentication."
         return GetCommitmentRequest(
-            netuid=self._login_response.netuid,
-            identity_name=self._login_response.identity_name,
+            netuid=self.netuid,
+            identity_name=self.identity_name,
             hotkey=hotkey,
         )
 
     async def _get_own_commitment_request(self) -> GetOwnCommitmentRequest:  # type: ignore[reportIncompatibleMethodOverride]
-        assert self._login_response, "Attempted api request without authentication."
         return GetOwnCommitmentRequest(
-            netuid=self._login_response.netuid,
-            identity_name=self._login_response.identity_name,
+            netuid=self.netuid,
+            identity_name=self.identity_name,
         )

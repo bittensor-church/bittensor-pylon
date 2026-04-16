@@ -176,7 +176,7 @@ class AbstractOpenAccessApi(AbstractApi, ABC):
         Returns:
             GetAllRevealedCommitmentsResponse: containing data mapping hotkeys to revealed commitment lists.
         """
-        return self._send_authenticated_request(partial(self._get_all_revealed_commitments_request, netuid))
+        return self._send_request(self._get_all_revealed_commitments_request(netuid))
 
     def get_commitment(self, netuid: NetUid, hotkey: Hotkey) -> GetCommitmentResponse:
         """
@@ -208,7 +208,7 @@ class AbstractOpenAccessApi(AbstractApi, ABC):
         Throws:
             PylonNotFound: If no commitments could be found.
         """
-        return self._send_authenticated_request(partial(self._get_revealed_commitments_request, netuid, hotkey))
+        return self._send_request(self._get_revealed_commitments_request(netuid, hotkey))
 
     def get_validators(self, netuid: NetUid, block_number: BlockNumber) -> GetValidatorsResponse:
         """
@@ -274,7 +274,7 @@ class AbstractOpenAccessApi(AbstractApi, ABC):
         Returns:
             GetDrandLastStoredRoundRequest: containing the last stored round number.
         """
-        return self._send_authenticated_request(self._get_drand_last_stored_round_request)
+        return self._send_request(self._get_drand_last_stored_round_request())
 
     # Private API
 
@@ -454,7 +454,7 @@ class AbstractIdentityApi(AbstractApi, ABC):
         Returns:
             GetAllRevealedCommitmentsResponse: containing data mapping hotkeys to revealed commitment lists.
         """
-        return self._send_authenticated_request(self._get_all_revealed_commitments_request)
+        return self._send_identity_request(self._get_all_revealed_commitments_request)
 
     def get_commitment(self, hotkey: Hotkey) -> GetCommitmentResponse:
         """
@@ -484,7 +484,7 @@ class AbstractIdentityApi(AbstractApi, ABC):
         Raises:
             PylonNotFound: If the commitments could not be found.
         """
-        return self._send_authenticated_request(partial(self._get_revealed_commitments_request, hotkey))
+        return self._send_identity_request(partial(self._get_revealed_commitments_request, hotkey))
 
     def get_own_commitment(self) -> GetCommitmentResponse:
         """
@@ -508,7 +508,7 @@ class AbstractIdentityApi(AbstractApi, ABC):
         Raises:
             PylonNotFound: If no commitments could be found.
         """
-        return self._send_authenticated_request(self._get_own_revealed_commitments_request)
+        return self._send_identity_request(self._get_own_revealed_commitments_request)
 
     def set_commitment(self, commitment: CommitmentDataBytes | CommitmentDataHex) -> SetCommitmentResponse:
         """
@@ -542,7 +542,7 @@ class AbstractIdentityApi(AbstractApi, ABC):
         Returns:
             SetRevealedCommitmentResponse containing a reveal round number.
         """
-        return self._send_authenticated_request(
+        return self._send_identity_request(
             partial(self._set_revealed_commitment_request, commitment, blocks_until_reveal, block_time)
         )
 
@@ -606,7 +606,7 @@ class AbstractIdentityApi(AbstractApi, ABC):
         Returns:
             GetDrandLastStoredRoundRequest: containing the last stored round number.
         """
-        return self._send_authenticated_request(self._get_drand_last_stored_round_request)
+        return self._send_identity_request(self._get_drand_last_stored_round_request)
 
     # Private API
 

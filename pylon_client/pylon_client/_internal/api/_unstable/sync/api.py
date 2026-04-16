@@ -127,10 +127,9 @@ class IdentityApi(AbstractIdentityApi):
         )
 
     def _get_all_revealed_commitments_request(self) -> GetAllRevealedCommitmentsRequest:
-        assert self._login_response, "Attempted api request without authentication."
         return GetAllRevealedCommitmentsRequest(
-            netuid=self._login_response.netuid,
-            identity_name=self._login_response.identity_name,
+            netuid=self.netuid,
+            identity_name=self.identity_name,
         )
 
     def _get_commitment_request(self, hotkey: Hotkey) -> GetCommitmentRequest:
@@ -141,10 +140,9 @@ class IdentityApi(AbstractIdentityApi):
         )
 
     def _get_revealed_commitments_request(self, hotkey: Hotkey) -> GetRevealedCommitmentsRequest:
-        assert self._login_response, "Attempted api request without authentication."
         return GetRevealedCommitmentsRequest(
-            netuid=self._login_response.netuid,
-            identity_name=self._login_response.identity_name,
+            netuid=self.netuid,
+            identity_name=self.identity_name,
             hotkey=hotkey,
         )
 
@@ -155,10 +153,9 @@ class IdentityApi(AbstractIdentityApi):
         )
 
     def _get_own_revealed_commitments_request(self) -> GetOwnRevealedCommitmentsRequest:
-        assert self._login_response, "Attempted api request without authentication."
         return GetOwnRevealedCommitmentsRequest(
-            netuid=self._login_response.netuid,
-            identity_name=self._login_response.identity_name,
+            netuid=self.netuid,
+            identity_name=self.identity_name,
         )
 
     def _set_commitment_request(self, commitment: CommitmentDataBytes | CommitmentDataHex) -> SetCommitmentRequest:
@@ -171,10 +168,9 @@ class IdentityApi(AbstractIdentityApi):
     def _set_revealed_commitment_request(
         self, commitment: str, blocks_until_reveal: int = 360, block_time: int | float = 12
     ) -> SetRevealedCommitmentRequest:
-        assert self._login_response, "Attempted api request without authentication."
         return SetRevealedCommitmentRequest(
-            netuid=self._login_response.netuid,
-            identity_name=self._login_response.identity_name,
+            netuid=self.netuid,
+            identity_name=self.identity_name,
             commitment=RevealedCommitmentData(commitment),
             blocks_until_reveal=blocks_until_reveal,
             block_time=block_time,

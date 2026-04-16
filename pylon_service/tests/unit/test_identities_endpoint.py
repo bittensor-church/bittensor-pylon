@@ -13,7 +13,7 @@ async def test_get_identities_v1(test_client: AsyncTestClient):
 
     assert response.status_code == HTTP_200_OK
     assert response.json() == {
-        "identities": {"sn1": 1, "sn2": 2, "sn11": 11, "sn21": 21, "sn22": 22, "sn23": 23, "sn24": 24},
+        "identities": {"sn1": 1, "sn2": 2, "sn11": 11, "sn21": 21, "sn22": 22, "sn23": 23, "sn24": 24, "sn25": 25},
     }
 
 
@@ -23,5 +23,5 @@ async def test_get_identities_unstable(test_client: AsyncTestClient):
 
     assert response.status_code == HTTP_200_OK
     assert response.json() == {
-        "identities": {"sn1": 1, "sn2": 2, "sn11": 11, "sn21": 21, "sn22": 22, "sn23": 23, "sn24": 24},
+        "identities": {"sn1": 1, "sn2": 2, "sn11": 11, "sn21": 21, "sn22": 22, "sn23": 23, "sn24": 24, "sn25": 25},
     }

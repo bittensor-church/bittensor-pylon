@@ -2,8 +2,8 @@ import re
 
 from litestar import Controller, Request, Response, status_codes
 from litestar.di import Provide
-from litestar.response import Redirect
 from litestar.exceptions import NotFoundException
+from litestar.response import Redirect
 from pylon_commons._unstable.requests import GenerateCertificateKeypairRequest
 from pylon_commons.models import Hotkey, NeuronCertificate
 from pylon_commons.types import BlockNumber, NetUid

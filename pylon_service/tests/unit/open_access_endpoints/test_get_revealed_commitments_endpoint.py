@@ -4,17 +4,15 @@ Tests for the GET /subnet/{netuid}/block/latest/commitments/revealed/{hotkey} en
 
 import pytest
 from litestar.status_codes import HTTP_200_OK, HTTP_404_NOT_FOUND
-from litestar.testing import AsyncTestClient
 from pylon_commons.models import Block
 from pylon_commons.types import BlockHash, BlockNumber, Hotkey, RevealedCommitmentData
 
-from pylon_service.bittensor.mock_contact import MockBittensorContact
 from tests.world import REVEALED_COMMITMENTS_NETUID
 
 
 @pytest.mark.asyncio
 async def test_v1_open_access_get_revealed_commitments_by_hotkey_returns_list(
-    test_client: AsyncTestClient, open_access_mock_bt_client: MockBittensorContact, snapshot_json
+    test_client, mock_bt_client_factory, snapshot_json
 ):
     revealed_by_hotkey = {
         Hotkey("hotkey1"): [
@@ -43,10 +41,11 @@ async def test_v1_open_access_get_revealed_commitments_by_hotkey_returns_list(
             return None
         return revealed_by_hotkey.get(hotkey)
 
-    async with open_access_mock_bt_client.mock_behavior(get_revealed_commitments=[resolve_revealed_commitments]):
-        response = await test_client.get(
-            f"/api/v1/subnet/{REVEALED_COMMITMENTS_NETUID}/block/latest/commitments/revealed/hotkey1"
-        )
+    async with mock_bt_client_factory() as mock_client:
+        async with mock_client.mock_behavior(get_revealed_commitments=[resolve_revealed_commitments]):
+            response = await test_client.get(
+                f"/api/v1/subnet/{REVEALED_COMMITMENTS_NETUID}/block/latest/commitments/revealed/hotkey1"
+            )
 
     assert response.status_code == HTTP_200_OK
     assert response.json() == snapshot_json
@@ -54,15 +53,16 @@ async def test_v1_open_access_get_revealed_commitments_by_hotkey_returns_list(
 
 @pytest.mark.asyncio
 async def test_v1_open_access_get_revealed_commitments_by_hotkey_returns_404_when_missing(
-    test_client: AsyncTestClient, open_access_mock_bt_client: MockBittensorContact, snapshot_json
+    test_client, mock_bt_client_factory, snapshot_json
 ):
-    async with open_access_mock_bt_client.mock_behavior(
-        get_latest_block=[Block(number=BlockNumber(1000), hash=BlockHash("0xabc123"))],
-        get_revealed_commitments=[None],
-    ):
-        response = await test_client.get(
-            f"/api/v1/subnet/{REVEALED_COMMITMENTS_NETUID}/block/latest/commitments/revealed/hotkey1"
-        )
+    async with mock_bt_client_factory() as mock_client:
+        async with mock_client.mock_behavior(
+            get_latest_block=[Block(number=BlockNumber(1000), hash=BlockHash("0xabc123"))],
+            get_revealed_commitments=[None],
+        ):
+            response = await test_client.get(
+                f"/api/v1/subnet/{REVEALED_COMMITMENTS_NETUID}/block/latest/commitments/revealed/hotkey1"
+            )
 
     assert response.status_code == HTTP_404_NOT_FOUND
     assert response.json() == snapshot_json
