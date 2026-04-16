@@ -355,12 +355,14 @@ class AbstractAsyncIdentityApi(AbstractAsyncApi, ABC):
 
     @property
     def netuid(self) -> NetUid:
-        assert self._netuid is not None, "Identity netuid accessed before it was resolved."
+        if self._netuid is None:
+            raise AttributeError("Identity netuid accessed before it was resolved.")
         return self._netuid
 
     @property
     def identity_name(self) -> IdentityName:
-        assert self._identity_name is not None, "Identity name accessed before it was resolved."
+        if self._identity_name is None:
+            raise AttributeError("Identity name accessed before it was resolved.")
         return self._identity_name
 
     async def _ensure_netuid(self) -> NetUid:
