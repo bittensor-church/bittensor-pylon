@@ -4,7 +4,7 @@ from litestar.testing import AsyncTestClient
 from pylon_commons.models import Block
 from pylon_commons.types import BlockHash, BlockNumber, Hotkey, RevealedCommitmentData
 
-from pylon_service.bittensor.contact import MockBittensorContact
+from pylon_service.bittensor.mock_contact import MockBittensorContact
 from tests.world import REVEALED_COMMITMENTS_NETUID
 
 

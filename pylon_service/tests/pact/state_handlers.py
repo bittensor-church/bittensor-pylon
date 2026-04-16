@@ -22,7 +22,7 @@ from tests.mock_store import MockStore
 if TYPE_CHECKING:
     from pytest import MonkeyPatch
 
-    from pylon_service.bittensor.contact import MockBittensorContact
+    from pylon_service.bittensor.mock_contact import MockBittensorContact
 
 _registry: dict[str, type["StateHandler"]] = {}
 

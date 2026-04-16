@@ -16,8 +16,9 @@ from syrupy.matchers import path_type
 
 from pylon_service import identities as identities_module
 from pylon_service import lifespans, main
-from pylon_service.bittensor.contact import ContactFactory, MockBittensorContact
+from pylon_service.bittensor.contact import ContactFactory
 from pylon_service.bittensor.contact_router import BittensorContactRouter
+from pylon_service.bittensor.mock_contact import MockBittensorContact
 from pylon_service.bittensor.pool import BittensorContactPool
 from pylon_service.main import create_app
 from pylon_service.settings import settings

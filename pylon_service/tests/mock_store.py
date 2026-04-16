@@ -2,7 +2,7 @@ from datetime import timedelta
 
 from litestar.stores.base import Store
 
-from tests.behave import Behave
+from pylon_service.bittensor.mock_contact import Behave
 
 
 class MockStore(Store):

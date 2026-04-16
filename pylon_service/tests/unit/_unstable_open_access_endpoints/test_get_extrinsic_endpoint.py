@@ -3,7 +3,7 @@ from litestar.status_codes import HTTP_200_OK, HTTP_404_NOT_FOUND
 from pylon_commons.models import Block, Extrinsic, ExtrinsicCall
 from pylon_commons.types import BlockHash, BlockNumber, ExtrinsicHash, ExtrinsicIndex, ExtrinsicLength
 
-from pylon_service.bittensor.contact import MockBittensorContact
+from pylon_service.bittensor.mock_contact import MockBittensorContact
 
 
 @pytest.mark.asyncio

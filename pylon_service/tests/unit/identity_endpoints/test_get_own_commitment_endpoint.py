@@ -4,7 +4,7 @@ from litestar.testing import AsyncTestClient
 from pylon_commons.models import Block
 from pylon_commons.types import BlockHash, BlockNumber
 
-from pylon_service.bittensor.contact import MockBittensorContact
+from pylon_service.bittensor.mock_contact import MockBittensorContact
 from tests.world import OWN_COMMITMENT_NETUID, OWN_TIMELOCK_COMMITMENT_NETUID
 
 

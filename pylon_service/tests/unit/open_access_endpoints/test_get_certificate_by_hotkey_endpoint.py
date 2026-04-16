@@ -8,7 +8,7 @@ from litestar.testing import AsyncTestClient
 from pylon_commons.models import Block, CertificateAlgorithm, NeuronCertificate
 from pylon_commons.types import BlockHash, BlockNumber, PublicKey
 
-from pylon_service.bittensor.contact import MockBittensorContact
+from pylon_service.bittensor.mock_contact import MockBittensorContact
 
 
 @pytest.mark.asyncio

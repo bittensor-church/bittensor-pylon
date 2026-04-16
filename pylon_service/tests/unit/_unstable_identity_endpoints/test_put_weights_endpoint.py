@@ -9,7 +9,7 @@ from pylon_commons.models import Block, CommitReveal, SubnetHyperparams
 from pylon_commons.types import BlockHash, BlockNumber, NeuronUid, RevealRound
 
 from pylon_service.api._unstable.tasks import ApplyWeights
-from pylon_service.bittensor.contact import MockBittensorContact
+from pylon_service.bittensor.mock_contact import MockBittensorContact
 from tests.helpers import wait_for_background_tasks
 
 

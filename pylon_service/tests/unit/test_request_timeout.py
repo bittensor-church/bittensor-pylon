@@ -4,7 +4,7 @@ import pytest
 from litestar.status_codes import HTTP_400_BAD_REQUEST, HTTP_504_GATEWAY_TIMEOUT
 from litestar.testing import AsyncTestClient
 
-from pylon_service.bittensor.contact import MockBittensorContact
+from pylon_service.bittensor.mock_contact import MockBittensorContact
 from pylon_service.middleware import request_timeout
 
 _ENDPOINT = "/api/v1/subnet/1/block/latest/neurons"

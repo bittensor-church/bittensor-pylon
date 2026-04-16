@@ -3,8 +3,8 @@ from litestar.status_codes import HTTP_200_OK
 from pylon_commons.models import Block
 from pylon_commons.types import BlockHash, BlockNumber, Timestamp
 
-from pylon_service.bittensor.contact import MockBittensorContact
 from pylon_service.bittensor.exceptions import BittensorTransportError
+from pylon_service.bittensor.mock_contact import MockBittensorContact
 
 
 @pytest.mark.asyncio
