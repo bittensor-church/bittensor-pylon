@@ -15,7 +15,6 @@ def pylon_client_factory():
         client = AsyncPylonClient(config)
         if logged_in:
             client.unstable.identity._netuid = NetUid(NETUID)
-            client.unstable.identity._identity_name = IdentityName(IDENTITY_NAME)
         return client
 
     return _create_client

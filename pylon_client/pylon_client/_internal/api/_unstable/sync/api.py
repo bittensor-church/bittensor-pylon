@@ -85,14 +85,10 @@ class IdentityApi(AbstractIdentityApi):
     api_version = ApiVersion.UNSTABLE
 
     def _fetch_netuid(self) -> None:
-        config = self._communicator.config
-        if not config.identity_name or not config.identity_token:
-            raise PylonMisconfigured("Can not use identity api - no identity name or token provided in config.")
         response = self._send_request(GetIdentitiesRequest())
-        if config.identity_name not in response.identities:
-            raise PylonMisconfigured(f"Identity '{config.identity_name}' is not configured on the server.")
-        self._identity_name = config.identity_name
-        self._netuid = response.identities[config.identity_name]
+        if self.identity_name not in response.identities:
+            raise PylonMisconfigured(f"Identity '{self.identity_name}' is not configured on the server.")
+        self._netuid = response.identities[self.identity_name]
 
     def _get_neurons_request(self, block_number: BlockNumber) -> GetNeuronsRequest:
         return GetNeuronsRequest(

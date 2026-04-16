@@ -47,13 +47,15 @@ class AbstractAsyncPylonClient(Generic[CommunicatorT], ABC):
         self._communicator = self._communicator_cls(config)
 
         self.v1 = ClientNamespace(
-            open_access=AsyncOpenAccessApi(self._communicator),
-            identity=AsyncIdentityApi(self._communicator),
+            open_access_cls=AsyncOpenAccessApi,
+            identity_cls=AsyncIdentityApi,
+            communicator=self._communicator,
         )
 
         self.unstable = ClientNamespace(
-            open_access=UnstableAsyncOpenAccessApi(self._communicator),
-            identity=UnstableAsyncIdentityApi(self._communicator),
+            open_access_cls=UnstableAsyncOpenAccessApi,
+            identity_cls=UnstableAsyncIdentityApi,
+            communicator=self._communicator,
         )
 
         self.is_open = False

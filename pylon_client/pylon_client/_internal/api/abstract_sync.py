@@ -43,7 +43,6 @@ from pylon_client._internal.pylon_commons._unstable.responses import (
 from pylon_client._internal.pylon_commons.apiver import ApiVersion
 from pylon_client._internal.pylon_commons.exceptions import (
     PylonClosed,
-    PylonMisconfigured,
     PylonNetuidMismatch,
 )
 from pylon_client._internal.pylon_commons.types import (
@@ -98,11 +97,6 @@ class AbstractOpenAccessApi(AbstractApi, ABC):
         PylonResponseException: When the server returns an error response.
         PylonMisconfigured: When the open access token is not configured.
     """
-
-    def _send_request(self, request: PylonRequest[ResponseT]) -> ResponseT:
-        if self._communicator.config.open_access_token is None:
-            raise PylonMisconfigured("Can not use open access api - no open access token provided in config.")
-        return super()._send_request(request)
 
     # Public API
 
@@ -339,8 +333,11 @@ class AbstractIdentityApi(AbstractApi, ABC):
 
     def __init__(self, communicator: AbstractCommunicator):
         super().__init__(communicator)
+        identity_name = communicator.config.identity_name
+        if identity_name is None:
+            raise ValueError("IdentityApi requires identity_name to be set in config.")
+        self.identity_name: IdentityName = identity_name
         self._netuid: NetUid | None = None
-        self._identity_name: IdentityName | None = None
         self._identity_lock = threading.Lock()
 
     @abstractmethod
@@ -355,12 +352,6 @@ class AbstractIdentityApi(AbstractApi, ABC):
         if self._netuid is None:
             raise AttributeError("Identity netuid accessed before it was resolved.")
         return self._netuid
-
-    @property
-    def identity_name(self) -> IdentityName:
-        if self._identity_name is None:
-            raise AttributeError("Identity name accessed before it was resolved.")
-        return self._identity_name
 
     def _ensure_netuid(self) -> NetUid:
         with self._identity_lock:

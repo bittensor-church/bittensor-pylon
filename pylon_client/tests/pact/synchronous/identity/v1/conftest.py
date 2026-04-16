@@ -15,7 +15,6 @@ def pylon_client_factory():
         client = PylonClient(config)
         if logged_in:
             client.v1.identity._netuid = NetUid(NETUID)
-            client.v1.identity._identity_name = IdentityName(IDENTITY_NAME)
         return client
 
     return _create_client
