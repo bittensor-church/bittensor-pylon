@@ -1,0 +1,95 @@
+# serializer version: 1
+# name: test_get_hyperparams_returns_prepared_hyperparams
+  dict({
+    'commit_reveal_weights_enabled': <CommitReveal.DISABLED: 'disabled'>,
+    'max_weights_limit': 65535,
+    'tempo': 50,
+  })
+# ---
+# name: test_get_neurons_list_returns_prepared_neurons
+  list([
+    dict({
+      'active': True,
+      'coldkey': '5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY',
+      'hotkey': '5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY',
+      'validator_permit': True,
+    }),
+    dict({
+      'active': True,
+      'coldkey': '5FHneW46xGXgs5mUiveU4sbTyGBzmstUspZC92UhjJM694ty',
+      'hotkey': '5FHneW46xGXgs5mUiveU4sbTyGBzmstUspZC92UhjJM694ty',
+      'validator_permit': True,
+    }),
+    dict({
+      'active': True,
+      'coldkey': '5FLSigC9HGRKVhB9FiEo4Y3koPsNmBmLJbpXg2mp1hXcS59Y',
+      'hotkey': '5FLSigC9HGRKVhB9FiEo4Y3koPsNmBmLJbpXg2mp1hXcS59Y',
+      'validator_permit': False,
+    }),
+    dict({
+      'active': True,
+      'coldkey': '5DAAnrj7VHTznn2AWBemMuyBwZWs6FNFjdyVXUeYum3PTXFy',
+      'hotkey': '5DAAnrj7VHTznn2AWBemMuyBwZWs6FNFjdyVXUeYum3PTXFy',
+      'validator_permit': False,
+    }),
+  ])
+# ---
+# name: test_get_neurons_returns_full_prepared_neurons
+  dict({
+    'neurons': dict({
+      '5DAAnrj7VHTznn2AWBemMuyBwZWs6FNFjdyVXUeYum3PTXFy': dict({
+        'active': True,
+        'coldkey': '5DAAnrj7VHTznn2AWBemMuyBwZWs6FNFjdyVXUeYum3PTXFy',
+        'hotkey': '5DAAnrj7VHTznn2AWBemMuyBwZWs6FNFjdyVXUeYum3PTXFy',
+        'validator_permit': False,
+      }),
+      '5FHneW46xGXgs5mUiveU4sbTyGBzmstUspZC92UhjJM694ty': dict({
+        'active': True,
+        'coldkey': '5FHneW46xGXgs5mUiveU4sbTyGBzmstUspZC92UhjJM694ty',
+        'hotkey': '5FHneW46xGXgs5mUiveU4sbTyGBzmstUspZC92UhjJM694ty',
+        'validator_permit': True,
+      }),
+      '5FLSigC9HGRKVhB9FiEo4Y3koPsNmBmLJbpXg2mp1hXcS59Y': dict({
+        'active': True,
+        'coldkey': '5FLSigC9HGRKVhB9FiEo4Y3koPsNmBmLJbpXg2mp1hXcS59Y',
+        'hotkey': '5FLSigC9HGRKVhB9FiEo4Y3koPsNmBmLJbpXg2mp1hXcS59Y',
+        'validator_permit': False,
+      }),
+      '5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY': dict({
+        'active': True,
+        'coldkey': '5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY',
+        'hotkey': '5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY',
+        'validator_permit': True,
+      }),
+    }),
+  })
+# ---
+# name: test_get_subnet_state_returns_prepared_state
+  dict({
+    'active': list([
+      True,
+      True,
+      True,
+      True,
+    ]),
+    'coldkeys': list([
+      '5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY',
+      '5FHneW46xGXgs5mUiveU4sbTyGBzmstUspZC92UhjJM694ty',
+      '5FLSigC9HGRKVhB9FiEo4Y3koPsNmBmLJbpXg2mp1hXcS59Y',
+      '5DAAnrj7VHTznn2AWBemMuyBwZWs6FNFjdyVXUeYum3PTXFy',
+    ]),
+    'hotkeys': list([
+      '5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY',
+      '5FHneW46xGXgs5mUiveU4sbTyGBzmstUspZC92UhjJM694ty',
+      '5FLSigC9HGRKVhB9FiEo4Y3koPsNmBmLJbpXg2mp1hXcS59Y',
+      '5DAAnrj7VHTznn2AWBemMuyBwZWs6FNFjdyVXUeYum3PTXFy',
+    ]),
+    'netuid': 2,
+    'validator_permit': list([
+      True,
+      True,
+      False,
+      False,
+    ]),
+  })
+# ---

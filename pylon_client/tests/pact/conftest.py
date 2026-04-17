@@ -9,8 +9,11 @@ from tests.pact.matchers import (
     extrinsic_response_matcher,
     latest_block_info_response_matcher,
     neurons_response_matcher,
+    revealed_commitments_response_matcher,
     set_commitment_response_matcher,
+    set_revealed_commitment_response_matcher,
     set_weights_response_matcher,
+    single_revealed_commitment_response_matcher,
     v1_commitments_response_matcher,
     validators_response_matcher,
 )
@@ -62,6 +65,21 @@ def put_weights_response_matcher() -> dict:
 @pytest.fixture
 def post_commitment_response_matcher() -> dict:
     return set_commitment_response_matcher()
+
+
+@pytest.fixture
+def post_revealed_commitment_response_matcher() -> dict:
+    return set_revealed_commitment_response_matcher()
+
+
+@pytest.fixture
+def get_revealed_commitments_response_matcher() -> dict:
+    return revealed_commitments_response_matcher(HOTKEY_1, HOTKEY_2)
+
+
+@pytest.fixture
+def get_own_revealed_commitments_response_matcher() -> dict:
+    return single_revealed_commitment_response_matcher(HOTKEY_1)
 
 
 @pytest.fixture

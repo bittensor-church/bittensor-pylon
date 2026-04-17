@@ -14,7 +14,7 @@ from pylon_commons.types import BittensorNetwork
 from pylon_service.bittensor.contact import TurboBtContact
 from tests.helpers import find_free_port
 from tests.integration.contact_resilience.helpers import reset_proxy
-from tests.integration.containers import LocalChainContainer
+from tests.integration.containers import LocalChainContainer, LocalChainImage
 from tests.integration.localchain.manager import DockerContextEndpoint, LocalChainManager
 
 TOXIPROXY_IMAGE = "ghcr.io/shopify/toxiproxy:2.12.0"
@@ -40,7 +40,7 @@ class ToxiProxyRuntime:
 
 @pytest_asyncio.fixture(scope="package")
 async def resilience_chain() -> AsyncIterator[LocalChainManager]:
-    container = LocalChainContainer()
+    container = LocalChainContainer(image=LocalChainImage.PREPARED_CONTACT)
     await container.ensure_prepared_image()
     manager = LocalChainManager(container)
     try:

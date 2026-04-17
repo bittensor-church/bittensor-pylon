@@ -64,15 +64,29 @@ class BaseEndpointTest(ABC):
 
     @pytest.fixture
     def endpoint_url(self):
-        params = self.route_params.copy()
-        netuid = params.pop("netuid", None)
-        identity_name = params.pop("identity_name", None)
-        return self.endpoint.absolute_url(netuid_=netuid, identity_name_=identity_name, **params)
+        return self._create_url()
 
     @pytest.fixture
     def route_mock(self, service_mock, endpoint_url):
         mock_method = getattr(service_mock, self.http_method.lower())
         return mock_method(endpoint_url)
+
+    @pytest.fixture
+    def route_mock_factory(self, service_mock):
+        mock_method = getattr(service_mock, self.http_method.lower())
+
+        def factory(endpoint: Endpoint | None = None, extra_params: dict | None = None):
+            return mock_method(self._create_url(endpoint, extra_params))
+
+        return factory
+
+    def _create_url(self, endpoint: Endpoint | None = None, extra_params: dict | None = None):
+        params = self.route_params.copy()
+        if extra_params:
+            params.update(extra_params)
+        netuid = params.pop("netuid", None)
+        identity_name = params.pop("identity_name", None)
+        return (endpoint or self.endpoint).absolute_url(netuid_=netuid, identity_name_=identity_name, **params)
 
     def _setup_login_mock(self, service_mock):
         pass

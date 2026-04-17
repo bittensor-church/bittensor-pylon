@@ -1,0 +1,44 @@
+# serializer version: 1
+# name: test_commit_weights_succeeds_on_commit_reveal_subnet
+  dict({
+    2: 1.0,
+    3: 0.6666666666666666,
+  })
+# ---
+# name: test_mechanism_commit_weights_succeeds_on_commit_reveal_subnet
+  dict({
+    2: 1.0,
+    3: 0.6666666666666666,
+  })
+# ---
+# name: test_mechanism_set_weights_succeeds_on_direct_subnet
+  dict({
+    2: 1.0,
+    3: 0.6666666666666666,
+  })
+# ---
+# name: test_set_commitment_writes_readable_commitment
+  dict({
+    'commitment': '0x636f6e746163742d77726974652d636f6d6d69746d656e74',
+    'hotkey': '5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY',
+    'kind': <CommitmentKind.HEX_DATA: 'hex_data'>,
+  })
+# ---
+# name: test_set_revealed_commitment_writes_readable_commitment
+  list([
+    dict({
+      'commitment': 'revealed-commitment-alice',
+      'hotkey': '5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY',
+    }),
+    dict({
+      'commitment': 'contact-write-commitment',
+      'hotkey': '5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY',
+    }),
+  ])
+# ---
+# name: test_set_weights_succeeds_on_direct_subnet
+  dict({
+    2: 1.0,
+    3: 0.6666666666666666,
+  })
+# ---

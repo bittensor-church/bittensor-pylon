@@ -25,6 +25,7 @@ from pylon_commons.types import (
     ExtrinsicLength,
     Hotkey,
     Incentive,
+    MechanismId,
     NetUid,
     NeuronActive,
     NeuronUid,
@@ -138,10 +139,14 @@ class AbstractBittensorContact(ABC):
     async def get_subnet_state(self, netuid: NetUid, block: Block) -> SubnetState | None: ...
 
     @abstractmethod
-    async def commit_weights(self, netuid: NetUid, weights: dict[NeuronUid, Weight]) -> RevealRound: ...
+    async def commit_weights(
+        self, netuid: NetUid, mechanism_id: MechanismId, weights: dict[NeuronUid, Weight]
+    ) -> RevealRound: ...
 
     @abstractmethod
-    async def set_weights(self, netuid: NetUid, weights: dict[NeuronUid, Weight]) -> None: ...
+    async def set_weights(
+        self, netuid: NetUid, mechanism_id: MechanismId, weights: dict[NeuronUid, Weight]
+    ) -> None: ...
 
     @abstractmethod
     async def get_neurons(self, netuid: NetUid, block: Block) -> SubnetNeurons: ...
@@ -172,7 +177,7 @@ class AbstractBittensorContact(ABC):
 
     @abstractmethod
     async def set_revealed_commitment(
-        self, netuid: NetUid, commitment: RevealedCommitmentData, block_to_reveal: int, block_time: int | float
+        self, netuid: NetUid, commitment: RevealedCommitmentData, block_to_reveal: int
     ) -> int:
         """
         Sets revealed commitment on chain with retry logic.
@@ -200,9 +205,6 @@ class AbstractBittensorContact(ABC):
     async def set_commitment(self, netuid: NetUid, data: CommitmentDataBytes) -> None: ...
 
     @abstractmethod
-    async def get_signed_block(self, block: Block) -> SignedBlock | None: ...
-
-    @abstractmethod
     async def get_extrinsic(self, block: Block, extrinsic_index: ExtrinsicIndex) -> Extrinsic | None: ...
 
 
@@ -223,15 +225,18 @@ class BittensorPort(Protocol):
         self, netuid: NetUid, algorithm: CertificateAlgorithm
     ) -> NeuronCertificateKeypair | None: ...
     async def get_subnet_state(self, netuid: NetUid, block: Block) -> SubnetState | None: ...
-    async def commit_weights(self, netuid: NetUid, weights: dict[NeuronUid, Weight]) -> RevealRound: ...
-    async def set_weights(self, netuid: NetUid, weights: dict[NeuronUid, Weight]) -> None: ...
+    async def commit_weights(
+        self, netuid: NetUid, mechanism_id: MechanismId, weights: dict[NeuronUid, Weight]
+    ) -> RevealRound: ...
+    async def set_weights(
+        self, netuid: NetUid, mechanism_id: MechanismId, weights: dict[NeuronUid, Weight]
+    ) -> None: ...
     async def get_neurons(self, netuid: NetUid, block: Block) -> SubnetNeurons: ...
     async def get_commitment(
         self, netuid: NetUid, block: Block, hotkey: Hotkey | None = None
     ) -> CommitmentVariant | None: ...
     async def get_commitments(self, netuid: NetUid, block: Block) -> SubnetCommitments: ...
     async def set_commitment(self, netuid: NetUid, data: CommitmentDataBytes) -> None: ...
-    async def get_signed_block(self, block: Block) -> SignedBlock | None: ...
     async def get_extrinsic(self, block: Block, extrinsic_index: ExtrinsicIndex) -> Extrinsic | None: ...
 
     async def get_revealed_commitments(
@@ -241,7 +246,7 @@ class BittensorPort(Protocol):
     async def get_all_revealed_commitments(self, netuid: NetUid, block: Block) -> SubnetRevealedCommitments: ...
 
     async def set_revealed_commitment(
-        self, netuid: NetUid, commitment: RevealedCommitmentData, block_to_reveal: int, block_time: int | float
+        self, netuid: NetUid, commitment: RevealedCommitmentData, block_to_reveal: int
     ) -> int: ...
 
     async def get_drand_last_stored_round(self, block: Block | None = None) -> int: ...
@@ -526,14 +531,21 @@ class TurboBtContact(AbstractBittensorContact):
         bittensor_operation_duration,
         labels={"uri": Attr("uri"), "netuid": Param("netuid"), "hotkey": Attr("hotkey")},
     )
-    async def commit_weights(self, netuid: NetUid, weights: dict[NeuronUid, Weight]) -> RevealRound:
+    async def commit_weights(
+        self,
+        netuid: NetUid,
+        mechanism_id: MechanismId,
+        weights: dict[NeuronUid, Weight],
+    ) -> RevealRound:
         from pylon_service.settings import settings
 
         normalized_weights = {int(uid): float(weight) for uid, weight in weights.items()}
         block_time = settings.block_duration_seconds
         reveal_round = await self._protect_turbobt(
             "commit_weights",
-            lambda c: c.subnet(netuid).weights.commit(normalized_weights, block_time=block_time),  # type: ignore[arg-type]
+            lambda c: c.subnet(netuid).weights.commit(
+                normalized_weights, mechanism_id=mechanism_id, block_time=block_time
+            ),
         )
         return RevealRound(reveal_round)
 
@@ -541,9 +553,12 @@ class TurboBtContact(AbstractBittensorContact):
         bittensor_operation_duration,
         labels={"uri": Attr("uri"), "netuid": Param("netuid"), "hotkey": Attr("hotkey")},
     )
-    async def set_weights(self, netuid: NetUid, weights: dict[NeuronUid, Weight]) -> None:
+    async def set_weights(self, netuid: NetUid, mechanism_id: MechanismId, weights: dict[NeuronUid, Weight]) -> None:
         normalized_weights = {int(uid): float(weight) for uid, weight in weights.items()}
-        await self._protect_turbobt("set_weights", lambda c: c.subnet(netuid).weights.set(normalized_weights))
+        await self._protect_turbobt(
+            "set_weights",
+            lambda c: c.subnet(netuid).weights.set(normalized_weights, mechanism_id=mechanism_id),
+        )
 
     @track_operation(
         bittensor_operation_duration,
@@ -613,8 +628,11 @@ class TurboBtContact(AbstractBittensorContact):
         },
     )
     async def set_revealed_commitment(
-        self, netuid: NetUid, commitment: RevealedCommitmentData, block_to_reveal: int, block_time: int | float
+        self, netuid: NetUid, commitment: RevealedCommitmentData, block_to_reveal: int
     ) -> int:
+        from pylon_service.settings import settings
+
+        block_time = settings.block_duration_seconds
         return await self._protect_turbobt(
             "set_revealed_commitment",
             lambda c: c.subnet(netuid).commitments.set_revealed(commitment, block_to_reveal, block_time),
@@ -638,11 +656,8 @@ class TurboBtContact(AbstractBittensorContact):
     async def set_commitment(self, netuid: NetUid, data: CommitmentDataBytes) -> None:
         await self._protect_turbobt("set_commitment", lambda c: c.subnet(netuid).commitments.set(bytes(data)))
 
-    async def get_signed_block(self, block: Block) -> SignedBlock | None:
-        return await self._protect_turbobt("get_signed_block", lambda c: c.subtensor.chain.getBlock(block.hash))
-
     async def get_extrinsic(self, block: Block, extrinsic_index: ExtrinsicIndex) -> Extrinsic | None:
-        signed_block = await self.get_signed_block(block)
+        signed_block = await self._get_signed_block(block)
         if signed_block is None:
             return None
 
@@ -652,6 +667,9 @@ class TurboBtContact(AbstractBittensorContact):
 
         raw_extrinsic = extrinsics[extrinsic_index]
         return self._translate_extrinsic(raw_extrinsic, block.number, extrinsic_index)
+
+    async def _get_signed_block(self, block: Block) -> SignedBlock | None:
+        return await self._protect_turbobt("get_signed_block", lambda c: c.subtensor.chain.getBlock(block.hash))
 
     @staticmethod
     def _translate_extrinsic(

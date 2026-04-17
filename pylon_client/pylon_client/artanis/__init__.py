@@ -40,6 +40,7 @@ from pylon_client._internal.pylon_commons.types import (
     Incentive,
     IdentityName,
     MaxWeightsLimit,
+    MechanismId,
     NetUid,
     NeuronActive,
     NeuronUid,

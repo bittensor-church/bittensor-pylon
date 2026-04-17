@@ -5,14 +5,27 @@ Tests for the PUT /subnet/weights endpoint.
 import pytest
 from litestar.status_codes import HTTP_200_OK, HTTP_400_BAD_REQUEST, HTTP_404_NOT_FOUND
 from pylon_commons.models import Block, CommitReveal, SubnetHyperparams
-from pylon_commons.types import BlockHash, BlockNumber, NeuronUid, RevealRound
+from pylon_commons.types import BlockHash, BlockNumber, MechanismId, NeuronUid, RevealRound
 
 from pylon_service.api._unstable.tasks import ApplyWeights
 from tests.helpers import wait_for_background_tasks
 
 
+@pytest.mark.parametrize(
+    "mechanism_url_infix,expected_mechanism_id",
+    [
+        pytest.param("", 0, id="no_mechanism_id"),
+        pytest.param("mechanism/1/", 1, id="with_mechanism_id"),
+    ],
+)
 @pytest.mark.asyncio
-async def test_put_weights_commit_reveal_enabled(identity_test_client_factory, mock_bt_client_factory, snapshot_json):
+async def test_put_weights_commit_reveal_enabled(
+    mechanism_url_infix: str,
+    expected_mechanism_id: int,
+    identity_test_client_factory,
+    mock_bt_client_factory,
+    snapshot_json,
+):
     """
     Test setting weights when commit-reveal is enabled.
     """
@@ -43,7 +56,7 @@ async def test_put_weights_commit_reveal_enabled(identity_test_client_factory, m
         ):
             async with identity_test_client_factory("sn1") as client:
                 response = await client.put(
-                    "/api/_unstable/identity/sn1/subnet/1/weights",
+                    f"/api/_unstable/identity/sn1/subnet/1/{mechanism_url_infix}weights",
                     json={"weights": weights},
                 )
 
@@ -57,6 +70,7 @@ async def test_put_weights_commit_reveal_enabled(identity_test_client_factory, m
         assert mock_client.calls["commit_weights"] == [
             (
                 1,
+                MechanismId(expected_mechanism_id),
                 {
                     NeuronUid(1): 0.5,
                     NeuronUid(2): 0.3,
@@ -66,8 +80,21 @@ async def test_put_weights_commit_reveal_enabled(identity_test_client_factory, m
         ]
 
 
+@pytest.mark.parametrize(
+    "mechanism_url_infix,expected_mechanism_id",
+    [
+        pytest.param("", 0, id="no_mechanism_id"),
+        pytest.param("mechanism/1/", 1, id="with_mechanism_id"),
+    ],
+)
 @pytest.mark.asyncio
-async def test_put_weights_commit_reveal_disabled(identity_test_client_factory, mock_bt_client_factory, snapshot_json):
+async def test_put_weights_commit_reveal_disabled(
+    mechanism_url_infix: str,
+    expected_mechanism_id: int,
+    identity_test_client_factory,
+    mock_bt_client_factory,
+    snapshot_json,
+):
     """
     Test setting weights when commit-reveal is disabled.
     """
@@ -96,7 +123,7 @@ async def test_put_weights_commit_reveal_disabled(identity_test_client_factory, 
         ):
             async with identity_test_client_factory("sn2") as client:
                 response = await client.put(
-                    "/api/_unstable/identity/sn2/subnet/2/weights",
+                    f"/api/_unstable/identity/sn2/subnet/2/{mechanism_url_infix}weights",
                     json={"weights": weights},
                 )
 
@@ -110,6 +137,7 @@ async def test_put_weights_commit_reveal_disabled(identity_test_client_factory, 
         assert mock_client.calls["set_weights"] == [
             (
                 2,
+                MechanismId(expected_mechanism_id),
                 {
                     NeuronUid(1): 0.7,
                     NeuronUid(2): 0.3,
@@ -164,6 +192,7 @@ async def test_put_weights_retries_when_prepare_fails(
         assert mock_client.calls["set_weights"] == [
             (
                 1,
+                MechanismId(0),
                 {
                     NeuronUid(1): 0.5,
                     NeuronUid(2): 0.5,

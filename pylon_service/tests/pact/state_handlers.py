@@ -8,10 +8,18 @@ from unittest.mock import Mock
 from pylon_commons.models import (
     CommitmentVariant,
     HexDataCommitment,
+    RevealedCommitment,
     SubnetCommitments,
     SubnetNeurons,
+    SubnetRevealedCommitments,
 )
-from pylon_commons.types import BlockNumber, CommitmentDataHex, Hotkey, Timestamp
+from pylon_commons.types import (
+    BlockNumber,
+    CommitmentDataHex,
+    Hotkey,
+    RevealedCommitmentData,
+    Timestamp,
+)
 
 from pylon_service.bittensor.exceptions import ArchiveFallbackException
 from pylon_service.bittensor.recent.adapter import _CacheEntry
@@ -285,6 +293,69 @@ class CommitmentCanBeSetHandler(StateHandler):
         client = self._get_client(parameters)
         self._set_default_latest_block(client, block)
         client.add_behavior("set_commitment", None)
+
+
+class RevealedCommitmentsExistHandler(StateHandler):
+    name = "revealed commitments exist"
+
+    def setup(self, parameters: dict[str, Any]) -> None:
+        block = BlockFactory.build()
+        client = self._get_client(parameters)
+        self._set_default_latest_block(client, block)
+
+        if "hotkey" in parameters:
+            hotkey = Hotkey(parameters["hotkey"])
+            commitments: list[RevealedCommitment] = [
+                RevealedCommitment(
+                    reveal_block_number=BlockNumber(block.number - 50),
+                    hotkey=hotkey,
+                    commitment=RevealedCommitmentData("0xaabbccdd11223344"),
+                )
+            ]
+            client.add_behavior("get_revealed_commitments", commitments)
+        else:
+            hotkeys = [Hotkey("h1"), Hotkey("h2")]
+            commitments_dict: dict[Hotkey, list[RevealedCommitment]] = {
+                hotkey: [
+                    RevealedCommitment(
+                        reveal_block_number=BlockNumber(block.number - 50),
+                        hotkey=hotkey,
+                        commitment=RevealedCommitmentData("0xaabbccdd11223344"),
+                    )
+                ]
+                for hotkey in hotkeys
+            }
+            subnet_revealed_commitments = SubnetRevealedCommitments(block=block, commitments=commitments_dict)
+            client.add_behavior("get_all_revealed_commitments", subnet_revealed_commitments)
+
+
+class OwnRevealedCommitmentsExistHandler(StateHandler):
+    name = "own revealed commitments exist"
+
+    def setup(self, parameters: dict[str, Any]) -> None:
+        block = BlockFactory.build()
+        hotkey = Hotkey(parameters["hotkey"])
+        commitments: list[RevealedCommitment] = [
+            RevealedCommitment(
+                reveal_block_number=BlockNumber(block.number - 50),
+                hotkey=hotkey,
+                commitment=RevealedCommitmentData("0xaabbccdd11223344"),
+            )
+        ]
+
+        client = self._get_client(parameters)
+        self._set_default_latest_block(client, block)
+        client.add_behavior("get_revealed_commitments", commitments)
+
+
+class RevealedCommitmentCanBeSetHandler(StateHandler):
+    name = "revealed commitment can be set"
+
+    def setup(self, parameters: dict[str, Any]) -> None:
+        block = BlockFactory.build()
+        client = self._get_client(parameters)
+        self._set_default_latest_block(client, block)
+        client.add_behavior("set_revealed_commitment", 123456)
 
 
 class BittensorHangs(StateHandler):

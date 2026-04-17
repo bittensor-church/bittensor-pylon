@@ -68,10 +68,10 @@ async def test_contact_recovers_after_subtensor_restart(
         baseline = await live_contact.get_latest_block()
         assert baseline.number > 0
 
-        resilience_chain.stop()
+        await resilience_chain.stop()
         await retry_until_failure(lambda: live_contact.get_latest_block(), expected=RESTART_RETRYABLE_EXCEPTIONS)
 
-        resilience_chain.start()
+        await resilience_chain.start()
         recovered = await retry_until_result(
             lambda: live_contact.get_latest_block(),
             retryable_exceptions=RESTART_RETRYABLE_EXCEPTIONS,

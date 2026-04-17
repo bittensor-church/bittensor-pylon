@@ -1,10 +1,8 @@
 from pylon_commons.models import CommitmentKind, CommitmentVariant
 from pylon_commons.types import Hotkey, NetUid
 from pylon_commons.v1.responses import (
-    GetAllRevealedCommitmentsResponse,
     GetCommitmentResponse,
     GetCommitmentsResponse,
-    GetRevealedCommitmentsResponse,
 )
 
 from pylon_service.api._unstable.services import BlockService, CertificateService, NeuronService  # noqa: F401
@@ -43,22 +41,6 @@ class CommitmentService:
         if commitment.kind != CommitmentKind.HEX_DATA:
             raise CommitmentNotFoundError()
         return self._wrap_commitment(block, commitment)
-
-    async def get_all_revealed_commitments(
-        self, contact_router: BittensorPort, netuid: NetUid
-    ) -> GetAllRevealedCommitmentsResponse:
-        block = await contact_router.get_latest_block()
-        result = await contact_router.get_all_revealed_commitments(netuid, block)
-        return GetAllRevealedCommitmentsResponse.model_validate(result, from_attributes=True)
-
-    async def get_revealed_commitments(
-        self, contact_router: BittensorPort, netuid: NetUid, hotkey: Hotkey | None = None
-    ) -> GetRevealedCommitmentsResponse:
-        block = await contact_router.get_latest_block()
-        commitments = await contact_router.get_revealed_commitments(netuid, block, hotkey=hotkey)
-        if commitments is None:
-            raise CommitmentNotFoundError()
-        return GetRevealedCommitmentsResponse(block=block, commitments=commitments)
 
     @staticmethod
     def _wrap_commitment(block: Block, commitment: CommitmentVariant) -> GetCommitmentResponse:

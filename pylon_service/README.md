@@ -52,7 +52,7 @@ services    |                 |           }
     |  /                      |
     | /                       |
     |/                        |
-wallet-bound BittensorContactRouter       - chosses between lite and archive contacts
+wallet-bound BittensorContactRouter       - chooses between lite and archive contacts
     |
     v
 contacts                                  - maintains a connection, reconnects and facilitates other necessary mechanisms

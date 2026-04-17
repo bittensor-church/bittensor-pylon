@@ -1,5 +1,5 @@
-from pylon_commons.models import CommitmentVariant
-from pylon_commons.types import CommitmentDataBytes, NetUid
+from pylon_commons.models import CommitmentVariant, RevealedCommitment, SubnetRevealedCommitments
+from pylon_commons.types import CommitmentDataBytes, Hotkey, NetUid, RevealedCommitmentData
 
 from pylon_service.bittensor.contact import BittensorPort
 from pylon_service.bittensor.models import Block, SubnetCommitments
@@ -24,7 +24,7 @@ class CommitmentService:
         return await self.get_commitments(contact_router, netuid, block)
 
     async def get_commitment(
-        self, contact_router: BittensorPort, netuid: NetUid, hotkey
+        self, contact_router: BittensorPort, netuid: NetUid, hotkey: Hotkey
     ) -> tuple[Block, CommitmentVariant]:
         block = await contact_router.get_latest_block()
         commitment = await contact_router.get_commitment(netuid, block, hotkey=hotkey)
@@ -43,3 +43,33 @@ class CommitmentService:
 
     async def set_commitment(self, contact_router: BittensorPort, netuid: NetUid, data: CommitmentDataBytes) -> None:
         await contact_router.set_commitment(netuid, data)
+
+    async def get_all_revealed_commitments(
+        self, contact_router: BittensorPort, netuid: NetUid
+    ) -> tuple[Block, SubnetRevealedCommitments]:
+        block = await contact_router.get_latest_block()
+        commitments = await contact_router.get_all_revealed_commitments(netuid, block)
+        return block, commitments
+
+    async def get_revealed_commitments(
+        self, contact_router: BittensorPort, netuid: NetUid, hotkey: Hotkey | None = None
+    ) -> tuple[Block, list[RevealedCommitment]]:
+        block = await contact_router.get_latest_block()
+        commitments = await contact_router.get_revealed_commitments(netuid, block, hotkey=hotkey)
+        if commitments is None:
+            raise CommitmentNotFoundError("Revealed commitments not found.")
+        return block, commitments
+
+    async def get_own_revealed_commitments(
+        self, contact_router: BittensorPort, netuid: NetUid
+    ) -> tuple[Block, list[RevealedCommitment]]:
+        block = await contact_router.get_latest_block()
+        commitments = await contact_router.get_revealed_commitments(netuid, block)
+        if commitments is None:
+            raise CommitmentNotFoundError("Revealed commitments not found.")
+        return block, commitments
+
+    async def set_revealed_commitment(
+        self, contact_router: BittensorPort, netuid: NetUid, commitment: RevealedCommitmentData, block_to_reveal: int
+    ) -> int:
+        return await contact_router.set_revealed_commitment(netuid, commitment, block_to_reveal)

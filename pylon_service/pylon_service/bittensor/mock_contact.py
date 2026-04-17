@@ -14,6 +14,7 @@ from pylon_commons.types import (
     CommitmentDataBytes,
     ExtrinsicIndex,
     Hotkey,
+    MechanismId,
     NetUid,
     NeuronUid,
     RevealedCommitmentData,
@@ -21,7 +22,6 @@ from pylon_commons.types import (
     Timestamp,
     Weight,
 )
-from turbobt.substrate.pallets.chain import SignedBlock
 
 from pylon_service.bittensor.contact import AbstractBittensorContact
 from pylon_service.bittensor.models import (
@@ -205,11 +205,13 @@ class MockBittensorContact(AbstractBittensorContact):
     async def get_subnet_state(self, netuid: NetUid, block: Block) -> SubnetState:
         return await self._execute_behavior("get_subnet_state", netuid, block)
 
-    async def commit_weights(self, netuid: NetUid, weights: dict[NeuronUid, Weight]) -> RevealRound:
-        return await self._execute_behavior("commit_weights", netuid, weights)
+    async def commit_weights(
+        self, netuid: NetUid, mechanism_id: MechanismId, weights: dict[NeuronUid, Weight]
+    ) -> RevealRound:
+        return await self._execute_behavior("commit_weights", netuid, mechanism_id, weights)
 
-    async def set_weights(self, netuid: NetUid, weights: dict[NeuronUid, Weight]) -> None:
-        return await self._execute_behavior("set_weights", netuid, weights)
+    async def set_weights(self, netuid: NetUid, mechanism_id: MechanismId, weights: dict[NeuronUid, Weight]) -> None:
+        return await self._execute_behavior("set_weights", netuid, mechanism_id, weights)
 
     async def get_neurons(self, netuid: NetUid, block: Block) -> SubnetNeurons:
         return await self._execute_behavior("get_neurons", netuid, block)
@@ -225,9 +227,6 @@ class MockBittensorContact(AbstractBittensorContact):
     async def set_commitment(self, netuid: NetUid, data: CommitmentDataBytes) -> None:
         return await self._execute_behavior("set_commitment", netuid, data)
 
-    async def get_signed_block(self, block: Block) -> SignedBlock | None:
-        return await self._execute_behavior("get_signed_block", block)
-
     async def get_extrinsic(self, block: Block, extrinsic_index: ExtrinsicIndex) -> Extrinsic | None:
         return await self._execute_behavior("get_extrinsic", block, extrinsic_index)
 
@@ -240,9 +239,9 @@ class MockBittensorContact(AbstractBittensorContact):
         return await self._execute_behavior("get_all_revealed_commitments", netuid, block)
 
     async def set_revealed_commitment(
-        self, netuid: NetUid, commitment: RevealedCommitmentData, block_to_reveal: int, block_time: int | float
+        self, netuid: NetUid, commitment: RevealedCommitmentData, block_to_reveal: int
     ) -> int:
-        return await self._execute_behavior("set_revealed_commitment", netuid, commitment, block_to_reveal, block_time)
+        return await self._execute_behavior("set_revealed_commitment", netuid, commitment, block_to_reveal)
 
     async def get_drand_last_stored_round(self, block: Block | None = None) -> int:
         return await self._execute_behavior("get_drand_last_stored_round", block)

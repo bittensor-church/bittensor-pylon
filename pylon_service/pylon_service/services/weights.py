@@ -1,7 +1,7 @@
 import logging
 
 from pylon_commons.models import CommitReveal
-from pylon_commons.types import Hotkey, NetUid, NeuronUid, Weight
+from pylon_commons.types import Hotkey, MechanismId, NetUid, NeuronUid, Weight
 
 from pylon_service.bittensor.contact import BittensorPort
 
@@ -35,7 +35,9 @@ class WeightsService:
             )
         return translated_weights
 
-    async def apply_weights(self, contact_router: BittensorPort, netuid: NetUid, weights: dict[Hotkey, Weight]) -> None:
+    async def apply_weights(
+        self, contact_router: BittensorPort, netuid: NetUid, mechanism_id: MechanismId, weights: dict[Hotkey, Weight]
+    ) -> None:
         latest_block = await contact_router.get_latest_block()
         hyperparams = await contact_router.get_hyperparams(netuid, latest_block)
         if hyperparams is None:
@@ -44,6 +46,6 @@ class WeightsService:
         translated_weights = await self._translate_weights(contact_router, netuid, weights)
         commit_reveal_enabled = hyperparams.commit_reveal_weights_enabled
         if commit_reveal_enabled and commit_reveal_enabled != CommitReveal.DISABLED:
-            await contact_router.commit_weights(netuid, translated_weights)
+            await contact_router.commit_weights(netuid, mechanism_id, translated_weights)
         else:
-            await contact_router.set_weights(netuid, translated_weights)
+            await contact_router.set_weights(netuid, mechanism_id, translated_weights)

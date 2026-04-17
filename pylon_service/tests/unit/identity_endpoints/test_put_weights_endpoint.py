@@ -5,7 +5,7 @@ Tests for the PUT /subnet/weights endpoint.
 import pytest
 from litestar.status_codes import HTTP_200_OK, HTTP_400_BAD_REQUEST, HTTP_404_NOT_FOUND
 from pylon_commons.models import Block, CommitReveal, SubnetHyperparams
-from pylon_commons.types import BlockHash, BlockNumber, NeuronUid, RevealRound
+from pylon_commons.types import BlockHash, BlockNumber, MechanismId, NeuronUid, RevealRound
 
 from pylon_service.api._unstable.tasks import ApplyWeights
 from tests.helpers import wait_for_background_tasks
@@ -57,6 +57,7 @@ async def test_put_weights_commit_reveal_enabled(identity_test_client_factory, m
         assert mock_client.calls["commit_weights"] == [
             (
                 1,
+                MechanismId(0),
                 {
                     NeuronUid(1): 0.5,
                     NeuronUid(2): 0.3,
@@ -110,6 +111,7 @@ async def test_put_weights_commit_reveal_disabled(identity_test_client_factory, 
         assert mock_client.calls["set_weights"] == [
             (
                 2,
+                MechanismId(0),
                 {
                     NeuronUid(1): 0.7,
                     NeuronUid(2): 0.3,
@@ -164,6 +166,7 @@ async def test_put_weights_retries_when_prepare_fails(
         assert mock_client.calls["set_weights"] == [
             (
                 1,
+                MechanismId(0),
                 {
                     NeuronUid(1): 0.5,
                     NeuronUid(2): 0.5,

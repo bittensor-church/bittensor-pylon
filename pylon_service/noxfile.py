@@ -37,16 +37,30 @@ def test_pact(session):
     session.run("pytest", "-s", "-vv", "tests/pact/", *session.posargs, env={"PYLON_ENV_FILE": "tests/.test-env"})
 
 
+@nox.session(name="test-integration-contact", python=PYTHON_VERSION)
+def test_integration_contact(session):
+    test_integration(session, suite_sufix="contact/")
+
+
+@nox.session(name="test-integration-contact-resilience", python=PYTHON_VERSION)
+def test_integration_contact_resilience(session):
+    test_integration(session, suite_sufix="contact_resilience/")
+
+
+@nox.session(name="test-integration-e2e", python=PYTHON_VERSION)
+def test_integration_e2e(session):
+    test_integration(session, suite_sufix="client_service_e2e/")
+
+
 @nox.session(name="test-integration", python=PYTHON_VERSION)
-def test_integration(session):
+def test_integration(session, suite_sufix: str = ""):
     session.run("uv", "sync", "--active", "--extra", "dev")
     session.run(
         "pytest",
         "-s",
         "-vv",
         "--log-cli-level=INFO",
-        # Disabling contact tests - revert back to whole integration module when tests are fixed.
-        "tests/integration/client_service_e2e/",
+        f"tests/integration/{suite_sufix}",
         *session.posargs,
         env={"PYLON_ENV_FILE": "tests/.test-env"},
         interrupt_timeout=10,
@@ -90,8 +104,8 @@ def release(session):
     session.run("git", "push", "origin", tag_name, external=True)
 
 
-@nox.session(name="prepare-localchain", python=PYTHON_VERSION, default=False)
-def prepare_localchain(session):
+@nox.session(name="prepare-e2e-localchain", python=PYTHON_VERSION, default=False)
+def prepare_e2e_localchain(session):
     """
     Prepare the local subtensor chain snapshot for integration tests.
 
@@ -108,9 +122,31 @@ def prepare_localchain(session):
         "--active",
         "python",
         "-m",
-        "tests.integration.localchain.prepare_chain",
+        "tests.integration.localchain.prepare_e2e_chain",
         interrupt_timeout=10,
         terminate_timeout=2,
+    )
+
+
+@nox.session(name="prepare-contact-localchain", python=PYTHON_VERSION, default=False)
+def prepare_contact_localchain(session):
+    """
+    Prepare the local subtensor chain snapshot for contact integration tests.
+
+    Creates a Docker image with pre-configured chain state (subnets, neurons, stake).
+    Run this once to create the snapshot, or when the chain state needs updating.
+
+    Usage:
+      nox -s prepare-contact-localchain
+    """
+    session.run("uv", "sync", "--active", "--extra", "dev")
+    session.run(
+        "uv",
+        "run",
+        "--active",
+        "python",
+        "-m",
+        "tests.integration.localchain.prepare_contact_chain",
     )
 
 

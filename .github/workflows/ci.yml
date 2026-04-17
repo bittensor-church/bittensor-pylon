@@ -165,8 +165,11 @@ jobs:
         with:
           python-version: '3.13'
 
-      - name: Prepare local chain
-        run: cd pylon_service && nox -s prepare-localchain
+      - name: Prepare local e2e chain
+        run: cd pylon_service && nox -s prepare-e2e-localchain
+
+      - name: Prepare local contact chain
+        run: cd pylon_service && nox -s prepare-contact-localchain
 
       - name: Run integration tests
         run: cd pylon_service && nox -s test-integration

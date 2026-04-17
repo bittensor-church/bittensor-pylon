@@ -10,13 +10,13 @@ from pylon_commons.types import (
     CommitmentDataBytes,
     ExtrinsicIndex,
     Hotkey,
+    MechanismId,
     NetUid,
     NeuronUid,
     RevealedCommitmentData,
     Weight,
 )
 from turbobt.substrate.exceptions import UnknownBlock
-from turbobt.substrate.pallets.chain import SignedBlock
 
 from pylon_service.bittensor.contact import AbstractBittensorContact
 from pylon_service.bittensor.exceptions import ArchiveFallbackException
@@ -189,18 +189,18 @@ class BittensorContactRouter:
             block=block,
         )
 
-    async def commit_weights(self, netuid: NetUid, weights: dict[NeuronUid, Weight]):
+    async def commit_weights(self, netuid: NetUid, mechanism_id: MechanismId, weights: dict[NeuronUid, Weight]):
         return await self._delegate(
             "commit_weights",
-            main_call=lambda: self._main_contact.commit_weights(netuid, weights),
-            archive_call=lambda: self._archive_contact.commit_weights(netuid, weights),
+            main_call=lambda: self._main_contact.commit_weights(netuid, mechanism_id, weights),
+            archive_call=lambda: self._archive_contact.commit_weights(netuid, mechanism_id, weights),
         )
 
-    async def set_weights(self, netuid: NetUid, weights: dict[NeuronUid, Weight]) -> None:
+    async def set_weights(self, netuid: NetUid, mechanism_id: MechanismId, weights: dict[NeuronUid, Weight]) -> None:
         return await self._delegate(
             "set_weights",
-            main_call=lambda: self._main_contact.set_weights(netuid, weights),
-            archive_call=lambda: self._archive_contact.set_weights(netuid, weights),
+            main_call=lambda: self._main_contact.set_weights(netuid, mechanism_id, weights),
+            archive_call=lambda: self._archive_contact.set_weights(netuid, mechanism_id, weights),
         )
 
     async def get_neurons(self, netuid: NetUid, block: Block) -> SubnetNeurons:
@@ -234,14 +234,6 @@ class BittensorContactRouter:
             archive_call=lambda: self._archive_contact.set_commitment(netuid, data),
         )
 
-    async def get_signed_block(self, block: Block) -> SignedBlock | None:
-        return await self._delegate(
-            "get_signed_block",
-            main_call=lambda: self._main_contact.get_signed_block(block),
-            archive_call=lambda: self._archive_contact.get_signed_block(block),
-            block=block,
-        )
-
     async def get_extrinsic(self, block: Block, extrinsic_index: ExtrinsicIndex) -> Extrinsic | None:
         return await self._delegate(
             "get_extrinsic",
@@ -269,16 +261,12 @@ class BittensorContactRouter:
         )
 
     async def set_revealed_commitment(
-        self, netuid: NetUid, commitment: RevealedCommitmentData, block_to_reveal: int, block_time: int | float
+        self, netuid: NetUid, commitment: RevealedCommitmentData, block_to_reveal: int
     ) -> int:
         return await self._delegate(
             "set_revealed_commitment",
-            main_call=lambda: self._main_contact.set_revealed_commitment(
-                netuid, commitment, block_to_reveal, block_time
-            ),
-            archive_call=lambda: self._archive_contact.set_revealed_commitment(
-                netuid, commitment, block_to_reveal, block_time
-            ),
+            main_call=lambda: self._main_contact.set_revealed_commitment(netuid, commitment, block_to_reveal),
+            archive_call=lambda: self._archive_contact.set_revealed_commitment(netuid, commitment, block_to_reveal),
         )
 
     async def get_drand_last_stored_round(self, block: Block | None = None) -> int:

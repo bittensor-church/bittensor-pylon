@@ -40,3 +40,6 @@ class DevAccount(enum.Enum):
     @property
     def hotkey_ss58(self) -> str:
         return self.wallet.hotkey.ss58_address
+
+
+SUDO_WALLET = DevAccount.ALICE.wallet

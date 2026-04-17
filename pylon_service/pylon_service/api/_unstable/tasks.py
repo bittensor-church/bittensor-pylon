@@ -5,7 +5,7 @@ from typing import ClassVar, TypeVar
 
 from prometheus_client import Histogram
 from pylon_commons.models import Block
-from pylon_commons.types import CommitmentDataBytes, Hotkey, NetUid, RevealedCommitmentData, Tempo, Weight
+from pylon_commons.types import CommitmentDataBytes, Hotkey, MechanismId, NetUid, RevealedCommitmentData, Tempo, Weight
 from tenacity import (
     AsyncRetrying,
     RetryCallState,
@@ -145,10 +145,12 @@ class ApplyWeights(
         client: BittensorPort,
         weights: dict[Hotkey, Weight],
         netuid: NetUid,
+        mechanism_id: MechanismId,
     ):
         self._client = client
         self._weights = weights
         self._netuid = netuid
+        self._mechanism_id = mechanism_id
         self._hotkey = client.hotkey
         self._start_block: Block | None = None
         self._initial_tempo: Epoch | None = None
@@ -191,7 +193,7 @@ class ApplyWeights(
     )
     async def _apply_weights(self, latest_block: Block) -> None:
         logger.info("Applying weights via weights service")
-        await weights_service.apply_weights(self._client, self._netuid, self._weights)
+        await weights_service.apply_weights(self._client, self._netuid, self._mechanism_id, self._weights)
 
 
 class SetCommitment(
@@ -250,14 +252,12 @@ class SetRevealedCommitment(
         client: BittensorPort,
         netuid: NetUid,
         commitment: RevealedCommitmentData,
-        blocks_to_reveal: int,
-        block_time: int | float,
+        blocks_until_reveal: int,
     ):
         self._client = client
         self._netuid = netuid
         self._commitment = commitment
-        self._blocks_to_reveal = blocks_to_reveal
-        self._block_time = block_time
+        self._blocks_until_reveal = blocks_until_reveal
 
     @property
     def _retry_attempts(self) -> int:
@@ -271,8 +271,8 @@ class SetRevealedCommitment(
         logger.info("Set revealed commitment attempt")
         return await asyncio.wait_for(
             asyncio.shield(
-                self._client.set_revealed_commitment(
-                    self._netuid, self._commitment, self._blocks_to_reveal, self._block_time
+                commitment_service.set_revealed_commitment(
+                    self._client, self._netuid, self._commitment, self._blocks_until_reveal
                 )
             ),
             timeout=120,

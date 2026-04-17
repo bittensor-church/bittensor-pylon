@@ -1,5 +1,5 @@
 """
-Local subtensor chain state preparation script.
+Local subtensor e2e tests chain state preparation script.
 
 Starts a fresh local subtensor chain in Docker, prepares
 the test state (wallets, subnets, neurons, stake), and
@@ -54,32 +54,27 @@ import tempfile
 from bittensor_wallet import Wallet
 
 from tests.integration.containers import LocalChainImage
+from tests.integration.localchain.common import LOW_TEMPO, log_step
 from tests.integration.localchain.dev_accounts import DevAccount
 from tests.integration.localchain.manager import LocalChainManager
 
 logger = logging.getLogger(__name__)
 
-SNAPSHOT_IMAGE = LocalChainImage.PREPARED
+SNAPSHOT_IMAGE = LocalChainImage.PREPARED_E2E
 
 VALIDATORS = [DevAccount.ALICE, DevAccount.BOB]
-NETUIDS = [1, 2]
+NETUIDS = [1, 2, 3]
 TRANSFER_AMOUNT_TAO = 100_000
-STAKE_AMOUNT_TAO = 10_000
-LOW_TEMPO_NETUID = 2
-LOW_TEMPO = 50
-DRAND_WORKER_MARGIN = 80  # Roughly after how many blocks after starting the chain drand rounds will start fetching
+STAKE_AMOUNT_TAO = 10
+LOW_TEMPO_NETUIDS = [2, 3]
+MECHANISMS_NETUID = 3
 
 MAX_NEURONS = 256
+FILLER_NEURONS_NETUIDS = [1, 2]
 FILLER_NEURON_COUNT = MAX_NEURONS - len(DevAccount) - 1  # 251 (UID 0 is a pre-existing node)
 FILLER_TRANSFER_AMOUNT_TAO = 500
 FILLER_REGISTRATION_BATCH_SIZE = 64
 FILLER_TRANSFER_BATCH_SIZE = 256
-
-
-def log_step(message: str) -> None:
-    print(f"\n{'=' * 40}")
-    print(f"  {message}")
-    print(f"{'=' * 40}\n")
 
 
 def create_filler_wallets(count: int, wallet_dir: str) -> list[Wallet]:
@@ -111,7 +106,7 @@ async def main() -> None:
         alice = DevAccount.ALICE
 
         log_step("Disabling admin freeze window")
-        await manager.disable_admin_freeze_window(sudo_wallet=alice.wallet)
+        await manager.disable_admin_freeze_window()
 
         log_step("Transferring TAO")
         for dev in [DevAccount.BOB, DevAccount.CHARLIE, DevAccount.DAVE]:
@@ -139,7 +134,7 @@ async def main() -> None:
         log_step("Enabling subtokens")
         for netuid in NETUIDS:
             logger.info("Enabling subtokens on subnet %d", netuid)
-            await manager.enable_subtokens(sudo_wallet=alice.wallet, netuid=netuid)
+            await manager.enable_subtokens(netuid=netuid)
 
         log_step("Staking TAO for validators")
         for netuid in NETUIDS:
@@ -152,20 +147,30 @@ async def main() -> None:
                     amount_tao=STAKE_AMOUNT_TAO,
                 )
 
-        log_step(f"Setting low tempo ({LOW_TEMPO}) on subnet {LOW_TEMPO_NETUID}")
-        await manager.set_tempo(sudo_wallet=alice.wallet, netuid=LOW_TEMPO_NETUID, tempo=LOW_TEMPO)
+        for netuid in LOW_TEMPO_NETUIDS:
+            log_step(f"Setting low tempo ({LOW_TEMPO}) on subnet {netuid}")
+            await manager.set_tempo(netuid=netuid, tempo=LOW_TEMPO)
+
+        await manager.setup_mechanisms(netuid=MECHANISMS_NETUID)
 
         log_step("Setting commitments")
         for dev in [DevAccount.CHARLIE, DevAccount.DAVE]:
             data = f"commitment-{dev.wallet_name}"
             logger.info("Setting commitment for %s: %r", dev.wallet_name, data)
             await manager.set_commitment(wallet=dev.wallet, netuid=1, data=data)
+        for dev in [DevAccount.ALICE, DevAccount.BOB]:
+            revealed_commitment = f"revealed-commitment-{dev.wallet_name}"
+            logger.info("Setting  revealed commitment for %s: %s", dev.wallet_name, revealed_commitment)
+            await manager.set_revealed_commitment(
+                wallet=dev.wallet, netuid=1, data=revealed_commitment, blocks_until_reveal=1
+            )
+        await manager.wait_for_commitment_reveal(netuid=1, expected_count=2)
 
         log_step("Tuning registration parameters for bulk registration")
-        for netuid in NETUIDS:
-            await manager.set_max_registrations_per_block(sudo_wallet=alice.wallet, netuid=netuid, max_regs=256)
-            await manager.set_target_registrations_per_interval(sudo_wallet=alice.wallet, netuid=netuid, target=256)
-            await manager.set_tx_rate_limit(sudo_wallet=alice.wallet, netuid=netuid, rate_limit=0)
+        for netuid in FILLER_NEURONS_NETUIDS:
+            await manager.set_max_registrations_per_block(netuid=netuid, max_regs=256)
+            await manager.set_target_registrations_per_interval(netuid=netuid, target=256)
+            await manager.set_tx_rate_limit(netuid=netuid, rate_limit=0)
 
         log_step(f"Creating {FILLER_NEURON_COUNT} filler wallets")
         with tempfile.TemporaryDirectory(prefix="filler-wallets-") as tmpdir:
@@ -180,7 +185,7 @@ async def main() -> None:
                 batch_size=FILLER_TRANSFER_BATCH_SIZE,
             )
 
-            for netuid in NETUIDS:
+            for netuid in FILLER_NEURONS_NETUIDS:
                 log_step(f"Registering {FILLER_NEURON_COUNT} filler neurons on subnet {netuid}")
                 await manager.register_neurons_concurrent(
                     wallets=filler_wallets,
@@ -190,10 +195,7 @@ async def main() -> None:
 
         # Phase 1 of drand workaround — see localchain/README.md#drand-workaround
         log_step("Setting Drand.NextUnsignedAt")
-        current_block = await manager.get_current_block_number()
-        await manager.set_drand_next_unsigned_at(
-            sudo_wallet=alice.wallet, block_number=current_block + DRAND_WORKER_MARGIN
-        )
+        await manager.offset_drand_next_unsigned_at()
 
         log_step("Creating Docker snapshot")
         manager.make_snapshot(image_name=SNAPSHOT_IMAGE)
@@ -201,7 +203,7 @@ async def main() -> None:
         log_step("Done")
         logger.info("Snapshot image: %s", SNAPSHOT_IMAGE)
         logger.info("To run manually:")
-        logger.info("  docker run --rm -p 9944:9944 %s", SNAPSHOT_IMAGE)
+        logger.info("  docker run --rm -p 9944:9944 %s True --no-purge", SNAPSHOT_IMAGE)
 
 
 if __name__ == "__main__":
