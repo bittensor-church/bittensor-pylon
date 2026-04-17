@@ -422,6 +422,26 @@ class LocalChainManager:
             )
             await result.wait_for_finalization()
 
+    async def remove_stake(self, wallet: Wallet, netuid: int, hotkey_ss58: str, amount_tao: int) -> None:
+        """
+        Remove staked TAO for a hotkey on a subnet.
+
+        Args:
+            wallet: Wallet to unstake from.
+            netuid: Subnet UID to unstake on.
+            hotkey_ss58: SS58 address of the hotkey to unstake for.
+            amount_tao: Amount to unstake in TAO.
+        """
+        logger.info("Unstaking %d TAO for hotkey %s on subnet %d", amount_tao, hotkey_ss58, netuid)
+        async with self._turbobt_client(wallet=wallet) as client:
+            result = await client.subtensor.subtensor_module.remove_stake(
+                hotkey=hotkey_ss58,
+                netuid=netuid,
+                amount_unstaked=amount_tao * _RAO_PER_TAO,
+                wallet=wallet,
+            )
+            await result.wait_for_finalization()
+
     async def set_commitment(self, wallet: Wallet, netuid: int, data: str) -> None:
         """
         Set a commitment for a hotkey on a subnet.

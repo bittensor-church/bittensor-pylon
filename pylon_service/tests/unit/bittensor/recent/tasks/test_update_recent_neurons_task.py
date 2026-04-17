@@ -1,7 +1,9 @@
 import pytest
+import time_machine
 from pylon_commons.models import SubnetNeurons
 from pylon_commons.types import NetUid, Timestamp
 
+from pylon_service.bittensor.exceptions import SubnetStateUnavailable
 from pylon_service.bittensor.recent import SubnetContext, UpdateRecentNeurons
 from pylon_service.bittensor.recent.adapter import CacheKey, _CacheEntry
 
@@ -24,20 +26,43 @@ async def test_execute(
     neurons = SubnetNeurons(block=block, neurons={neuron.hotkey: neuron for neuron in neuron_factory.batch(2)})
     context = SubnetContext(NetUid(1))
 
+    with time_machine.travel(123_123_123):
+        async with mock_bt_client_factory() as mock_client:
+            async with (
+                mock_client.mock_behavior(
+                    get_latest_block=[block],
+                    get_neurons=[neurons],
+                ),
+                mock_recent_objects_store.behave.mock(set=[None]),
+            ):
+                await update_task.execute(context)
+
+            data = _CacheEntry(data=neurons.model_dump_json(), timestamp=timestamp).model_dump_json()
+
+            assert mock_client.calls["get_latest_block"] == [(), ()]
+            assert mock_client.calls["get_neurons"] == [(NetUid(1), block)]
+            assert mock_recent_objects_store.behave.calls["set"] == [
+                (CacheKey(SubnetNeurons, NetUid(1), None), data, None)
+            ]
+
+
+@pytest.mark.asyncio
+async def test_execute_skips_when_subnet_state_is_missing(
+    mock_recent_objects_store,
+    mock_bt_client_factory,
+    update_task,
+    block_factory,
+):
+    block = block_factory.build()
+    context = SubnetContext(NetUid(11))
+
     async with mock_bt_client_factory() as mock_client:
-        async with (
-            mock_client.mock_behavior(
-                get_latest_block=[block],
-                get_block_timestamp=[timestamp],
-                get_neurons=[neurons],
-            ),
-            mock_recent_objects_store.behave.mock(set=[None]),
+        async with mock_client.mock_behavior(
+            get_latest_block=[block],
+            get_neurons=[SubnetStateUnavailable(f"Subnet state not available for netuid=11 at block={block.number}")],
         ):
             await update_task.execute(context)
 
-        data = _CacheEntry(data=neurons.model_dump_json(), timestamp=timestamp).model_dump_json()
-
-        assert mock_client.calls["get_latest_block"] == [(), (), ()]
-        assert mock_client.calls["get_block_timestamp"] == [(block,)]
-        assert mock_client.calls["get_neurons"] == [(NetUid(1), block)]
-        assert mock_recent_objects_store.behave.calls["set"] == [(CacheKey(SubnetNeurons, NetUid(1), None), data, None)]
+        assert mock_client.calls["get_latest_block"] == [(), ()]
+        assert mock_client.calls["get_neurons"] == [(NetUid(11), block)]
+        assert "set" not in mock_recent_objects_store.behave.calls

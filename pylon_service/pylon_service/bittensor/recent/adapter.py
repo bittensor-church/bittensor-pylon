@@ -1,3 +1,4 @@
+import datetime as dt
 import logging
 from typing import Self
 
@@ -24,10 +25,15 @@ class CacheKey[ModelT: BittensorModel](str):
 class _CacheEntry(BaseModel):
     """
     This class is internal to this module. It is used to serialize/deserialize cache entries via pydantic.
+    The timestamp tracks when the cache entry was written, using wall-clock time.
     """
 
     data: str
     timestamp: Timestamp
+
+
+def _current_timestamp() -> Timestamp:
+    return Timestamp(int(dt.datetime.now(dt.UTC).timestamp()))
 
 
 class RecentCacheAdapter[ModelT: BittensorModel]:
@@ -55,15 +61,14 @@ class RecentCacheAdapter[ModelT: BittensorModel]:
         self._model = model
         self._store = store
 
-    async def save(self, timestamp: Timestamp, object_: ModelT) -> None:
+    async def save(self, object_: ModelT) -> None:
         """
         Saves a cache entry in the wrapped store.
         Args:
-            timestamp: timestamp of the block this data is associated with.
             object_: The object to be cached.
         """
         data = object_.model_dump_json()
-        entry = _CacheEntry(data=data, timestamp=timestamp).model_dump_json()
+        entry = _CacheEntry(data=data, timestamp=_current_timestamp()).model_dump_json()
         await self._store.set(self._key, entry)
 
     async def get(self) -> tuple[Timestamp, ModelT] | None:

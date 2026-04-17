@@ -4,10 +4,10 @@ from abc import ABC, abstractmethod
 
 from litestar.stores.base import Store
 from pylon_commons.models import BittensorModel, SubnetNeurons
-from pylon_commons.types import Timestamp
 from tenacity import AsyncRetrying, stop_before_delay, wait_exponential
 
 from pylon_service.bittensor.contact import BittensorPort
+from pylon_service.bittensor.exceptions import SubnetStateUnavailable
 from pylon_service.bittensor.pool import BittensorContactPool
 from pylon_service.services.neurons import NeuronService
 
@@ -16,6 +16,10 @@ from .context import AbstractContext, SubnetContext
 
 logger = logging.getLogger(__name__)
 neuron_service = NeuronService()
+
+
+class _SkipRecentObjectUpdate(Exception):
+    """Raised when a recent-object update should be skipped without retrying this run."""
 
 
 class UpdateRecentObject[ModelT: BittensorModel, ContextT: AbstractContext](ABC):
@@ -33,20 +37,28 @@ class UpdateRecentObject[ModelT: BittensorModel, ContextT: AbstractContext](ABC)
         pass
 
     @abstractmethod
-    async def _get_object(self, context: ContextT, client: BittensorPort) -> tuple[Timestamp, ModelT]:
+    async def _get_object(self, context: ContextT, client: BittensorPort) -> ModelT:
         pass
 
     async def execute(self, context: ContextT) -> None:
         async with self._pool.acquire(wallet=context.wallet) as client:
             try:
-                timestamp, object_ = await self._get_object(context, client)
+                object_ = await self._get_object(context, client)
+            except _SkipRecentObjectUpdate as exc:
+                logger.warning(
+                    "Skipping recent object update. context: %s, object: %s, reason: %s",
+                    context,
+                    self._model.__name__,
+                    exc,
+                )
+                return
             except Exception as e:
                 logger.exception(f"Failed to fetch recent object. object={self._model.__name__}, error: {e}")
                 raise
 
         cache_key = context.build_key(self._model)
         cache_adapter = RecentCacheAdapter(cache_key, self._store, self._model)
-        await cache_adapter.save(timestamp, object_)
+        await cache_adapter.save(object_)
 
         logger.info(f"Updated recent object. context: {context}, object: {self._model.__name__}")
 
@@ -64,10 +76,15 @@ class UpdateRecentNeurons(UpdateRecentObject[SubnetNeurons, SubnetContext]):
         self,
         context: SubnetContext,
         client: BittensorPort,
-    ) -> tuple[Timestamp, SubnetNeurons]:
-        neurons = await neuron_service.get_latest_neurons(client, context.netuid)
-        timestamp = await client.get_block_timestamp(neurons.block)
-        return timestamp, neurons
+    ) -> SubnetNeurons:
+        block = await client.get_latest_block()
+        try:
+            return await neuron_service.get_neurons(client, context.netuid, block)
+        except SubnetStateUnavailable as exc:
+            raise _SkipRecentObjectUpdate(
+                f"subnet state is unavailable for netuid {context.netuid} at block {block.number}; "
+                "the subnet may not exist yet"
+            ) from exc
 
 
 class RecentObjectUpdateTaskExecutor:

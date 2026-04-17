@@ -1,4 +1,5 @@
 import pytest
+import time_machine
 from litestar.stores.base import Store
 from pylon_commons.models import BittensorModel
 from pylon_commons.types import NetUid, Timestamp
@@ -27,7 +28,7 @@ class Task(UpdateRecentObject[AnObjectModel, SubnetContext]):
     def _model(self) -> type[AnObjectModel]:
         return AnObjectModel
 
-    async def _get_object(self, context: SubnetContext, client: BittensorPort) -> tuple[Timestamp, AnObjectModel]:
+    async def _get_object(self, context: SubnetContext, client: BittensorPort) -> AnObjectModel:
         self.behave.track("_get_object", context, client)
         return await self.behave.execute("_get_object", context, client)
 
@@ -70,19 +71,23 @@ async def test_executor_success_after_attempt(
     context,
 ):
     object_ = AnObjectModel(field_1="foo", field_2=123)
+    timestamp = Timestamp(123123123)
 
-    async with mock_bt_client_factory() as mock_client:
-        async with (
-            update_task.behave.mock(_get_object=[Exception("error"), (Timestamp(123123123), object_)]),
-            mock_recent_objects_store.behave.mock(set=[None]),
-        ):
-            await executor.run()
+    with time_machine.travel(123_123_123):
+        async with mock_bt_client_factory() as mock_client:
+            async with (
+                update_task.behave.mock(_get_object=[Exception("error"), object_]),
+                mock_recent_objects_store.behave.mock(set=[None]),
+            ):
+                await executor.run()
 
-        data = _CacheEntry(data=object_.model_dump_json(), timestamp=Timestamp(123123123)).model_dump_json()
+            data = _CacheEntry(data=object_.model_dump_json(), timestamp=timestamp).model_dump_json()
 
-        calls = update_task.behave.calls["_get_object"]
-        assert len(calls) == 2
-        assert [call[0] for call in calls] == [context] * 2
-        assert all(isinstance(call[1], BittensorContactRouter) for call in calls)
-        assert all(call[1]._main_contact is mock_client for call in calls)
-        assert mock_recent_objects_store.behave.calls["set"] == [(CacheKey(AnObjectModel, NetUid(1), None), data, None)]
+            calls = update_task.behave.calls["_get_object"]
+            assert len(calls) == 2
+            assert [call[0] for call in calls] == [context] * 2
+            assert all(isinstance(call[1], BittensorContactRouter) for call in calls)
+            assert all(call[1]._main_contact is mock_client for call in calls)
+            assert mock_recent_objects_store.behave.calls["set"] == [
+                (CacheKey(AnObjectModel, NetUid(1), None), data, None)
+            ]

@@ -1,4 +1,5 @@
 import pytest
+import time_machine
 from litestar.stores.base import Store
 from pylon_commons.models import BittensorModel
 from pylon_commons.types import NetUid, Timestamp
@@ -24,8 +25,8 @@ class Task(UpdateRecentObject[AnObjectModel, SubnetContext]):
     def _model(self) -> type[AnObjectModel]:
         return AnObjectModel
 
-    async def _get_object(self, context: SubnetContext, client: BittensorPort) -> tuple[Timestamp, AnObjectModel]:
-        return Timestamp(123123123), self._object
+    async def _get_object(self, context: SubnetContext, client: BittensorPort) -> AnObjectModel:
+        return self._object
 
     @classmethod
     def contexts(cls) -> list[SubnetContext]:
@@ -45,8 +46,10 @@ def update_task(mock_recent_objects_store, mock_bt_contact_pool, object_) -> Tas
 @pytest.mark.asyncio
 async def test_execute(mock_recent_objects_store, update_task, object_):
     context = SubnetContext(NetUid(1))
-    async with mock_recent_objects_store.behave.mock(set=[None]):
-        await update_task.execute(context)
+    timestamp = Timestamp(123123123)
+    with time_machine.travel(123_123_123):
+        async with mock_recent_objects_store.behave.mock(set=[None]):
+            await update_task.execute(context)
 
-    data = _CacheEntry(data=object_.model_dump_json(), timestamp=Timestamp(123123123)).model_dump_json()
+    data = _CacheEntry(data=object_.model_dump_json(), timestamp=timestamp).model_dump_json()
     assert mock_recent_objects_store.behave.calls["set"] == [(CacheKey(AnObjectModel, NetUid(1), None), data, None)]

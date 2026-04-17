@@ -27,3 +27,9 @@ class ArchiveFallbackException(BittensorException):
     """
     Raised when block data is unavailable after archive node fallback.
     """
+
+
+class SubnetStateUnavailable(BittensorException):
+    """
+    Raised when subnet state is not available for a given netuid and block.
+    """

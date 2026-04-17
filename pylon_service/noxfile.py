@@ -45,7 +45,7 @@ def test_integration(session):
         "-s",
         "-vv",
         "--log-cli-level=INFO",
-        "tests/integration/",
+        "tests/integration/client_service_e2e/",
         *session.posargs,
         env={"PYLON_ENV_FILE": "tests/.test-env"},
     )

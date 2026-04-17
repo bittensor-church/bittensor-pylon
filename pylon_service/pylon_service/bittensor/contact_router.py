@@ -181,7 +181,7 @@ class BittensorContactRouter:
             archive_call=lambda: self._archive_contact.generate_certificate_keypair(netuid, algorithm),
         )
 
-    async def get_subnet_state(self, netuid: NetUid, block: Block) -> SubnetState:
+    async def get_subnet_state(self, netuid: NetUid, block: Block) -> SubnetState | None:
         return await self._delegate(
             "get_subnet_state",
             main_call=lambda: self._main_contact.get_subnet_state(netuid, block),
