@@ -105,6 +105,15 @@ class PylonBadGateway(PylonResponseException):
     default_status_code: ClassVar[int | None] = 502
 
 
+class PylonNetuidMismatch(PylonResponseException):
+    """
+    Error raised when the server returns 308 indicating the netuid in the URL doesn't match the identity's configured netuid.
+    """
+
+    default_message: ClassVar[str] = "Netuid mismatch"
+    default_status_code: ClassVar[int | None] = 308
+
+
 class PylonClosed(BasePylonException):
     """
     Error raised when attempting to use a client that has not been opened.

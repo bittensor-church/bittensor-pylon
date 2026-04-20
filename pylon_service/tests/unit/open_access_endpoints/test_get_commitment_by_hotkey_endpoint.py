@@ -8,8 +8,7 @@ from litestar.testing import AsyncTestClient
 from pylon_commons.models import Block
 from pylon_commons.types import BlockHash, BlockNumber
 
-from pylon_service.bittensor.mock_contact import MockBittensorContact
-from tests.world import COMMITMENTS_ALL_NETUID, COMMITMENTS_TIMELOCK_ONLY_NETUID
+from tests.world import COMMITMENTS_ALL_NETUID
 
 
 @pytest.mark.asyncio
@@ -24,27 +23,16 @@ async def test_v1_open_access_get_commitment_by_hotkey_returns_v1_commitment_sha
 
 @pytest.mark.asyncio
 async def test_get_commitment_open_access_not_found(
-    test_client: AsyncTestClient, open_access_mock_bt_client: MockBittensorContact, snapshot_json
+    test_client: AsyncTestClient, mock_bt_client_factory, snapshot_json
 ):
     """
     Test getting a commitment that doesn't exist.
     """
-    async with open_access_mock_bt_client.mock_behavior(
-        get_latest_block=[Block(number=BlockNumber(1000), hash=BlockHash("0xabc123"))],
-        get_commitment=[None],
-    ):
-        response = await test_client.get("/api/v1/subnet/1/block/latest/commitments/hotkey1")
-    assert response.status_code == HTTP_404_NOT_FOUND
-    assert response.json() == snapshot_json
-
-
-@pytest.mark.asyncio
-async def test_v1_open_access_get_commitment_by_hotkey_returns_404_for_timelock_commitment(
-    test_client: AsyncTestClient, snapshot_json
-):
-    response = await test_client.get(
-        f"/api/v1/subnet/{COMMITMENTS_TIMELOCK_ONLY_NETUID}/block/latest/commitments/hotkey2"
-    )
-
-    assert response.status_code == HTTP_404_NOT_FOUND
-    assert response.json() == snapshot_json
+    async with mock_bt_client_factory() as mock_client:
+        async with mock_client.mock_behavior(
+            get_latest_block=[Block(number=BlockNumber(1000), hash=BlockHash("0xabc123"))],
+            get_commitment=[None],
+        ):
+            response = await test_client.get("/api/v1/subnet/1/block/latest/commitments/hotkey1")
+        assert response.status_code == HTTP_404_NOT_FOUND
+        assert response.json() == snapshot_json

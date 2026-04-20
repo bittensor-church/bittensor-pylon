@@ -6,15 +6,15 @@ The Verifier replays interactions from pact files against the actual running ser
 """
 
 from pact import Verifier
+from pylon_commons.types import IdentityName
 
 from tests.pact.state_handlers import StateHandler
+from tests.world import SharedWorld
 
 
 def test_provider_honors_pact_with_pylon_client(
     provider_server,
-    open_access_mock_bt_client,
-    sn1_mock_bt_client,
-    sn2_mock_bt_client,
+    shared_world: SharedWorld,
     pacts_dir,
     provider_url,
     mock_stores,
@@ -36,7 +36,11 @@ def test_provider_honors_pact_with_pylon_client(
         .add_transport(url=provider_url)
         .state_handler(
             StateHandler.create_all(
-                open_access_mock_bt_client, sn1_mock_bt_client, sn2_mock_bt_client, mock_stores, monkeypatch
+                shared_world.open_access.main,
+                shared_world.identity_contacts[IdentityName("sn1")].main,
+                shared_world.identity_contacts[IdentityName("sn2")].main,
+                mock_stores,
+                monkeypatch,
             ),
             teardown=True,
         )

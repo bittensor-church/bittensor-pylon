@@ -1,6 +1,6 @@
 from pydantic import BaseModel, field_serializer, field_validator
 
-from ..types import CommitmentDataBytes, CommitmentDataHex, Hotkey, PylonAuthToken, RevealedCommitmentData, Weight
+from ..types import CommitmentDataBytes, CommitmentDataHex, Hotkey, RevealedCommitmentData, Weight
 
 
 class PylonBody(BaseModel):
@@ -9,14 +9,6 @@ class PylonBody(BaseModel):
     PylonBody is used in the service to parse the incoming data.
     It is also used in the client as a base for the requests made to the endpoints that require that pylon body.
     """
-
-
-class LoginBody(PylonBody):
-    """
-    Class used to log in to the API.
-    """
-
-    token: PylonAuthToken
 
 
 class SetWeightsBody(PylonBody):

@@ -8,45 +8,45 @@ from litestar.testing import AsyncTestClient
 from pylon_commons.models import Block, Extrinsic, ExtrinsicCall
 from pylon_commons.types import BlockHash, BlockNumber, ExtrinsicHash, ExtrinsicIndex, ExtrinsicLength
 
-from pylon_service.bittensor.mock_contact import MockBittensorContact
-
 
 @pytest.mark.asyncio
 async def test_get_extrinsic_not_found(
     test_client: AsyncTestClient,
-    open_access_mock_bt_client: MockBittensorContact,
+    mock_bt_client_factory,
     snapshot_json,
 ):
     """
     Test that non-existent extrinsic returns 404.
     """
     block = Block(number=BlockNumber(999), hash=BlockHash("0xblock999"))
-    async with open_access_mock_bt_client.mock_behavior(
-        get_block=[block],
-        get_extrinsic=[None],
-    ):
-        response = await test_client.get("/api/v1/block/999/extrinsic/99")
+    async with mock_bt_client_factory() as mock_client:
+        async with mock_client.mock_behavior(
+            get_block=[block],
+            get_extrinsic=[None],
+        ):
+            response = await test_client.get("/api/v1/block/999/extrinsic/99")
 
-        assert response.status_code == HTTP_404_NOT_FOUND, response.content
-        assert response.json() == snapshot_json
+            assert response.status_code == HTTP_404_NOT_FOUND, response.content
+            assert response.json() == snapshot_json
 
 
 @pytest.mark.asyncio
 async def test_get_extrinsic_block_not_found(
     test_client: AsyncTestClient,
-    open_access_mock_bt_client: MockBittensorContact,
+    mock_bt_client_factory,
     snapshot_json,
 ):
     """
     Test that non-existent block returns 404.
     """
-    async with open_access_mock_bt_client.mock_behavior(
-        get_block=[None],
-    ):
-        response = await test_client.get("/api/v1/block/999999999/extrinsic/0")
+    async with mock_bt_client_factory() as mock_client:
+        async with mock_client.mock_behavior(
+            get_block=[None],
+        ):
+            response = await test_client.get("/api/v1/block/999999999/extrinsic/0")
 
-        assert response.status_code == HTTP_404_NOT_FOUND, response.content
-        assert response.json() == snapshot_json
+            assert response.status_code == HTTP_404_NOT_FOUND, response.content
+            assert response.json() == snapshot_json
 
 
 @pytest.mark.asyncio
@@ -98,7 +98,7 @@ async def test_get_extrinsic_invalid_extrinsic_index_type(
 @pytest.mark.asyncio
 async def test_get_extrinsic_different_indices(
     test_client: AsyncTestClient,
-    open_access_mock_bt_client: MockBittensorContact,
+    mock_bt_client_factory,
     snapshot_json,
 ):
     """
@@ -122,15 +122,16 @@ async def test_get_extrinsic_different_indices(
         call=ExtrinsicCall(call_module="Balances", call_function="transfer", call_args=[]),
     )
 
-    async with open_access_mock_bt_client.mock_behavior(
-        get_block=[block, block],
-        get_extrinsic=[extrinsic_0, extrinsic_1],
-    ):
-        response_0 = await test_client.get("/api/v1/block/100/extrinsic/0")
-        response_1 = await test_client.get("/api/v1/block/100/extrinsic/1")
+    async with mock_bt_client_factory() as mock_client:
+        async with mock_client.mock_behavior(
+            get_block=[block, block],
+            get_extrinsic=[extrinsic_0, extrinsic_1],
+        ):
+            response_0 = await test_client.get("/api/v1/block/100/extrinsic/0")
+            response_1 = await test_client.get("/api/v1/block/100/extrinsic/1")
 
-        assert response_0.status_code == HTTP_200_OK
-        assert response_0.json() == snapshot_json
+            assert response_0.status_code == HTTP_200_OK
+            assert response_0.json() == snapshot_json
 
-        assert response_1.status_code == HTTP_200_OK
-        assert response_1.json() == snapshot_json
+            assert response_1.status_code == HTTP_200_OK
+            assert response_1.json() == snapshot_json

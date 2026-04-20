@@ -2,7 +2,7 @@ import asyncio
 from abc import ABC, abstractmethod
 from collections.abc import Awaitable, Callable
 from functools import partial
-from typing import Generic, NewType, TypeVar
+from typing import TypeVar
 
 from pylon_client._internal.client.asynchronous.communicators import AbstractAsyncCommunicator
 from pylon_client._internal.pylon_commons._unstable.requests import (
@@ -35,7 +35,6 @@ from pylon_client._internal.pylon_commons._unstable.responses import (
     GetNeuronsResponse,
     GetRevealedCommitmentsResponse,
     GetValidatorsResponse,
-    LoginResponse,
     PylonResponse,
     SetCommitmentResponse,
     SetRevealedCommitmentResponse,
@@ -44,8 +43,7 @@ from pylon_client._internal.pylon_commons._unstable.responses import (
 from pylon_client._internal.pylon_commons.apiver import ApiVersion
 from pylon_client._internal.pylon_commons.exceptions import (
     PylonClosed,
-    PylonForbidden,
-    PylonUnauthorized,
+    PylonNetuidMismatch,
 )
 from pylon_client._internal.pylon_commons.types import (
     BlockNumber,
@@ -53,37 +51,24 @@ from pylon_client._internal.pylon_commons.types import (
     CommitmentDataHex,
     ExtrinsicIndex,
     Hotkey,
+    IdentityName,
     NetUid,
     Weight,
 )
 
 ResponseT = TypeVar("ResponseT", bound=PylonResponse)
-LoginResponseT = TypeVar("LoginResponseT", bound=LoginResponse)
-LoginGeneration = NewType("LoginGeneration", int)
-ALWAYS_FRESH_GENERATION = LoginGeneration(-1)
 
 
-class AbstractAsyncApi(Generic[LoginResponseT], ABC):
+class AbstractAsyncApi(ABC):
     """
     Class that represents the API available in the service.
     It provides the set of methods to query the service endpoints in a simple way.
-    The class takes care of authentication and re-authentication.
     """
 
     api_version: ApiVersion
 
     def __init__(self, communicator: AbstractAsyncCommunicator):
         self._communicator = communicator
-        self._login_response: LoginResponseT | None = None
-        self._login_lock = asyncio.Lock()
-        self._login_generation: LoginGeneration = LoginGeneration(0)
-
-    @abstractmethod
-    async def _login(self) -> LoginResponseT:
-        """
-        This method should call the login endpoint and return the proper LoginResponse subclass instance, so that
-        the other methods may use the data returned from the login endpoint.
-        """
 
     async def _send_request(self, request: PylonRequest[ResponseT]) -> ResponseT:
         """
@@ -97,46 +82,13 @@ class AbstractAsyncApi(Generic[LoginResponseT], ABC):
         request.api_version = self.api_version
         return await self._communicator.request(request)
 
-    async def _authenticated_request(
-        self,
-        request_factory: Callable[[], Awaitable[PylonRequest[ResponseT]]],
-        stale_generation: LoginGeneration = ALWAYS_FRESH_GENERATION,
-    ) -> tuple[PylonRequest[ResponseT], LoginGeneration]:
-        """
-        Makes the PylonRequest instance by calling the factory method, first making sure that the login data is
-        available for the factory method to prepare the request.
-        """
-        async with self._login_lock:
-            if self._login_response is None or stale_generation == self._login_generation:
-                self._login_response = await self._login()
-                self._login_generation = LoginGeneration(self._login_generation + 1)
-            return await request_factory(), self._login_generation
 
-    async def _send_authenticated_request(
-        self, request_factory: Callable[[], Awaitable[PylonRequest[ResponseT]]]
-    ) -> ResponseT:
-        """
-        Performs the request, first authenticating if needed.
-        Re-authenticates if Pylon returns Unauthorized or Forbidden errors for the cases like session expiration
-        or server restarted with different configuration.
-        """
-        request, login_generation = await self._authenticated_request(request_factory)
-        try:
-            return await self._send_request(request)
-        except (PylonUnauthorized, PylonForbidden):
-            # Retry the request after generating new login data. Login will not be performed if reauthentication was
-            # performed by another task.
-            request, _ = await self._authenticated_request(request_factory, stale_generation=login_generation)
-            return await self._send_request(request)
-
-
-class AbstractAsyncOpenAccessApi(AbstractAsyncApi[LoginResponseT], ABC):
+class AbstractAsyncOpenAccessApi(AbstractAsyncApi, ABC):
     """
     Open access API for querying Bittensor subnet data via Pylon service without identity authentication.
 
     This API provides read-only access to the chain data across any subnet.
     Requests require an open access token configured in the client.
-    The API handles authentication to Pylon service automatically and caches credentials for subsequent requests.
 
     All methods in this API may raise the following exceptions:
         PylonClosed: When the api method is called and the communicator is closed.
@@ -159,7 +111,7 @@ class AbstractAsyncOpenAccessApi(AbstractAsyncApi[LoginResponseT], ABC):
         Returns:
             GetNeuronsResponse: containing the block information and a dictionary mapping hotkeys to Neuron objects.
         """
-        return await self._send_authenticated_request(partial(self._get_neurons_request, netuid, block_number))
+        return await self._send_request(await self._get_neurons_request(netuid, block_number))
 
     async def get_latest_neurons(self, netuid: NetUid) -> GetNeuronsResponse:
         """
@@ -172,7 +124,7 @@ class AbstractAsyncOpenAccessApi(AbstractAsyncApi[LoginResponseT], ABC):
             GetNeuronsResponse: containing the latest block information and a dictionary mapping hotkeys to
             Neuron objects.
         """
-        return await self._send_authenticated_request(partial(self._get_latest_neurons_request, netuid))
+        return await self._send_request(await self._get_latest_neurons_request(netuid))
 
     async def get_recent_neurons(self, netuid: NetUid) -> GetNeuronsResponse:
         """
@@ -195,7 +147,7 @@ class AbstractAsyncOpenAccessApi(AbstractAsyncApi[LoginResponseT], ABC):
                 - The requested subnet is not of one of the configured identities or is not configured
                   for caching recent data via `PYLON_RECENT_OBJECTS_NETUIDS` config variable.
         """
-        return await self._send_authenticated_request(partial(self._get_recent_neurons_request, netuid))
+        return await self._send_request(await self._get_recent_neurons_request(netuid))
 
     async def get_commitments(self, netuid: NetUid) -> GetCommitmentsResponse:
         """
@@ -207,7 +159,7 @@ class AbstractAsyncOpenAccessApi(AbstractAsyncApi[LoginResponseT], ABC):
         Returns:
             GetCommitmentsResponse: containing data mapping hotkeys to commitments.
         """
-        return await self._send_authenticated_request(partial(self._get_commitments_request, netuid))
+        return await self._send_request(await self._get_commitments_request(netuid))
 
     async def get_all_revealed_commitments(self, netuid: NetUid) -> GetAllRevealedCommitmentsResponse:
         """
@@ -219,7 +171,7 @@ class AbstractAsyncOpenAccessApi(AbstractAsyncApi[LoginResponseT], ABC):
         Returns:
             GetAllRevealedCommitmentsResponse: containing data mapping hotkeys to revealed commitment lists.
         """
-        return await self._send_authenticated_request(partial(self._get_all_revealed_commitments_request, netuid))
+        return await self._send_request(await self._get_all_revealed_commitments_request(netuid))
 
     async def get_commitment(self, netuid: NetUid, hotkey: Hotkey) -> GetCommitmentResponse:
         """
@@ -235,7 +187,7 @@ class AbstractAsyncOpenAccessApi(AbstractAsyncApi[LoginResponseT], ABC):
         Throws:
             PylonNotFound: If a commitment could not be found.
         """
-        return await self._send_authenticated_request(partial(self._get_commitment_request, netuid, hotkey))
+        return await self._send_request(await self._get_commitment_request(netuid, hotkey))
 
     async def get_revealed_commitments(self, netuid: NetUid, hotkey: Hotkey) -> GetRevealedCommitmentsResponse:
         """
@@ -251,7 +203,7 @@ class AbstractAsyncOpenAccessApi(AbstractAsyncApi[LoginResponseT], ABC):
         Throws:
             PylonNotFound: If no commitments could be found.
         """
-        return await self._send_authenticated_request(partial(self._get_revealed_commitments_request, netuid, hotkey))
+        return await self._send_request(await self._get_revealed_commitments_request(netuid, hotkey))
 
     async def get_validators(self, netuid: NetUid, block_number: BlockNumber) -> GetValidatorsResponse:
         """
@@ -266,7 +218,7 @@ class AbstractAsyncOpenAccessApi(AbstractAsyncApi[LoginResponseT], ABC):
         Returns:
             GetValidatorsResponse: containing the block information and a list of validator Neuron objects.
         """
-        return await self._send_authenticated_request(partial(self._get_validators_request, netuid, block_number))
+        return await self._send_request(await self._get_validators_request(netuid, block_number))
 
     async def get_latest_validators(self, netuid: NetUid) -> GetValidatorsResponse:
         """
@@ -280,7 +232,7 @@ class AbstractAsyncOpenAccessApi(AbstractAsyncApi[LoginResponseT], ABC):
         Returns:
             GetValidatorsResponse: containing the latest block information and a list of validator Neuron objects.
         """
-        return await self._send_authenticated_request(partial(self._get_latest_validators_request, netuid))
+        return await self._send_request(await self._get_latest_validators_request(netuid))
 
     async def get_latest_block_info(self) -> GetLatestBlockInfoResponse:
         """
@@ -291,7 +243,7 @@ class AbstractAsyncOpenAccessApi(AbstractAsyncApi[LoginResponseT], ABC):
         Returns:
             GetLatestBlockInfoResponse: containing the block number and hash.
         """
-        return await self._send_authenticated_request(self._get_latest_block_info_request)
+        return await self._send_request(await self._get_latest_block_info_request())
 
     async def get_extrinsic(self, block_number: BlockNumber, extrinsic_index: ExtrinsicIndex) -> GetExtrinsicResponse:
         """
@@ -306,9 +258,7 @@ class AbstractAsyncOpenAccessApi(AbstractAsyncApi[LoginResponseT], ABC):
         Returns:
             GetExtrinsicResponse: containing the full extrinsic data.
         """
-        return await self._send_authenticated_request(
-            partial(self._get_extrinsic_request, block_number, extrinsic_index)
-        )
+        return await self._send_request(await self._get_extrinsic_request(block_number, extrinsic_index))
 
     async def get_drand_last_stored_round(self) -> GetDrandLastStoredRoundResponse:
         """
@@ -319,7 +269,7 @@ class AbstractAsyncOpenAccessApi(AbstractAsyncApi[LoginResponseT], ABC):
         Returns:
             GetDrandLastStoredRoundRequest: containing the last stored round number.
         """
-        return await self._send_authenticated_request(self._get_drand_last_stored_round_request)
+        return await self._send_request(await self._get_drand_last_stored_round_request())
 
     # Private API
 
@@ -364,14 +314,15 @@ class AbstractAsyncOpenAccessApi(AbstractAsyncApi[LoginResponseT], ABC):
     async def _get_drand_last_stored_round_request(self) -> GetDrandLastStoredRoundRequest: ...
 
 
-class AbstractAsyncIdentityApi(AbstractAsyncApi[LoginResponseT], ABC):
+class AbstractAsyncIdentityApi(AbstractAsyncApi, ABC):
     """
     Identity-authenticated API for subnet-specific operations.
 
     This API provides access to read and write operations for a specific subnet associated with
     the configured identity. The subnet is determined automatically from the identity credentials.
-    Authentication is performed on the first request and cached for subsequent requests.
-    The API automatically re-authenticates when sessions expire or authentication errors occur.
+    The netuid for the configured identity is fetched lazily on the first request and cached
+    for subsequent requests. The cache is refreshed automatically when the server signals
+    a netuid mismatch (HTTP 308).
 
     All methods in this API may raise the following exceptions:
         PylonClosed: When the api method is called and the communicator is closed.
@@ -382,6 +333,50 @@ class AbstractAsyncIdentityApi(AbstractAsyncApi[LoginResponseT], ABC):
         PylonMisconfigured: When required identity credentials (identity_name and identity_token)
             are not configured.
     """
+
+    def __init__(self, communicator: AbstractAsyncCommunicator):
+        super().__init__(communicator)
+        identity_name = communicator.config.identity_name
+        if identity_name is None:
+            raise ValueError("IdentityApi requires identity_name to be set in config.")
+        self.identity_name: IdentityName = identity_name
+        self._netuid: NetUid | None = None
+        self._identity_lock = asyncio.Lock()
+
+    @abstractmethod
+    async def _fetch_netuid(self) -> None:
+        """
+        Fetches the netuid for the configured identity from the server and assigns it (together
+        with the identity name) to self._netuid and self._identity_name. Called under self._identity_lock.
+        """
+
+    @property
+    def netuid(self) -> NetUid:
+        if self._netuid is None:
+            raise AttributeError("Identity netuid accessed before it was resolved.")
+        return self._netuid
+
+    async def _ensure_netuid(self) -> NetUid:
+        async with self._identity_lock:
+            if self._netuid is None:
+                await self._fetch_netuid()
+            assert self._netuid is not None
+            return self._netuid
+
+    async def _refetch_netuid_if_stale(self, seen_netuid: NetUid) -> None:
+        async with self._identity_lock:
+            if self._netuid == seen_netuid:
+                await self._fetch_netuid()
+
+    async def _send_identity_request(
+        self, request_factory: Callable[[], Awaitable[PylonRequest[ResponseT]]]
+    ) -> ResponseT:
+        seen_netuid = await self._ensure_netuid()
+        try:
+            return await self._send_request(await request_factory())
+        except PylonNetuidMismatch:
+            await self._refetch_netuid_if_stale(seen_netuid)
+            return await self._send_request(await request_factory())
 
     # Public API
 
@@ -395,7 +390,7 @@ class AbstractAsyncIdentityApi(AbstractAsyncApi[LoginResponseT], ABC):
         Returns:
             GetNeuronsResponse containing the block information and a dictionary mapping hotkeys to Neuron objects.
         """
-        return await self._send_authenticated_request(partial(self._get_neurons_request, block_number))
+        return await self._send_identity_request(partial(self._get_neurons_request, block_number))
 
     async def get_latest_neurons(self) -> GetNeuronsResponse:
         """
@@ -405,7 +400,7 @@ class AbstractAsyncIdentityApi(AbstractAsyncApi[LoginResponseT], ABC):
             GetNeuronsResponse containing the latest block information and a dictionary mapping hotkeys to
             Neuron objects.
         """
-        return await self._send_authenticated_request(self._get_latest_neurons_request)
+        return await self._send_identity_request(self._get_latest_neurons_request)
 
     async def get_recent_neurons(self) -> GetNeuronsResponse:
         """
@@ -422,7 +417,7 @@ class AbstractAsyncIdentityApi(AbstractAsyncApi[LoginResponseT], ABC):
         Raises:
             PylonResponseException: When the Pylon service cache doesn't have fresh enough data.
         """
-        return await self._send_authenticated_request(self._get_recent_neurons_request)
+        return await self._send_identity_request(self._get_recent_neurons_request)
 
     async def put_weights(self, weights: dict[Hotkey, Weight]) -> SetWeightsResponse:
         """
@@ -439,7 +434,7 @@ class AbstractAsyncIdentityApi(AbstractAsyncApi[LoginResponseT], ABC):
         Returns:
             SetWeightsResponse indicating the weights update has been scheduled.
         """
-        return await self._send_authenticated_request(partial(self._put_weights_request, weights))
+        return await self._send_identity_request(partial(self._put_weights_request, weights))
 
     async def get_commitments(self) -> GetCommitmentsResponse:
         """
@@ -448,7 +443,7 @@ class AbstractAsyncIdentityApi(AbstractAsyncApi[LoginResponseT], ABC):
         Returns:
             GetCommitmentsResponse: containing data mapping hotkeys to data commitments.
         """
-        return await self._send_authenticated_request(self._get_commitments_request)
+        return await self._send_identity_request(self._get_commitments_request)
 
     async def get_all_revealed_commitments(self) -> GetAllRevealedCommitmentsResponse:
         """
@@ -457,7 +452,7 @@ class AbstractAsyncIdentityApi(AbstractAsyncApi[LoginResponseT], ABC):
         Returns:
             GetAllRevealedCommitmentsResponse: containing data mapping hotkeys to revealed commitment lists.
         """
-        return await self._send_authenticated_request(self._get_all_revealed_commitments_request)
+        return await self._send_identity_request(self._get_all_revealed_commitments_request)
 
     async def get_commitment(self, hotkey: Hotkey) -> GetCommitmentResponse:
         """
@@ -472,7 +467,7 @@ class AbstractAsyncIdentityApi(AbstractAsyncApi[LoginResponseT], ABC):
         Raises:
             PylonNotFound: If a data commitment could not be found.
         """
-        return await self._send_authenticated_request(partial(self._get_commitment_request, hotkey))
+        return await self._send_identity_request(partial(self._get_commitment_request, hotkey))
 
     async def get_revealed_commitments(self, hotkey: Hotkey) -> GetRevealedCommitmentsResponse:
         """
@@ -487,7 +482,7 @@ class AbstractAsyncIdentityApi(AbstractAsyncApi[LoginResponseT], ABC):
         Raises:
             PylonNotFound: If the commitments could not be found.
         """
-        return await self._send_authenticated_request(partial(self._get_revealed_commitments_request, hotkey))
+        return await self._send_identity_request(partial(self._get_revealed_commitments_request, hotkey))
 
     async def get_own_commitment(self) -> GetCommitmentResponse:
         """
@@ -499,7 +494,7 @@ class AbstractAsyncIdentityApi(AbstractAsyncApi[LoginResponseT], ABC):
         Raises:
             PylonNotFound: If a commitment could not be found.
         """
-        return await self._send_authenticated_request(self._get_own_commitment_request)
+        return await self._send_identity_request(self._get_own_commitment_request)
 
     async def get_own_revealed_commitments(self) -> GetRevealedCommitmentsResponse:
         """
@@ -511,7 +506,7 @@ class AbstractAsyncIdentityApi(AbstractAsyncApi[LoginResponseT], ABC):
         Raises:
             PylonNotFound: If no commitments could be found.
         """
-        return await self._send_authenticated_request(self._get_own_revealed_commitments_request)
+        return await self._send_identity_request(self._get_own_revealed_commitments_request)
 
     async def set_commitment(self, commitment: CommitmentDataBytes | CommitmentDataHex) -> SetCommitmentResponse:
         """
@@ -523,7 +518,7 @@ class AbstractAsyncIdentityApi(AbstractAsyncApi[LoginResponseT], ABC):
         Returns:
             SetCommitmentResponse indicating the commitment has been set successfully.
         """
-        return await self._send_authenticated_request(partial(self._set_commitment_request, commitment))
+        return await self._send_identity_request(partial(self._set_commitment_request, commitment))
 
     async def set_revealed_commitment(
         self, commitment: str, blocks_until_reveal: int = 360, block_time: int | float = 12
@@ -539,7 +534,7 @@ class AbstractAsyncIdentityApi(AbstractAsyncApi[LoginResponseT], ABC):
         Returns:
             SetRevealedCommitmentResponse containing a reveal round number.
         """
-        return await self._send_authenticated_request(
+        return await self._send_identity_request(
             partial(self._set_revealed_commitment_request, commitment, blocks_until_reveal, block_time)
         )
 
@@ -555,7 +550,7 @@ class AbstractAsyncIdentityApi(AbstractAsyncApi[LoginResponseT], ABC):
         Returns:
             GetValidatorsResponse: containing the block information and a list of validator Neuron objects.
         """
-        return await self._send_authenticated_request(partial(self._get_validators_request, block_number))
+        return await self._send_identity_request(partial(self._get_validators_request, block_number))
 
     async def get_latest_validators(self) -> GetValidatorsResponse:
         """
@@ -566,7 +561,7 @@ class AbstractAsyncIdentityApi(AbstractAsyncApi[LoginResponseT], ABC):
         Returns:
             GetValidatorsResponse: containing the latest block information and a list of validator Neuron objects.
         """
-        return await self._send_authenticated_request(self._get_latest_validators_request)
+        return await self._send_identity_request(self._get_latest_validators_request)
 
     async def get_latest_block_info(self) -> GetLatestBlockInfoResponse:
         """
@@ -577,7 +572,7 @@ class AbstractAsyncIdentityApi(AbstractAsyncApi[LoginResponseT], ABC):
         Returns:
             GetLatestBlockInfoResponse: containing the block number and hash.
         """
-        return await self._send_authenticated_request(self._get_latest_block_info_request)
+        return await self._send_identity_request(self._get_latest_block_info_request)
 
     async def get_extrinsic(self, block_number: BlockNumber, extrinsic_index: ExtrinsicIndex) -> GetExtrinsicResponse:
         """
@@ -592,9 +587,7 @@ class AbstractAsyncIdentityApi(AbstractAsyncApi[LoginResponseT], ABC):
         Returns:
             GetExtrinsicResponse: containing the full extrinsic data.
         """
-        return await self._send_authenticated_request(
-            partial(self._get_extrinsic_request, block_number, extrinsic_index)
-        )
+        return await self._send_identity_request(partial(self._get_extrinsic_request, block_number, extrinsic_index))
 
     async def get_drand_last_stored_round(self) -> GetDrandLastStoredRoundResponse:
         """
@@ -605,7 +598,7 @@ class AbstractAsyncIdentityApi(AbstractAsyncApi[LoginResponseT], ABC):
         Returns:
             GetDrandLastStoredRoundRequest: containing the last stored round number.
         """
-        return await self._send_authenticated_request(self._get_drand_last_stored_round_request)
+        return await self._send_identity_request(self._get_drand_last_stored_round_request)
 
     # Private API
 

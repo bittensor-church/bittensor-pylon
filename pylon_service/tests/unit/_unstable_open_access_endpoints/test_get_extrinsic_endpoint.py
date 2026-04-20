@@ -3,22 +3,21 @@ from litestar.status_codes import HTTP_200_OK, HTTP_404_NOT_FOUND
 from pylon_commons.models import Block, Extrinsic, ExtrinsicCall
 from pylon_commons.types import BlockHash, BlockNumber, ExtrinsicHash, ExtrinsicIndex, ExtrinsicLength
 
-from pylon_service.bittensor.mock_contact import MockBittensorContact
-
 
 @pytest.mark.asyncio
 async def test_unstable_public_get_extrinsic_missing_extrinsic_returns_404(
     test_client,
-    open_access_mock_bt_client: MockBittensorContact,
+    mock_bt_client_factory,
     snapshot_json,
 ):
     block = Block(number=BlockNumber(999), hash=BlockHash("0xblock999"))
 
-    async with open_access_mock_bt_client.mock_behavior(
-        get_block=[block],
-        get_extrinsic=[None],
-    ):
-        response = await test_client.get("/api/_unstable/block/999/extrinsic/99")
+    async with mock_bt_client_factory() as mock_client:
+        async with mock_client.mock_behavior(
+            get_block=[block],
+            get_extrinsic=[None],
+        ):
+            response = await test_client.get("/api/_unstable/block/999/extrinsic/99")
 
     assert response.status_code == HTTP_404_NOT_FOUND, response.content
     assert response.json() == snapshot_json
@@ -27,11 +26,12 @@ async def test_unstable_public_get_extrinsic_missing_extrinsic_returns_404(
 @pytest.mark.asyncio
 async def test_unstable_public_get_extrinsic_missing_block_returns_404(
     test_client,
-    open_access_mock_bt_client: MockBittensorContact,
+    mock_bt_client_factory,
     snapshot_json,
 ):
-    async with open_access_mock_bt_client.mock_behavior(get_block=[None]):
-        response = await test_client.get("/api/_unstable/block/999999999/extrinsic/0")
+    async with mock_bt_client_factory() as mock_client:
+        async with mock_client.mock_behavior(get_block=[None]):
+            response = await test_client.get("/api/_unstable/block/999999999/extrinsic/0")
 
     assert response.status_code == HTTP_404_NOT_FOUND, response.content
     assert response.json() == snapshot_json
@@ -40,7 +40,7 @@ async def test_unstable_public_get_extrinsic_missing_block_returns_404(
 @pytest.mark.asyncio
 async def test_unstable_public_get_extrinsic_returns_decoded_extrinsic(
     test_client,
-    open_access_mock_bt_client: MockBittensorContact,
+    mock_bt_client_factory,
     snapshot_json,
 ):
     block = Block(number=BlockNumber(100), hash=BlockHash("0xblock100"))
@@ -53,11 +53,12 @@ async def test_unstable_public_get_extrinsic_returns_decoded_extrinsic(
         call=ExtrinsicCall(call_module="Balances", call_function="transfer", call_args=[]),
     )
 
-    async with open_access_mock_bt_client.mock_behavior(
-        get_block=[block],
-        get_extrinsic=[extrinsic],
-    ):
-        response = await test_client.get("/api/_unstable/block/100/extrinsic/1")
+    async with mock_bt_client_factory() as mock_client:
+        async with mock_client.mock_behavior(
+            get_block=[block],
+            get_extrinsic=[extrinsic],
+        ):
+            response = await test_client.get("/api/_unstable/block/100/extrinsic/1")
 
     assert response.status_code == HTTP_200_OK
     assert response.json() == snapshot_json

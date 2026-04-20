@@ -26,6 +26,7 @@ from pylon_client._internal.pylon_commons.exceptions import (
     PylonBadGateway,
     PylonClosed,
     PylonForbidden,
+    PylonNetuidMismatch,
     PylonNotFound,
     PylonRequestException,
     PylonResponseException,
@@ -175,6 +176,7 @@ class AsyncHttpCommunicator(AbstractAsyncCommunicator[Request, Response]):
     async def _open(self) -> None:
         logger.debug(f"Opening communicator for the server {self.config.address}")
         timeout = self.config.timeout
+        headers = timeout.get_header()
         self._raw_client = AsyncClient(
             base_url=self.config.address,
             timeout=HttpxTimeout(
@@ -183,7 +185,7 @@ class AsyncHttpCommunicator(AbstractAsyncCommunicator[Request, Response]):
                 write=timeout.write,
                 pool=timeout.pool,
             ),
-            headers=timeout.get_header(),
+            headers=headers,
         )
 
     async def _close(self) -> None:
@@ -238,6 +240,8 @@ class AsyncHttpCommunicator(AbstractAsyncCommunicator[Request, Response]):
             raise PylonForbidden(detail=detail) from exc
         if status_code == 404:
             raise PylonNotFound(detail=detail) from exc
+        if status_code == 308:
+            raise PylonNetuidMismatch(detail=detail) from exc
         if status_code == 502:
             raise PylonBadGateway(detail=detail) from exc
         if status_code == 504:

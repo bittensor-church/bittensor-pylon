@@ -4,11 +4,8 @@ Tests for the GET /identity/{identity_name}/subnet/{netuid}/block/latest/certifi
 
 import pytest
 from litestar.status_codes import HTTP_200_OK
-from litestar.testing import AsyncTestClient
 from pylon_commons.models import Block, CertificateAlgorithm, NeuronCertificate
 from pylon_commons.types import BlockHash, BlockNumber, PublicKey
-
-from pylon_service.bittensor.mock_contact import MockBittensorContact
 
 
 @pytest.mark.asyncio
@@ -35,8 +32,8 @@ from pylon_service.bittensor.mock_contact import MockBittensorContact
     ],
 )
 async def test_get_certificates_identity(
-    test_client: AsyncTestClient,
-    sn1_mock_bt_client: MockBittensorContact,
+    identity_test_client_factory,
+    mock_bt_client_factory,
     certificates_input: dict,
     snapshot_json,
 ):
@@ -44,11 +41,15 @@ async def test_get_certificates_identity(
     Test getting certificates from the subnet.
     """
     latest_block = Block(number=BlockNumber(1000), hash=BlockHash("0xabc123"))
-    async with sn1_mock_bt_client.mock_behavior(
-        get_latest_block=[latest_block],
-        get_certificates=[certificates_input],
-    ):
-        response = await test_client.get("/api/_unstable/identity/sn1/subnet/1/block/latest/certificates")
+    async with mock_bt_client_factory("sn1") as mock_client:
+        async with mock_client.mock_behavior(
+            get_latest_block=[latest_block],
+            get_certificates=[certificates_input],
+        ):
+            async with identity_test_client_factory("sn1") as client:
+                response = await client.get(
+                    "/api/_unstable/identity/sn1/subnet/1/block/latest/certificates",
+                )
 
-        assert response.status_code == HTTP_200_OK
-        assert response.json() == snapshot_json
+            assert response.status_code == HTTP_200_OK
+            assert response.json() == snapshot_json

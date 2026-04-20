@@ -12,6 +12,7 @@ from pylon_client.artanis import (
     PylonBadGateway,
     PylonClient,
     PylonForbidden,
+    PylonNetuidMismatch,
     PylonNotFound,
     PylonResponseException,
     PylonTimeoutException,
@@ -31,6 +32,12 @@ def neurons_url():
 @pytest.mark.parametrize(
     "status_code,expected_exception,expected_message",
     [
+        pytest.param(
+            codes.PERMANENT_REDIRECT,
+            PylonNetuidMismatch,
+            r"Netuid mismatch \(HTTP 308\)",
+            id="netuid_mismatch_308",
+        ),
         pytest.param(
             codes.UNAUTHORIZED,
             PylonUnauthorized,
@@ -90,6 +97,7 @@ def test_status_code_raises_correct_exception(
 @pytest.mark.parametrize(
     "status_code,expected_exception",
     [
+        pytest.param(codes.PERMANENT_REDIRECT, PylonNetuidMismatch, id="netuid_mismatch_308"),
         pytest.param(codes.UNAUTHORIZED, PylonUnauthorized, id="unauthorized_401"),
         pytest.param(codes.FORBIDDEN, PylonForbidden, id="forbidden_403"),
         pytest.param(codes.NOT_FOUND, PylonNotFound, id="not_found_404"),

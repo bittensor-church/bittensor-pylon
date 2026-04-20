@@ -4,7 +4,6 @@ import pytest
 from litestar.status_codes import HTTP_400_BAD_REQUEST, HTTP_504_GATEWAY_TIMEOUT
 from litestar.testing import AsyncTestClient
 
-from pylon_service.bittensor.mock_contact import MockBittensorContact
 from pylon_service.middleware import request_timeout
 
 _ENDPOINT = "/api/v1/subnet/1/block/latest/neurons"
@@ -15,11 +14,10 @@ async def _slow_response(*args, **kwargs):
 
 
 @pytest.mark.asyncio
-async def test_request_times_out_with_header(
-    test_client: AsyncTestClient, open_access_mock_bt_client: MockBittensorContact, snapshot_json
-):
-    async with open_access_mock_bt_client.mock_behavior(get_latest_block=[_slow_response]):
-        response = await test_client.get(_ENDPOINT, headers={"x-pylon-timeout": "0.1"})
+async def test_request_times_out_with_header(test_client: AsyncTestClient, mock_bt_client_factory, snapshot_json):
+    async with mock_bt_client_factory() as mock_client:
+        async with mock_client.mock_behavior(get_latest_block=[_slow_response]):
+            response = await test_client.get(_ENDPOINT, headers={"x-pylon-timeout": "0.1"})
 
     assert response.status_code == HTTP_504_GATEWAY_TIMEOUT
     assert response.json() == snapshot_json
@@ -27,25 +25,25 @@ async def test_request_times_out_with_header(
 
 @pytest.mark.asyncio
 async def test_request_times_out_with_default(
-    test_client: AsyncTestClient, open_access_mock_bt_client: MockBittensorContact, monkeypatch, snapshot_json
+    test_client: AsyncTestClient, mock_bt_client_factory, monkeypatch, snapshot_json
 ):
     monkeypatch.setattr(request_timeout.settings, "default_request_timeout_seconds", 0.1)
 
-    async with open_access_mock_bt_client.mock_behavior(get_latest_block=[_slow_response]):
-        response = await test_client.get(_ENDPOINT)
+    async with mock_bt_client_factory() as mock_client:
+        async with mock_client.mock_behavior(get_latest_block=[_slow_response]):
+            response = await test_client.get(_ENDPOINT)
 
     assert response.status_code == HTTP_504_GATEWAY_TIMEOUT
     assert response.json() == snapshot_json
 
 
 @pytest.mark.asyncio
-async def test_timeout_capped_at_max(
-    test_client: AsyncTestClient, open_access_mock_bt_client: MockBittensorContact, monkeypatch, snapshot_json
-):
+async def test_timeout_capped_at_max(test_client: AsyncTestClient, mock_bt_client_factory, monkeypatch, snapshot_json):
     monkeypatch.setattr(request_timeout.settings, "max_request_timeout_seconds", 0.1)
 
-    async with open_access_mock_bt_client.mock_behavior(get_latest_block=[_slow_response]):
-        response = await test_client.get(_ENDPOINT, headers={"x-pylon-timeout": "2"})
+    async with mock_bt_client_factory() as mock_client:
+        async with mock_client.mock_behavior(get_latest_block=[_slow_response]):
+            response = await test_client.get(_ENDPOINT, headers={"x-pylon-timeout": "2"})
 
     assert response.status_code == HTTP_504_GATEWAY_TIMEOUT
     assert response.json() == snapshot_json

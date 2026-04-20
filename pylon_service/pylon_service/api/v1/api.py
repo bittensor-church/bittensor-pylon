@@ -10,6 +10,7 @@ from pylon_commons.v1.responses import (
     GetAllRevealedCommitmentsResponse,
     GetCommitmentResponse,
     GetCommitmentsResponse,
+    GetIdentitiesResponse,
     GetNeuronsResponse,
     GetRevealedCommitmentsResponse,
     GetValidatorsResponse,
@@ -19,10 +20,9 @@ from pylon_commons.v1.responses import (
 from pylon_service.api._unstable.api import (
     get_extrinsic_endpoint,
     get_latest_block_info_endpoint,
-    identity_login,
 )
 from pylon_service.api._unstable.tasks import ApplyWeights, SetCommitment, SetRevealedCommitment
-from pylon_service.api.utils import handler
+from pylon_service.api.utils import check_identity_netuid, handler
 from pylon_service.bittensor.contact_router import BittensorContactRouter
 from pylon_service.bittensor.recent import RecentObjectProvider
 from pylon_service.dependencies import (
@@ -33,6 +33,8 @@ from pylon_service.dependencies import (
     recent_object_provider_open_access_dep,
 )
 from pylon_service.exceptions import BadGatewayException
+from pylon_service.guards import identity_auth_guard
+from pylon_service.identities import identities
 from pylon_service.services.errors import CommitmentNotFoundError
 
 from . import services
@@ -40,6 +42,14 @@ from . import services
 neuron_service = services.NeuronService()
 certificate_service = services.CertificateService()
 commitment_service = services.CommitmentService()
+
+
+@handler(
+    Endpoint.IDENTITIES,
+    status_code=status_codes.HTTP_200_OK,
+)
+async def get_identities() -> GetIdentitiesResponse:
+    return GetIdentitiesResponse(identities={name: identity.netuid for name, identity in identities.items()})
 
 
 def identity_handler(endpoint: Endpoint, **kwargs):
@@ -121,6 +131,8 @@ class OpenAccessController(Controller):
 
 class IdentityController(Controller):
     path = "/identity/{identity_name:str}/subnet/{netuid:int}"
+    guards = [identity_auth_guard]
+    before_request = check_identity_netuid
     dependencies = {
         "identity": Provide(identity_dep),
         "bt_contact_router": Provide(bt_contact_router_identity_dep),
@@ -241,7 +253,7 @@ class IdentityController(Controller):
 __all__ = [
     "OpenAccessController",
     "IdentityController",
-    "identity_login",
+    "get_identities",
     "get_extrinsic_endpoint",
     "get_latest_block_info_endpoint",
 ]

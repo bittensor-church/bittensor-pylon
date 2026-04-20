@@ -28,11 +28,11 @@ def test_sync_config_retries_success(service_mock, test_url, attempts):
     """
     Test that client retries the specified number of times before succeeding.
     """
-    login_url = EndpointUnstable.IDENTITY_LOGIN.absolute_url(identity_name="sn1")
+    identities_url = EndpointUnstable.IDENTITIES.absolute_url()
     weights_url = EndpointUnstable.SUBNET_WEIGHTS.absolute_url(identity_name_=IdentityName("sn1"), netuid_=NetUid(1))
 
-    login_response_json = {"netuid": 1, "identity_name": "sn1"}
-    service_mock.post(login_url).mock(return_value=Response(status_code=codes.OK, json=login_response_json))
+    identities_response_json = {"identities": {"sn1": 1}}
+    service_mock.get(identities_url).mock(return_value=Response(status_code=codes.OK, json=identities_response_json))
     route = service_mock.put(weights_url)
     route.mock(
         side_effect=[
@@ -63,11 +63,11 @@ def test_sync_config_retries_error(service_mock, test_url):
     """
     Test that client raises PylonRequestException after all retries exhausted.
     """
-    login_url = EndpointUnstable.IDENTITY_LOGIN.absolute_url(identity_name="sn1")
+    identities_url = EndpointUnstable.IDENTITIES.absolute_url()
     weights_url = EndpointUnstable.SUBNET_WEIGHTS.absolute_url(identity_name_=IdentityName("sn1"), netuid_=NetUid(1))
 
-    login_response_json = {"netuid": 1, "identity_name": "sn1"}
-    service_mock.post(login_url).mock(return_value=Response(status_code=codes.OK, json=login_response_json))
+    identities_response_json = {"identities": {"sn1": 1}}
+    service_mock.get(identities_url).mock(return_value=Response(status_code=codes.OK, json=identities_response_json))
     route = service_mock.put(weights_url)
     route.mock(side_effect=ConnectError("Connection failed"))
     with PylonClient(

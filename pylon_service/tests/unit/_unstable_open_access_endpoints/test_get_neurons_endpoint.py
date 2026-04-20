@@ -6,8 +6,6 @@ import pytest
 from litestar.status_codes import HTTP_200_OK, HTTP_404_NOT_FOUND
 from litestar.testing import AsyncTestClient
 
-from pylon_service.bittensor.mock_contact import MockBittensorContact
-
 
 @pytest.mark.asyncio
 @pytest.mark.parametrize(
@@ -50,15 +48,16 @@ async def test_unstable_open_access_get_latest_neurons_returns_latest_neurons(
 
 @pytest.mark.asyncio
 async def test_get_neurons_open_access_block_not_found(
-    test_client: AsyncTestClient, open_access_mock_bt_client: MockBittensorContact, snapshot_json
+    test_client: AsyncTestClient, mock_bt_client_factory, snapshot_json
 ):
     """
     Test that non-existent block returns 404.
     """
-    async with open_access_mock_bt_client.mock_behavior(get_block=[None]):
-        response = await test_client.get("/api/_unstable/subnet/1/block/123/neurons")
+    async with mock_bt_client_factory() as mock_client:
+        async with mock_client.mock_behavior(get_block=[None]):
+            response = await test_client.get("/api/_unstable/subnet/1/block/123/neurons")
 
-        assert response.status_code == HTTP_404_NOT_FOUND, response.content
-        assert response.json() == snapshot_json
+            assert response.status_code == HTTP_404_NOT_FOUND, response.content
+            assert response.json() == snapshot_json
 
-    assert open_access_mock_bt_client.calls["get_block"] == [(123,)]
+        assert mock_client.calls["get_block"] == [(123,)]

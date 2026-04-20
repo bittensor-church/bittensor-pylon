@@ -5,7 +5,7 @@ from pydantic import BaseModel, Field, field_validator
 
 from ..apiver import ApiVersion
 from ..types import BlockNumber, ExtrinsicIndex, Hotkey, IdentityName, NetUid
-from .bodies import LoginBody, SetCommitmentBody, SetRevealedCommitmentBody, SetWeightsBody
+from .bodies import SetCommitmentBody, SetRevealedCommitmentBody, SetWeightsBody
 from .models import CertificateAlgorithm
 from .responses import (
     GetAllRevealedCommitmentsResponse,
@@ -13,13 +13,11 @@ from .responses import (
     GetCommitmentsResponse,
     GetDrandLastStoredRoundResponse,
     GetExtrinsicResponse,
+    GetIdentitiesResponse,
     GetLatestBlockInfoResponse,
     GetNeuronsResponse,
     GetRevealedCommitmentsResponse,
     GetValidatorsResponse,
-    IdentityLoginResponse,
-    LoginResponse,
-    OpenAccessLoginResponse,
     PylonResponse,
     SetCommitmentResponse,
     SetRevealedCommitmentResponse,
@@ -27,7 +25,6 @@ from .responses import (
 )
 
 PylonResponseT = typing.TypeVar("PylonResponseT", bound=PylonResponse, covariant=True)
-LoginResponseT = typing.TypeVar("LoginResponseT", bound=LoginResponse, covariant=True)
 
 
 class PylonRequest(BaseModel, typing.Generic[PylonResponseT]):
@@ -50,17 +47,11 @@ class PylonRequest(BaseModel, typing.Generic[PylonResponseT]):
         return re.sub(r"(?<=[a-z0-9])(?=[A-Z])|(?<=[A-Z])(?=[A-Z][a-z])", "_", name).lower()
 
 
-# Request classes used to log in into Pylon
+# Request class to fetch identities mapping
 
 
-class OpenAccessLoginRequest(LoginBody, PylonRequest[OpenAccessLoginResponse]):
-    response_cls = OpenAccessLoginResponse
-
-
-class IdentityLoginRequest(LoginBody, PylonRequest[IdentityLoginResponse]):
-    response_cls = IdentityLoginResponse
-
-    identity_name: IdentityName
+class GetIdentitiesRequest(PylonRequest[GetIdentitiesResponse]):
+    response_cls = GetIdentitiesResponse
 
 
 # Request classes for endpoints that require authentication either by open access or identity
@@ -68,11 +59,22 @@ class IdentityLoginRequest(LoginBody, PylonRequest[IdentityLoginResponse]):
 
 class AuthenticatedPylonRequest(PylonRequest[PylonResponseT], typing.Generic[PylonResponseT]):
     """
-    Request that requires the authentication, either by open access or identity.
+    Request that requires authentication, either by open access or identity.
+
+    The ``identity_name`` field determines the authentication mode used by the
+    request translator (e.g. ``HttpTranslator``):
+
+    - **Open access** (``identity_name is None``): the translator uses
+      ``open_access_token`` from the client config as a Bearer token and builds
+      a URL without the ``/identity/`` segment
+      (e.g. ``/api/v1/subnet/{netuid}/...``).
+    - **Identity access** (``identity_name`` is set): the translator uses
+      ``identity_token`` from the client config as a Bearer token and embeds
+      the identity name in the URL path
+      (e.g. ``/api/v1/identity/{identity_name}/subnet/{netuid}/...``).
     """
 
     netuid: NetUid
-    # None == open access
     identity_name: IdentityName | None = None
 
 

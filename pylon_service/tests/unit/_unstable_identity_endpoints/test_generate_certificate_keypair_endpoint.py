@@ -4,7 +4,6 @@ Tests for the POST /identity/{identity_name}/subnet/{netuid}/certificates/self e
 
 import pytest
 from litestar.status_codes import HTTP_201_CREATED, HTTP_400_BAD_REQUEST, HTTP_404_NOT_FOUND, HTTP_502_BAD_GATEWAY
-from litestar.testing import AsyncTestClient
 from pylon_commons.models import (
     CertificateAlgorithm,
     NeuronCertificateKeypair,
@@ -12,12 +11,10 @@ from pylon_commons.models import (
     PublicKey,
 )
 
-from pylon_service.bittensor.mock_contact import MockBittensorContact
-
 
 @pytest.mark.asyncio
 async def test_generate_certificate_keypair_identity_success(
-    test_client: AsyncTestClient, sn1_mock_bt_client: MockBittensorContact, snapshot_json
+    identity_test_client_factory, mock_bt_client_factory, snapshot_json
 ):
     """
     Test generating a certificate keypair successfully.
@@ -28,21 +25,23 @@ async def test_generate_certificate_keypair_identity_success(
         private_key=PrivateKey("0xprivate987654321"),
     )
 
-    async with sn1_mock_bt_client.mock_behavior(
-        generate_certificate_keypair=[keypair],
-    ):
-        response = await test_client.post(
-            "/api/_unstable/identity/sn1/subnet/1/certificates/self",
-            json={"algorithm": 1},
-        )
+    async with mock_bt_client_factory("sn1") as mock_client:
+        async with mock_client.mock_behavior(
+            generate_certificate_keypair=[keypair],
+        ):
+            async with identity_test_client_factory("sn1") as client:
+                response = await client.post(
+                    "/api/_unstable/identity/sn1/subnet/1/certificates/self",
+                    json={"algorithm": 1},
+                )
 
-        assert response.status_code == HTTP_201_CREATED
-        assert response.json() == snapshot_json
+            assert response.status_code == HTTP_201_CREATED
+            assert response.json() == snapshot_json
 
 
 @pytest.mark.asyncio
 async def test_generate_certificate_keypair_identity_default_algorithm(
-    test_client: AsyncTestClient, sn2_mock_bt_client: MockBittensorContact, snapshot_json
+    identity_test_client_factory, mock_bt_client_factory, snapshot_json
 ):
     """
     Test generating a certificate keypair with default algorithm.
@@ -53,35 +52,39 @@ async def test_generate_certificate_keypair_identity_default_algorithm(
         private_key=PrivateKey("0xprivate_default"),
     )
 
-    async with sn2_mock_bt_client.mock_behavior(
-        generate_certificate_keypair=[keypair],
-    ):
-        response = await test_client.post(
-            "/api/_unstable/identity/sn2/subnet/2/certificates/self",
-            json={},
-        )
+    async with mock_bt_client_factory("sn2") as mock_client:
+        async with mock_client.mock_behavior(
+            generate_certificate_keypair=[keypair],
+        ):
+            async with identity_test_client_factory("sn2") as client:
+                response = await client.post(
+                    "/api/_unstable/identity/sn2/subnet/2/certificates/self",
+                    json={},
+                )
 
-        assert response.status_code == HTTP_201_CREATED
-        assert response.json() == snapshot_json
+            assert response.status_code == HTTP_201_CREATED
+            assert response.json() == snapshot_json
 
 
 @pytest.mark.asyncio
 async def test_generate_certificate_keypair_identity_failure(
-    test_client: AsyncTestClient, sn1_mock_bt_client: MockBittensorContact, snapshot_json
+    identity_test_client_factory, mock_bt_client_factory, snapshot_json
 ):
     """
     Test generating a certificate keypair when generation fails.
     """
-    async with sn1_mock_bt_client.mock_behavior(
-        generate_certificate_keypair=[None],
-    ):
-        response = await test_client.post(
-            "/api/_unstable/identity/sn1/subnet/1/certificates/self",
-            json={"algorithm": 1},
-        )
+    async with mock_bt_client_factory("sn1") as mock_client:
+        async with mock_client.mock_behavior(
+            generate_certificate_keypair=[None],
+        ):
+            async with identity_test_client_factory("sn1") as client:
+                response = await client.post(
+                    "/api/_unstable/identity/sn1/subnet/1/certificates/self",
+                    json={"algorithm": 1},
+                )
 
-        assert response.status_code == HTTP_502_BAD_GATEWAY
-        assert response.json() == snapshot_json
+            assert response.status_code == HTTP_502_BAD_GATEWAY
+            assert response.json() == snapshot_json
 
 
 @pytest.mark.asyncio
@@ -94,26 +97,30 @@ async def test_generate_certificate_keypair_identity_failure(
     ],
 )
 async def test_generate_certificate_keypair_identity_invalid_algorithm(
-    test_client: AsyncTestClient, algorithm, snapshot_json
+    identity_test_client_factory, algorithm, snapshot_json
 ):
     """
     Test generating a certificate keypair with invalid algorithm.
     """
-    response = await test_client.post(
-        "/api/_unstable/identity/sn1/subnet/1/certificates/self",
-        json={"algorithm": algorithm},
-    )
+    async with identity_test_client_factory("sn1") as client:
+        response = await client.post(
+            "/api/_unstable/identity/sn1/subnet/1/certificates/self",
+            json={"algorithm": algorithm},
+        )
 
     assert response.status_code == HTTP_400_BAD_REQUEST, response.json()
     assert response.json() == snapshot_json
 
 
 @pytest.mark.asyncio
-async def test_unstable_identity_generate_certificate_keypair_unknown_identity_returns_404(test_client, snapshot_json):
-    response = await test_client.post(
-        "/api/_unstable/identity/unknown/subnet/1/certificates/self",
-        json={"algorithm": 1},
-    )
+async def test_unstable_identity_generate_certificate_keypair_unknown_identity_returns_404(
+    identity_test_client_factory, snapshot_json
+):
+    async with identity_test_client_factory("sn1") as client:
+        response = await client.post(
+            "/api/_unstable/identity/unknown/subnet/1/certificates/self",
+            json={"algorithm": 1},
+        )
 
     assert response.status_code == HTTP_404_NOT_FOUND
     assert response.json() == snapshot_json

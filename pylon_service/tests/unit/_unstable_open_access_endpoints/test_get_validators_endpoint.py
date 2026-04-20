@@ -6,7 +6,6 @@ import pytest
 from litestar.status_codes import HTTP_200_OK, HTTP_404_NOT_FOUND
 from litestar.testing import AsyncTestClient
 
-from pylon_service.bittensor.mock_contact import MockBittensorContact
 from tests.world import VALIDATORS_NETUID
 
 
@@ -33,16 +32,17 @@ async def test_unstable_open_access_get_latest_validators_returns_only_validator
 @pytest.mark.asyncio
 async def test_get_validators_open_access_block_not_found(
     test_client: AsyncTestClient,
-    open_access_mock_bt_client: MockBittensorContact,
+    mock_bt_client_factory,
     snapshot_json,
 ):
-    async with open_access_mock_bt_client.mock_behavior(
-        get_block=[None],
-    ):
-        response = await test_client.get("/api/_unstable/subnet/1/block/999999/validators")
+    async with mock_bt_client_factory() as mock_client:
+        async with mock_client.mock_behavior(
+            get_block=[None],
+        ):
+            response = await test_client.get("/api/_unstable/subnet/1/block/999999/validators")
 
-        assert response.status_code == HTTP_404_NOT_FOUND
-        assert response.json() == snapshot_json
+            assert response.status_code == HTTP_404_NOT_FOUND
+            assert response.json() == snapshot_json
 
 
 @pytest.mark.asyncio

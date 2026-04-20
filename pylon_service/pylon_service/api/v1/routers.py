@@ -5,8 +5,8 @@ from pylon_service.api.v1.api import (
     IdentityController,
     OpenAccessController,
     get_extrinsic_endpoint,
+    get_identities,
     get_latest_block_info_endpoint,
-    identity_login,
 )
 
 v1_router = Router(
@@ -14,7 +14,7 @@ v1_router = Router(
     route_handlers=[
         IdentityController,
         OpenAccessController,
-        identity_login,
+        get_identities,
         get_extrinsic_endpoint,
         get_latest_block_info_endpoint,
     ],

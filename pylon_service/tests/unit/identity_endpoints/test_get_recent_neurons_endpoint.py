@@ -38,12 +38,15 @@ def wallet():
 
 
 @pytest.mark.asyncio
-async def test_get_recent_neurons_cache_missing(test_client, mock_recent_objects_store, wallet, snapshot_json):
+async def test_get_recent_neurons_cache_missing(
+    identity_test_client_factory, mock_recent_objects_store, wallet, snapshot_json
+):
     async with mock_recent_objects_store.behave.mock(get=[None]):
-        response = await test_client.get(_ENDPOINT)
+        async with identity_test_client_factory("sn1") as client:
+            response = await client.get(_ENDPOINT)
 
-        assert response.status_code == HTTP_503_SERVICE_UNAVAILABLE
-        assert response.json() == snapshot_json
+            assert response.status_code == HTTP_503_SERVICE_UNAVAILABLE
+            assert response.json() == snapshot_json
 
     assert mock_recent_objects_store.behave.calls["get"] == [
         (CacheKey(SubnetNeurons, NetUid(1), HotkeyName(wallet.hotkey_str)), None)
@@ -52,16 +55,17 @@ async def test_get_recent_neurons_cache_missing(test_client, mock_recent_objects
 
 @pytest.mark.asyncio
 async def test_get_recent_neurons_cache_expired(
-    test_client, mock_recent_objects_store, subnet_neurons, wallet, snapshot_json
+    identity_test_client_factory, mock_recent_objects_store, subnet_neurons, wallet, snapshot_json
 ):
     stale_blocks = recent_objects_settings.hard_limit_blocks + 1
     timestamp = Timestamp(int(dt.datetime.now().timestamp()) - BLOCK_PROCESSING_TIME * stale_blocks)
     cache_entry = _CacheEntry(data=subnet_neurons.model_dump_json(), timestamp=timestamp)
     async with mock_recent_objects_store.behave.mock(get=[cache_entry.model_dump_json().encode()]):
-        response = await test_client.get(_ENDPOINT)
+        async with identity_test_client_factory("sn1") as client:
+            response = await client.get(_ENDPOINT)
 
-        assert response.status_code == HTTP_503_SERVICE_UNAVAILABLE
-        assert response.json() == snapshot_json
+            assert response.status_code == HTTP_503_SERVICE_UNAVAILABLE
+            assert response.json() == snapshot_json
 
     assert mock_recent_objects_store.behave.calls["get"] == [
         (CacheKey(SubnetNeurons, NetUid(1), HotkeyName(wallet.hotkey_str)), None)
@@ -70,15 +74,16 @@ async def test_get_recent_neurons_cache_expired(
 
 @pytest.mark.asyncio
 async def test_get_recent_neurons_success(
-    test_client, mock_recent_objects_store, subnet_neurons, wallet, snapshot_json
+    identity_test_client_factory, mock_recent_objects_store, subnet_neurons, wallet, snapshot_json
 ):
     timestamp = Timestamp(int(dt.datetime.now().timestamp()))
     cache_entry = _CacheEntry(data=subnet_neurons.model_dump_json(), timestamp=timestamp)
     async with mock_recent_objects_store.behave.mock(get=[cache_entry.model_dump_json().encode()]):
-        response = await test_client.get(_ENDPOINT)
+        async with identity_test_client_factory("sn1") as client:
+            response = await client.get(_ENDPOINT)
 
-        assert response.status_code == HTTP_200_OK
-        assert response.json() == snapshot_json
+            assert response.status_code == HTTP_200_OK
+            assert response.json() == snapshot_json
 
     assert mock_recent_objects_store.behave.calls["get"] == [
         (CacheKey(SubnetNeurons, NetUid(1), HotkeyName(wallet.hotkey_str)), None)
