@@ -32,9 +32,9 @@ _ENDPOINT = "/api/_unstable/subnet/1/block/recent/neurons"
 
 
 @pytest.mark.asyncio
-async def test_get_recent_neurons_cache_missing(test_client, mock_recent_objects_store, snapshot_json):
+async def test_get_recent_neurons_cache_missing(open_access_test_client, mock_recent_objects_store, snapshot_json):
     async with mock_recent_objects_store.behave.mock(get=[None]):
-        response = await test_client.get(_ENDPOINT)
+        response = await open_access_test_client.get(_ENDPOINT)
 
         assert response.status_code == HTTP_503_SERVICE_UNAVAILABLE
         assert response.json() == snapshot_json
@@ -43,12 +43,14 @@ async def test_get_recent_neurons_cache_missing(test_client, mock_recent_objects
 
 
 @pytest.mark.asyncio
-async def test_get_recent_neurons_cache_expired(test_client, mock_recent_objects_store, subnet_neurons, snapshot_json):
+async def test_get_recent_neurons_cache_expired(
+    open_access_test_client, mock_recent_objects_store, subnet_neurons, snapshot_json
+):
     stale_blocks = recent_objects_settings.hard_limit_blocks + 1
     timestamp = Timestamp(int(dt.datetime.now().timestamp()) - BLOCK_PROCESSING_TIME * stale_blocks)
     cache_entry = _CacheEntry(data=subnet_neurons.model_dump_json(), timestamp=timestamp)
     async with mock_recent_objects_store.behave.mock(get=[cache_entry.model_dump_json().encode()]):
-        response = await test_client.get(_ENDPOINT)
+        response = await open_access_test_client.get(_ENDPOINT)
 
         assert response.status_code == HTTP_503_SERVICE_UNAVAILABLE
         assert response.json() == snapshot_json
@@ -57,11 +59,13 @@ async def test_get_recent_neurons_cache_expired(test_client, mock_recent_objects
 
 
 @pytest.mark.asyncio
-async def test_get_recent_neurons_success(test_client, mock_recent_objects_store, subnet_neurons, snapshot_json):
+async def test_get_recent_neurons_success(
+    open_access_test_client, mock_recent_objects_store, subnet_neurons, snapshot_json
+):
     timestamp = Timestamp(int(dt.datetime.now().timestamp()))
     cache_entry = _CacheEntry(data=subnet_neurons.model_dump_json(), timestamp=timestamp)
     async with mock_recent_objects_store.behave.mock(get=[cache_entry.model_dump_json().encode()]):
-        response = await test_client.get(_ENDPOINT)
+        response = await open_access_test_client.get(_ENDPOINT)
 
         assert response.status_code == HTTP_200_OK
         assert response.json() == snapshot_json

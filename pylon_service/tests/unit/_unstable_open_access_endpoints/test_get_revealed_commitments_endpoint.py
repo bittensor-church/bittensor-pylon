@@ -8,7 +8,7 @@ from tests.world import REVEALED_COMMITMENTS_NETUID
 
 @pytest.mark.asyncio
 async def test_unstable_open_access_get_revealed_commitments_by_hotkey_returns_list(
-    test_client, mock_bt_client_factory, snapshot_json
+    open_access_test_client, mock_bt_client_factory, snapshot_json
 ):
     revealed_by_hotkey = {
         Hotkey("hotkey1"): [
@@ -39,7 +39,7 @@ async def test_unstable_open_access_get_revealed_commitments_by_hotkey_returns_l
 
     async with mock_bt_client_factory() as mock_client:
         async with mock_client.mock_behavior(get_revealed_commitments=[resolve_revealed_commitments]):
-            response = await test_client.get(
+            response = await open_access_test_client.get(
                 f"/api/_unstable/subnet/{REVEALED_COMMITMENTS_NETUID}/block/latest/commitments/revealed/hotkey1"
             )
 
@@ -49,14 +49,14 @@ async def test_unstable_open_access_get_revealed_commitments_by_hotkey_returns_l
 
 @pytest.mark.asyncio
 async def test_unstable_open_access_get_revealed_commitments_by_hotkey_returns_404_when_missing(
-    test_client, mock_bt_client_factory, snapshot_json
+    open_access_test_client, mock_bt_client_factory, snapshot_json
 ):
     async with mock_bt_client_factory() as mock_client:
         async with mock_client.mock_behavior(
             get_latest_block=[Block(number=BlockNumber(1000), hash=BlockHash("0xabc123"))],
             get_revealed_commitments=[None],
         ):
-            response = await test_client.get(
+            response = await open_access_test_client.get(
                 f"/api/_unstable/subnet/{REVEALED_COMMITMENTS_NETUID}/block/latest/commitments/revealed/hotkey1"
             )
 

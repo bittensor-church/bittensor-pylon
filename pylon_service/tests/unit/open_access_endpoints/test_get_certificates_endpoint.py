@@ -32,7 +32,7 @@ from pylon_commons.types import BlockHash, BlockNumber, PublicKey
     ],
 )
 async def test_get_certificates_open_access(
-    test_client,
+    open_access_test_client,
     mock_bt_client_factory,
     certificates_input: dict,
     snapshot_json,
@@ -46,7 +46,7 @@ async def test_get_certificates_open_access(
             get_latest_block=[latest_block],
             get_certificates=[certificates_input],
         ):
-            response = await test_client.get("/api/v1/subnet/1/block/latest/certificates")
+            response = await open_access_test_client.get("/api/v1/subnet/1/block/latest/certificates")
 
             assert response.status_code == HTTP_200_OK
             assert response.json() == snapshot_json

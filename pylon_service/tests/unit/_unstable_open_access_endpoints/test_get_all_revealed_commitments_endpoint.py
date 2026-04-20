@@ -7,9 +7,9 @@ from tests.world import REVEALED_COMMITMENTS_NETUID
 
 @pytest.mark.asyncio
 async def test_unstable_open_access_get_all_revealed_commitments_returns_registered_lists(
-    test_client: AsyncTestClient, snapshot_json
+    open_access_test_client: AsyncTestClient, snapshot_json
 ):
-    response = await test_client.get(
+    response = await open_access_test_client.get(
         f"/api/_unstable/subnet/{REVEALED_COMMITMENTS_NETUID}/block/latest/commitments/revealed"
     )
 

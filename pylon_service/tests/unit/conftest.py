@@ -11,6 +11,7 @@ from pylon_commons.types import IdentityName
 
 from pylon_service.stores import StoreName
 from tests.conftest import TEST_IDENTITIES
+from tests.fixture_contract import TEST_OPEN_ACCESS_TOKEN
 from tests.mock_store import MockStore
 
 
@@ -20,6 +21,13 @@ async def test_client(test_app):
     Create an async test client for the test app.
     """
     async with AsyncTestClient(app=test_app) as client:
+        yield client
+
+
+@pytest_asyncio.fixture
+async def open_access_test_client(test_app):
+    async with AsyncTestClient(app=test_app) as client:
+        client.headers["Authorization"] = f"Bearer {TEST_OPEN_ACCESS_TOKEN}"
         yield client
 
 

@@ -1,4 +1,4 @@
 {
   "detail": "Invalid Authorization header format. Expected: Bearer <token>",
-  "status_code": 403
+  "status_code": 401
 }

@@ -13,9 +13,11 @@ from tests.world import COMMITMENTS_ALL_NETUID
 
 @pytest.mark.asyncio
 async def test_v1_open_access_get_commitment_by_hotkey_returns_v1_commitment_shape(
-    test_client: AsyncTestClient, snapshot_json
+    open_access_test_client: AsyncTestClient, snapshot_json
 ):
-    response = await test_client.get(f"/api/v1/subnet/{COMMITMENTS_ALL_NETUID}/block/latest/commitments/hotkey1")
+    response = await open_access_test_client.get(
+        f"/api/v1/subnet/{COMMITMENTS_ALL_NETUID}/block/latest/commitments/hotkey1"
+    )
 
     assert response.status_code == HTTP_200_OK
     assert response.json() == snapshot_json
@@ -23,7 +25,7 @@ async def test_v1_open_access_get_commitment_by_hotkey_returns_v1_commitment_sha
 
 @pytest.mark.asyncio
 async def test_get_commitment_open_access_not_found(
-    test_client: AsyncTestClient, mock_bt_client_factory, snapshot_json
+    open_access_test_client: AsyncTestClient, mock_bt_client_factory, snapshot_json
 ):
     """
     Test getting a commitment that doesn't exist.
@@ -33,6 +35,6 @@ async def test_get_commitment_open_access_not_found(
             get_latest_block=[Block(number=BlockNumber(1000), hash=BlockHash("0xabc123"))],
             get_commitment=[None],
         ):
-            response = await test_client.get("/api/v1/subnet/1/block/latest/commitments/hotkey1")
+            response = await open_access_test_client.get("/api/v1/subnet/1/block/latest/commitments/hotkey1")
         assert response.status_code == HTTP_404_NOT_FOUND
         assert response.json() == snapshot_json

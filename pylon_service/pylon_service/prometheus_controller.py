@@ -9,10 +9,11 @@ import logging
 import secrets
 
 from litestar.connection import ASGIConnection
-from litestar.exceptions import PermissionDeniedException
+from litestar.exceptions import NotAuthorizedException, PermissionDeniedException
 from litestar.handlers import BaseRouteHandler
 from litestar.plugins.prometheus.controller import PrometheusController
 
+from pylon_service.guards import extract_bearer_token
 from pylon_service.settings import settings
 
 logger = logging.getLogger(__name__)
@@ -23,23 +24,18 @@ def metrics_auth_guard(connection: ASGIConnection, _: BaseRouteHandler) -> None:
     Guard for /metrics endpoint - validates Bearer token.
 
     Raises:
-        PermissionDeniedException: If metrics are disabled or credentials are missing/invalid.
+        NotAuthorizedException: If no Authorization header is provided or format is invalid (401).
+        PermissionDeniedException: If metrics are disabled or credentials are missing/invalid (403).
     """
     if not settings.metrics_token:
         logger.warning("Metrics endpoint accessed but PYLON_METRICS_TOKEN is not configured")
         raise PermissionDeniedException(detail="Metrics endpoint is not configured")
 
-    auth_header = connection.headers.get("Authorization")
-    if not auth_header:
-        logger.warning("Metrics endpoint accessed without Authorization header")
-        raise PermissionDeniedException(detail="Authorization header is required")
-
-    parts = auth_header.split()
-    if len(parts) != 2 or parts[0].lower() != "bearer":
-        logger.warning("Metrics endpoint accessed with invalid Authorization format")
-        raise PermissionDeniedException(detail="Invalid Authorization header format. Expected: Bearer <token>")
-
-    token = parts[1]
+    try:
+        token = extract_bearer_token(connection)
+    except NotAuthorizedException:
+        logger.warning("Metrics endpoint accessed with missing or invalid Authorization header")
+        raise
 
     if not secrets.compare_digest(token, settings.metrics_token):
         logger.warning("Metrics endpoint accessed with invalid token")
