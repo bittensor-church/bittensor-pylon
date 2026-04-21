@@ -1,7 +1,6 @@
 import datetime as dt
 
 import pytest
-from pylon_commons.constants import BLOCK_PROCESSING_TIME
 from pylon_commons.models import BittensorModel
 from pylon_commons.types import HotkeyName, NetUid, Timestamp
 
@@ -21,6 +20,9 @@ class AnObjectModel(BittensorModel):
     field_2: int
 
 
+_BLOCK_DURATION_SECONDS = 12.0
+
+
 @pytest.fixture
 def cache_key(wallet) -> CacheKey:
     return CacheKey(AnObjectModel, NetUid(1), HotkeyName(wallet.hotkey_str))
@@ -36,6 +38,7 @@ def recent_object_provider(mock_recent_objects_store, wallet) -> RecentObjectPro
     return RecentObjectProvider(
         soft_limit=SoftLimit(2),
         hard_limit=HardLimit(4),
+        block_duration_seconds=_BLOCK_DURATION_SECONDS,
         store=mock_recent_objects_store,
         context=IdentitySubnetContext(NetUid(1), wallet),
     )
@@ -52,7 +55,7 @@ async def test_get_missing(mock_recent_objects_store, recent_object_provider, ca
 
 @pytest.mark.asyncio
 async def test_get_stale(mock_recent_objects_store, recent_object_provider, object_, cache_key):
-    timestamp = Timestamp(int(dt.datetime.now().timestamp()) - BLOCK_PROCESSING_TIME * 5)
+    timestamp = Timestamp(int(dt.datetime.now().timestamp() - _BLOCK_DURATION_SECONDS * 5))
     cache_entry = _CacheEntry(data=object_.model_dump_json(), timestamp=timestamp)
     async with mock_recent_objects_store.behave.mock(get=[cache_entry.model_dump_json().encode()]):
         with pytest.raises(RecentObjectStale):

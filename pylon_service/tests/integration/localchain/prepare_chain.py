@@ -13,6 +13,10 @@ Neuron layout (identical on both subnets):
     Validator 2:     bob     (//Bob)
     Non-validator 1: charlie (//Charlie)
     Non-validator 2: dave    (//Dave)
+
+Subnet configuration:
+    Subnet 1: default tempo (100)
+    Subnet 2: low tempo (50) — for fast commit-reveal weight tests
 """
 
 from __future__ import annotations
@@ -20,17 +24,21 @@ from __future__ import annotations
 import asyncio
 import logging
 
+from tests.integration.containers import LocalChainImage
 from tests.integration.localchain.dev_accounts import DevAccount
 from tests.integration.localchain.manager import LocalChainManager
 
 logger = logging.getLogger(__name__)
 
-SNAPSHOT_IMAGE = "prepared-localnet:latest"
+SNAPSHOT_IMAGE = LocalChainImage.PREPARED
 
 VALIDATORS = [DevAccount.ALICE, DevAccount.BOB]
 NETUIDS = [1, 2]
 TRANSFER_AMOUNT_TAO = 100_000
 STAKE_AMOUNT_TAO = 10_000
+LOW_TEMPO_NETUID = 2
+LOW_TEMPO = 50
+DRAND_WORKER_MARGIN = 80  # Roughly after how many blocks after starting the chain drand rounds will start fetching
 
 
 def log_step(message: str) -> None:
@@ -40,9 +48,7 @@ def log_step(message: str) -> None:
 
 
 async def main() -> None:
-    with LocalChainManager(
-        startup_timeout=120.0,
-    ) as manager:
+    async with LocalChainManager() as manager:
         log_step("Starting fresh local chain")
 
         alice = DevAccount.ALICE
@@ -89,11 +95,21 @@ async def main() -> None:
                     amount_tao=STAKE_AMOUNT_TAO,
                 )
 
+        log_step(f"Setting low tempo ({LOW_TEMPO}) on subnet {LOW_TEMPO_NETUID}")
+        await manager.set_tempo(sudo_wallet=alice.wallet, netuid=LOW_TEMPO_NETUID, tempo=LOW_TEMPO)
+
         log_step("Setting commitments")
         for dev in [DevAccount.CHARLIE, DevAccount.DAVE]:
             data = f"commitment-{dev.wallet_name}"
             logger.info("Setting commitment for %s: %r", dev.wallet_name, data)
             await manager.set_commitment(wallet=dev.wallet, netuid=1, data=data)
+
+        # Phase 1 of drand workaround — see localchain/README.md#drand-workaround
+        log_step("Setting Drand.NextUnsignedAt")
+        current_block = await manager.get_current_block_number()
+        await manager.set_drand_next_unsigned_at(
+            sudo_wallet=alice.wallet, block_number=current_block + DRAND_WORKER_MARGIN
+        )
 
         log_step("Creating Docker snapshot")
         manager.make_snapshot(image_name=SNAPSHOT_IMAGE)
@@ -101,7 +117,7 @@ async def main() -> None:
         log_step("Done")
         logger.info("Snapshot image: %s", SNAPSHOT_IMAGE)
         logger.info("To run manually:")
-        logger.info("  docker run --rm -p 9944:9944 %s True --no-purge", SNAPSHOT_IMAGE)
+        logger.info("  docker run --rm -p 9944:9944 %s", SNAPSHOT_IMAGE)
 
 
 if __name__ == "__main__":

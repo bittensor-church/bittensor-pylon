@@ -3,11 +3,12 @@ from typing import Self
 from litestar.config.response_cache import ResponseCacheConfig
 from pydantic import Field, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
-from pylon_commons.constants import BLOCK_PROCESSING_TIME
 from pylon_commons.settings import ENV_FILE, Settings
 from pylon_commons.types import NetUid
 
 from pylon_service.bittensor.recent import HardLimit, SoftLimit
+
+settings = Settings()  # type: ignore
 
 
 class RecentObjectsSettings(BaseSettings):
@@ -34,18 +35,16 @@ class RecentObjectsSettings(BaseSettings):
         return self
 
     @property
-    def update_interval_seconds(self) -> int:
+    def update_interval_seconds(self) -> float:
         """
         Calculate the update interval as (soft_limit - refresh_lead) blocks.
         This ensures the cache is updated before reaching the soft limit.
         """
         interval_blocks = max(self.soft_limit_blocks - self.refresh_lead_blocks, 1)
-        return interval_blocks * BLOCK_PROCESSING_TIME
+        return interval_blocks * settings.block_duration_seconds
 
 
 recent_objects_settings = RecentObjectsSettings()
 
 # Default cache config. Only used for endpoints with explicit @handler(..., cache=...)
 response_cache_config = ResponseCacheConfig()
-
-settings = Settings()  # type: ignore

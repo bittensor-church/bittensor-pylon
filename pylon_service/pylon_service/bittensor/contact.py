@@ -527,9 +527,13 @@ class TurboBtContact(AbstractBittensorContact):
         labels={"uri": Attr("uri"), "netuid": Param("netuid"), "hotkey": Attr("hotkey")},
     )
     async def commit_weights(self, netuid: NetUid, weights: dict[NeuronUid, Weight]) -> RevealRound:
+        from pylon_service.settings import settings
+
         normalized_weights = {int(uid): float(weight) for uid, weight in weights.items()}
+        block_time = settings.block_duration_seconds
         reveal_round = await self._protect_turbobt(
-            "commit_weights", lambda c: c.subnet(netuid).weights.commit(normalized_weights)
+            "commit_weights",
+            lambda c: c.subnet(netuid).weights.commit(normalized_weights, block_time=block_time),  # type: ignore[arg-type]
         )
         return RevealRound(reveal_round)
 

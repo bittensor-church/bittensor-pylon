@@ -2,13 +2,12 @@ import datetime as dt
 
 import pytest
 from litestar.status_codes import HTTP_200_OK, HTTP_503_SERVICE_UNAVAILABLE
-from pylon_commons.constants import BLOCK_PROCESSING_TIME
 from pylon_commons.models import Block, Neuron, SubnetNeurons
 from pylon_commons.types import HotkeyName, IdentityName, NetUid, Timestamp
 
 from pylon_service.bittensor.recent.adapter import CacheKey, _CacheEntry
 from pylon_service.identities import identities
-from pylon_service.settings import recent_objects_settings
+from pylon_service.settings import recent_objects_settings, settings
 from tests.factories import BlockFactory, NeuronFactory
 
 
@@ -58,7 +57,7 @@ async def test_get_recent_neurons_cache_expired(
     identity_test_client_factory, mock_recent_objects_store, subnet_neurons, wallet, snapshot_json
 ):
     stale_blocks = recent_objects_settings.hard_limit_blocks + 1
-    timestamp = Timestamp(int(dt.datetime.now().timestamp()) - BLOCK_PROCESSING_TIME * stale_blocks)
+    timestamp = Timestamp(int(dt.datetime.now().timestamp() - settings.block_duration_seconds * stale_blocks))
     cache_entry = _CacheEntry(data=subnet_neurons.model_dump_json(), timestamp=timestamp)
     async with mock_recent_objects_store.behave.mock(get=[cache_entry.model_dump_json().encode()]):
         async with identity_test_client_factory("sn1") as client:

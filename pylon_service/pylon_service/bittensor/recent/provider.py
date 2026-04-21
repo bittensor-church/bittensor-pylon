@@ -2,7 +2,6 @@ import datetime as dt
 import logging
 
 from litestar.stores.base import Store
-from pylon_commons.constants import BLOCK_PROCESSING_TIME
 from pylon_commons.models import BittensorModel
 
 from .adapter import RecentCacheAdapter
@@ -19,17 +18,32 @@ class RecentObjectProvider:
     checks on the objects and raises exceptions if they are stale or missing.
     """
 
-    def __init__(self, soft_limit: SoftLimit, hard_limit: HardLimit, store: Store, context: AbstractContext) -> None:
+    def __init__(
+        self,
+        soft_limit: SoftLimit,
+        hard_limit: HardLimit,
+        block_duration_seconds: float,
+        store: Store,
+        context: AbstractContext,
+    ) -> None:
         """
         Args:
             soft_limit: soft limit for recent object age in blocks.
             hard_limit: hard limit for recent object age in blocks.
+            block_duration_seconds: expected block duration in seconds.
             store: litestar store instance. It is directly passed to cache adapters for accessing
                 recent objects.
             context: a Context instance that defines the context to build the cache key for a given model.
+
+        Raises:
+            ValueError: if block_duration_seconds is not greater than 0.
         """
+        if block_duration_seconds <= 0:
+            raise ValueError("block_duration_seconds must be greater than 0.")
+
         self._soft_limit = soft_limit
         self._hard_limit = hard_limit
+        self._block_duration_seconds = block_duration_seconds
         self._store = store
         self._context = context
 
@@ -52,7 +66,7 @@ class RecentObjectProvider:
 
         cached_at, object_ = cache_entry
         now = dt.datetime.now(dt.UTC).timestamp()
-        elapsed_blocks = max(0, int(now - cached_at)) // BLOCK_PROCESSING_TIME
+        elapsed_blocks = int(max(0.0, now - cached_at) // self._block_duration_seconds)
 
         if elapsed_blocks > self._hard_limit:
             raise RecentObjectStale(

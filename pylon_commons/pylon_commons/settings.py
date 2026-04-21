@@ -7,7 +7,6 @@ from .types import (
     ArchiveBlocksCutoff,
     BittensorNetwork,
     IdentityName,
-    Tempo,
 )
 
 ENV_FILE = os.environ.get("PYLON_ENV_FILE", ".env")
@@ -30,8 +29,8 @@ class Settings(BaseSettings):
     # docker
     docker_image_name: str = "bittensor_pylon"
 
-    # subnet epoch length
-    tempo: Tempo = Tempo(360)
+    # block duration in seconds (used for drand reveal round calculation)
+    block_duration_seconds: float = Field(default=12.0, gt=0)
 
     # commit-reveal cycle
     commit_cycle_length: int = 3  # Number of tempos to wait between weight commitments

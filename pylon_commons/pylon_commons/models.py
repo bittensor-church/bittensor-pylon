@@ -35,6 +35,7 @@ from .types import (
     SubnetActive,
     TaoStake,
     TaoStakeRao,
+    Tempo,
     Timestamp,
     TotalStake,
     TotalStakeRao,
@@ -139,9 +140,9 @@ class SubnetValidators(BittensorModel):
 
 
 class SubnetHyperparams(BittensorModel):
+    tempo: Tempo | None = None
     max_weights_limit: MaxWeightsLimit | None = None
     commit_reveal_weights_enabled: CommitReveal | None = None
-    # Add more parameters as needed.
 
 
 class CertificateAlgorithm(UnknownIntEnum):

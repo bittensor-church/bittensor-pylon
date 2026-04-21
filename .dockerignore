@@ -1,9 +1,48 @@
+# Python bytecode and caches
 __pycache__/
-*.pyc
-*.pyo
-*.pyd
+**/__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+**/.pytest_cache/
+.ruff_cache/
+**/.ruff_cache/
+.mypy_cache/
+**/.mypy_cache/
+.pyright/
+**/.pyright/
+
+# Local virtual environments and nox sessions
+.venv/
+**/.venv/
+.nox/
+**/.nox/
+
+# Build, coverage, and packaging output
+build/
+**/build/
+dist/
+**/dist/
+*.egg-info/
+**/*.egg-info/
+.coverage
+.coverage.*
+coverage.xml
+htmlcov/
+**/htmlcov/
+
+# Local configuration and workspace metadata
 .env
+.env*
 .git
 .gitignore
+.github/
+.idea/
+.vscode/
+.claude/
+.codex/
+docker-compose.yaml
+
+# Documentation and root Dockerfile are not needed by pylon_service/Dockerfile
 README.md
 Dockerfile

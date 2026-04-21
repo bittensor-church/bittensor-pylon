@@ -4,22 +4,19 @@ import enum
 import json
 import logging
 import subprocess
-import time
 from collections.abc import AsyncIterator
-from contextlib import asynccontextmanager, suppress
+from contextlib import asynccontextmanager
 from dataclasses import dataclass
 from types import TracebackType
 from typing import TYPE_CHECKING
 from urllib.parse import urlparse
 
 import docker
-import docker.errors
-import httpx
 from bittensor_wallet import Wallet
 from turbobt.client import Bittensor
 from turbobt.subtensor.exceptions import HotKeyAlreadyRegisteredInSubNet
 
-from tests.helpers import find_free_port
+from tests.integration.containers import LocalChainContainer, LocalChainImage
 
 logger = logging.getLogger(__name__)
 
@@ -27,7 +24,6 @@ if TYPE_CHECKING:
     from docker.models.containers import Container
 
 _HOST = "localhost"
-_CHAIN_RPC_PORT = 9944
 _CONTACT_TEST_AXON_IP = "1.1.1.1"
 _CONTACT_TEST_AXON_PORT = 12345
 
@@ -37,6 +33,9 @@ _RAO_PER_TAO = 1_000_000_000
 class ChainStorage(enum.StrEnum):
     ADMIN_FREEZE_WINDOW = "SubtensorModule.AdminFreezeWindow"
     COMMIT_REVEAL_WEIGHTS_ENABLED = "SubtensorModule.CommitRevealWeightsEnabled"
+    DRAND_LAST_STORED_ROUND = "Drand.LastStoredRound"
+    DRAND_NEXT_UNSIGNED_AT = "Drand.NextUnsignedAt"
+    DRAND_OLDEST_STORED_ROUND = "Drand.OldestStoredRound"
     SERVING_RATE_LIMIT = "SubtensorModule.ServingRateLimit"
     SUBTOKEN_ENABLED = "SubtensorModule.SubtokenEnabled"
     TOTAL_NETWORKS = "SubtensorModule.TotalNetworks"
@@ -54,104 +53,64 @@ class DockerContextEndpoint:
 
 class LocalChainManager:
     """
-    Manages a local subtensor Docker container for integration tests.
+    Wrapper around a LocalChainContainer that manages its lifecycle
+    and provides chain operation methods via the turbobt library.
 
-    Provides Docker lifecycle management (start, stop, snapshot) and
-    chain operation methods for building custom chain states. Docker
-    operations are synchronous; chain operations are async and use
-    the turbobt library.
+    The container is configured externally (image, network, env vars)
+    before being passed to the manager. The manager is responsible for
+    starting and stopping the container.
     """
 
-    IMAGE = "ghcr.io/opentensor/subtensor-localnet:main"
-    _CONTAINER_NAME_PREFIX = "pylon-integration-test"
+    def __init__(self, container: LocalChainContainer | None = None) -> None:
+        self._container = container if container is not None else LocalChainContainer(image=LocalChainImage.DEFAULT)
+        self._bt_client: Bittensor | None = None
 
-    def __init__(
-        self,
-        port: int | None = None,
-        image: str = IMAGE,
-        startup_timeout: float = 60.0,
-    ) -> None:
-        self.port = port if port is not None else find_free_port()
-        self._image = image
-        self._startup_timeout = startup_timeout
-        self._container_name = f"{self._CONTAINER_NAME_PREFIX}-{self.port}"
-        self._context_endpoint = self._load_active_docker_context()
-        self._docker = self._create_docker_client(self._context_endpoint)
-        self._rpc_host = self._resolve_rpc_host(self._context_endpoint)
-        self._ssh_tunnel: subprocess.Popen[str] | None = None
-
-    def __enter__(self) -> LocalChainManager:
-        self.start()
+    async def __aenter__(self) -> LocalChainManager:
+        await self.start()
         return self
 
-    def __exit__(
+    async def __aexit__(
         self,
         exc_type: type[BaseException] | None,
         exc_val: BaseException | None,
         exc_tb: TracebackType | None,
     ) -> None:
-        self.stop()
+        await self.stop()
+
+    @property
+    def container(self) -> LocalChainContainer:
+        """Return the underlying LocalChainContainer."""
+        return self._container
 
     @property
     def ws_url(self) -> str:
-        return f"ws://{self._rpc_host}:{self.port}"
+        return self._container.ws_url
 
     @property
     def http_url(self) -> str:
-        return f"http://{self._rpc_host}:{self.port}"
+        return self._container.http_url
 
-    # ---- Docker lifecycle (sync) ----
+    # ---- Docker lifecycle ----
 
-    def start(self) -> None:
+    async def start(self) -> None:
         """
-        Start the local subtensor Docker container and wait until it's ready.
-
-        Uses the image and startup_timeout configured in __init__.
+        Start the underlying container and wait until it's ready.
 
         Raises:
-            RuntimeError: If the chain doesn't become ready within the timeout.
+            docker.errors.ImageNotFound: If the container image does not exist.
         """
-        logger.info("Starting container from image %s on port %d", self._image, self.port)
-        run_kwargs = {
-            "command": ["True", "--no-purge"],
-            "name": self._container_name,
-            "detach": True,
-        }
-        if self._context_endpoint.scheme != "ssh":
-            run_kwargs["ports"] = {f"{_CHAIN_RPC_PORT}/tcp": self.port}
+        self._container.start()
 
-        container = self._docker.containers.run(self._image, **run_kwargs)
+    async def stop(self) -> None:
+        """Stop and remove the underlying container, closing the turbobt client first."""
+        self._container.stop()
+        await self.close_turbobt_client()
 
-        if self._context_endpoint.scheme == "ssh":
-            self._start_ssh_tunnel(container)
-
-        deadline = time.monotonic() + self._startup_timeout
-        while time.monotonic() < deadline:
-            with suppress(httpx.RequestError):
-                response = httpx.post(
-                    self.http_url,
-                    json={"id": 1, "jsonrpc": "2.0", "method": "system_health", "params": []},
-                    timeout=2.0,
-                )
-                if response.status_code == 200:
-                    logger.info("Container ready on port %d", self.port)
-                    return
-            time.sleep(0.5)
-
-        self.stop()
-        raise RuntimeError(f"Local chain did not start within {self._startup_timeout}s on port {self.port}")
-
-    def stop(self) -> None:
-        """
-        Stop and remove the Docker container.
-        """
-        self._stop_ssh_tunnel()
-        try:
-            container = self._docker.containers.get(self._container_name)
-            logger.info("Removing container %s", self._container_name)
-            container.remove(force=True)
-        except docker.errors.NotFound:
-            pass
+    async def close_turbobt_client(self) -> None:
+        """Close the shared turbobt client if open."""
+        if self._bt_client is not None:
+            await self._bt_client.__aexit__(None, None, None)
+            self._bt_client = None
 
     @classmethod
     def load_active_docker_context(cls) -> DockerContextEndpoint:
@@ -187,37 +146,45 @@ class LocalChainManager:
         raise RuntimeError("Could not determine container IP address")
 
     def get_container(self) -> Container:
-        """Return the running Docker container for this manager."""
-        return self._docker.containers.get(self._container_name)
+        """Return the running Docker SDK container.
+
+        Raises:
+            RuntimeError: If the container has not been started yet.
+        """
+        wrapped = self._container.get_wrapped_container()
+        if wrapped is None:
+            raise RuntimeError("Container has not been started yet")
+        return wrapped
 
     def is_running(self) -> bool:
         """Report whether the managed container currently exists and is running."""
-        try:
-            container = self.get_container()
-        except docker.errors.NotFound:
+        wrapped = self._container.get_wrapped_container()
+        if wrapped is None:
             return False
-        container.reload()
-        return container.status == "running"
+        wrapped.reload()
+        return wrapped.status == "running"
 
     def make_snapshot(self, image_name: str) -> None:
         """
-        Stop the container and commit it as a Docker image.
+        Commit the running container as a Docker image.
 
-        The resulting image can be started with 'True --no-purge' arguments
-        to preserve chain state.
+        The resulting image has CMD ["True", "--no-purge"] baked in,
+        so it preserves chain state by default when started without
+        an explicit command override.
 
         Args:
             image_name: Name (and optional tag) for the snapshot image.
 
         Raises:
-            docker.errors.APIError: If any Docker operation fails.
-            docker.errors.NotFound: If the container does not exist.
+            RuntimeError: If the container has not been started yet.
+            docker.errors.APIError: If the Docker commit operation fails.
         """
+        wrapped = self._container.get_wrapped_container()
+        if wrapped is None:
+            raise RuntimeError("Container has not been started; cannot make snapshot")
         logger.info("Creating snapshot image %s", image_name)
-        container = self._docker.containers.get(self._container_name)
         repository, _, tag = image_name.partition(":")
-        container.commit(repository=repository, tag=tag or None)
-        container.remove(force=True)
+        wrapped.commit(repository=repository, tag=tag or None, conf={"Cmd": ["True", "--no-purge"]})
         logger.info("Snapshot image %s created", image_name)
 
     # ---- Wallet operations (sync) ----
@@ -257,7 +224,7 @@ class LocalChainManager:
             RuntimeError: If AdminFreezeWindow is not 0 after the call.
         """
         logger.info("Disabling AdminFreezeWindow")
-        async with self._turbobt_client(wallet=sudo_wallet) as client:
+        async with self._turbobt_client() as client:
             await client.subtensor._init_runtime()
             assert client.subtensor._metadata is not None
             pallet = client.subtensor._metadata.get_metadata_pallet("SubtensorModule")
@@ -287,7 +254,7 @@ class LocalChainManager:
             amount_tao: Amount to transfer in TAO.
         """
         logger.info("Transferring %d TAO to %s", amount_tao, destination_ss58)
-        async with self._turbobt_client(wallet=wallet) as client:
+        async with self._turbobt_client() as client:
             result = await client.subtensor.author.submitAndWatchExtrinsic(
                 "Balances",
                 "transfer_keep_alive",
@@ -304,7 +271,7 @@ class LocalChainManager:
             wallet: Wallet to register the subnet with (becomes subnet owner).
         """
         logger.info("Registering new subnet")
-        async with self._turbobt_client(wallet=wallet) as client:
+        async with self._turbobt_client() as client:
             await client.subnets.register(wallet=wallet)
 
     async def register_neuron(self, wallet: Wallet, netuid: int) -> None:
@@ -316,7 +283,7 @@ class LocalChainManager:
             netuid: Subnet UID to register on.
         """
         logger.info("Registering neuron %s on subnet %d", wallet.hotkey.ss58_address, netuid)
-        async with self._turbobt_client(wallet=wallet) as client:
+        async with self._turbobt_client() as client:
             try:
                 await client.subnet(netuid).neurons.register(wallet.hotkey, wallet=wallet)
             except HotKeyAlreadyRegisteredInSubNet:
@@ -337,7 +304,7 @@ class LocalChainManager:
             RuntimeError: If SubtokenEnabled is still False after the call.
         """
         logger.info("Enabling subtokens on subnet %d", netuid)
-        async with self._turbobt_client(wallet=sudo_wallet) as client:
+        async with self._turbobt_client() as client:
             result = await client.subtensor.sudo.sudo(
                 "AdminUtils",
                 "sudo_set_subtoken_enabled",
@@ -366,7 +333,7 @@ class LocalChainManager:
             RuntimeError: If commit-reveal weights are still disabled after the update.
         """
         logger.info("Enabling commit-reveal weights on subnet %d", netuid)
-        async with self._turbobt_client(wallet=sudo_wallet) as client:
+        async with self._turbobt_client() as client:
             result = await client.subtensor.admin_utils.sudo_set_commit_reveal_weights_enabled(
                 netuid=netuid,
                 enabled=True,
@@ -390,7 +357,7 @@ class LocalChainManager:
             RuntimeError: If commit-reveal weights remain enabled after the update.
         """
         logger.info("Disabling commit-reveal weights on subnet %d", netuid)
-        async with self._turbobt_client(wallet=sudo_wallet) as client:
+        async with self._turbobt_client() as client:
             result = await client.subtensor.admin_utils.sudo_set_commit_reveal_weights_enabled(
                 netuid=netuid,
                 enabled=False,
@@ -413,7 +380,7 @@ class LocalChainManager:
             amount_tao: Amount to stake in TAO.
         """
         logger.info("Staking %d TAO for hotkey %s on subnet %d", amount_tao, hotkey_ss58, netuid)
-        async with self._turbobt_client(wallet=wallet) as client:
+        async with self._turbobt_client() as client:
             result = await client.subtensor.subtensor_module.add_stake(
                 hotkey=hotkey_ss58,
                 netuid=netuid,
@@ -433,7 +400,7 @@ class LocalChainManager:
             amount_tao: Amount to unstake in TAO.
         """
         logger.info("Unstaking %d TAO for hotkey %s on subnet %d", amount_tao, hotkey_ss58, netuid)
-        async with self._turbobt_client(wallet=wallet) as client:
+        async with self._turbobt_client() as client:
             result = await client.subtensor.subtensor_module.remove_stake(
                 hotkey=hotkey_ss58,
                 netuid=netuid,
@@ -452,7 +419,7 @@ class LocalChainManager:
             data: Commitment data string.
         """
         logger.info("Setting commitment on subnet %d for %s", netuid, wallet.hotkey.ss58_address)
-        async with self._turbobt_client(wallet=wallet) as client:
+        async with self._turbobt_client() as client:
             result = await client.subnet(netuid).commitments.set(data.encode(), wallet=wallet)
             await result.wait_for_finalization()
 
@@ -483,10 +450,79 @@ class LocalChainManager:
             rate_limit: Rate limit value in blocks.
         """
         logger.info("Setting weights rate limit to %d on subnet %d", rate_limit, netuid)
-        async with self._turbobt_client(wallet=sudo_wallet) as client:
+        async with self._turbobt_client() as client:
             result = await client.subtensor.admin_utils.sudo_set_weights_set_rate_limit(
                 netuid=netuid,
                 weights_set_rate_limit=rate_limit,
+                wallet=sudo_wallet,
+            )
+            await result.wait_for_finalization()
+
+    async def set_drand_last_stored_round(self, sudo_wallet: Wallet, round_number: int) -> None:
+        """
+        Set the latest Drand round known to the local chain via sudo storage update.
+
+        Args:
+            sudo_wallet: Wallet with sudo privileges.
+            round_number: Drand round number to store.
+        """
+        logger.info("Setting Drand.LastStoredRound to %d", round_number)
+        await self._set_storage(
+            sudo_wallet=sudo_wallet,
+            pallet_name="Drand",
+            storage_name="LastStoredRound",
+            storage_value=f"0x{round_number.to_bytes(8, byteorder='little', signed=False).hex()}",
+        )
+
+    async def set_drand_oldest_stored_round(self, sudo_wallet: Wallet, round_number: int) -> None:
+        """
+        Set the oldest Drand round known to the local chain via sudo storage update.
+
+        Args:
+            sudo_wallet: Wallet with sudo privileges.
+            round_number: Drand round number to store.
+        """
+        logger.info("Setting Drand.OldestStoredRound to %d", round_number)
+        await self._set_storage(
+            sudo_wallet=sudo_wallet,
+            pallet_name="Drand",
+            storage_name="OldestStoredRound",
+            storage_value=f"0x{round_number.to_bytes(8, byteorder='little', signed=False).hex()}",
+        )
+
+    async def set_drand_next_unsigned_at(self, sudo_wallet: Wallet, block_number: int) -> None:
+        """
+        Set the next block at which an unsigned Drand extrinsic should be submitted.
+
+        Args:
+            sudo_wallet: Wallet with sudo privileges.
+            block_number: Target block number.
+
+        Raises:
+            RuntimeError: If the stored value does not match the expected value after write.
+        """
+        logger.info("Setting Drand.NextUnsignedAt to %d", block_number)
+        await self._set_storage(
+            sudo_wallet=sudo_wallet,
+            pallet_name="Drand",
+            storage_name="NextUnsignedAt",
+            storage_value=f"0x{block_number.to_bytes(4, byteorder='little', signed=False).hex()}",
+        )
+
+    async def set_tempo(self, sudo_wallet: Wallet, netuid: int, tempo: int) -> None:
+        """
+        Set the tempo (epoch length) for a subnet via sudo call.
+
+        Args:
+            sudo_wallet: Wallet with sudo privileges.
+            netuid: Subnet UID.
+            tempo: Tempo value in blocks.
+        """
+        logger.info("Setting tempo to %d on subnet %d", tempo, netuid)
+        async with self._turbobt_client() as client:
+            result = await client.subtensor.admin_utils.sudo_set_tempo(
+                netuid=netuid,
+                tempo=tempo,
                 wallet=sudo_wallet,
             )
             await result.wait_for_finalization()
@@ -526,7 +562,7 @@ class LocalChainManager:
             port: Port to announce.
         """
         logger.info("Serving axon %s:%d on subnet %d for %s", ip, port, netuid, wallet.hotkey.ss58_address)
-        async with self._turbobt_client(wallet=wallet) as client:
+        async with self._turbobt_client() as client:
             await client.subnet(netuid).neurons.serve(ip, port, wallet=wallet)
 
     async def get_total_networks(self) -> int:
@@ -536,6 +572,19 @@ class LocalChainManager:
         total_networks = await self.get_storage(ChainStorage.TOTAL_NETWORKS)
         assert isinstance(total_networks, int)
         return total_networks
+
+    async def get_current_block_number(self) -> int:
+        """
+        Return the current (head) block number from the chain.
+
+        Raises:
+            RuntimeError: If the chain header could not be retrieved.
+        """
+        async with self._turbobt_client() as client:
+            header = await client.subtensor.chain.getHeader()
+            if header is None:
+                raise RuntimeError("Failed to get chain header")
+            return header["number"]
 
     async def prepare_contact_write_subnets(
         self,
@@ -604,30 +653,30 @@ class LocalChainManager:
     # ---- Private helpers ----
 
     @asynccontextmanager
-    async def _turbobt_client(self, wallet: Wallet | None = None) -> AsyncIterator[Bittensor]:
+    async def _turbobt_client(self) -> AsyncIterator[Bittensor]:
         """
-        Create a turbobt Bittensor client connected to the local chain.
-
-        Args:
-            wallet: Optional wallet for signed operations.
+        Return the shared turbobt Bittensor client, opening it on first use.
 
         Yields:
             A connected Bittensor client instance.
         """
-        async with Bittensor(wallet=wallet, uri=self.ws_url) as client:
-            yield client
+        if self._bt_client is None:
+            self._bt_client = Bittensor(wallet=None, uri=self.ws_url)
+            await self._bt_client.__aenter__()
+        yield self._bt_client
 
     async def _set_storage(
         self,
         sudo_wallet: Wallet,
         storage_name: str,
         storage_value: str,
+        pallet_name: str = "SubtensorModule",
         params: list[object] | None = None,
     ) -> None:
-        async with self._turbobt_client(wallet=sudo_wallet) as client:
+        async with self._turbobt_client() as client:
             await client.subtensor._init_runtime()
             assert client.subtensor._metadata is not None
-            pallet = client.subtensor._metadata.get_metadata_pallet("SubtensorModule")
+            pallet = client.subtensor._metadata.get_metadata_pallet(pallet_name)
             storage_function = pallet.get_storage_function(storage_name)
             storage_key = client.subtensor.state._storage_key(pallet, storage_function, params or [])
             result = await client.subtensor.sudo.sudo(
@@ -690,54 +739,3 @@ class LocalChainManager:
             username=parsed.username,
             port=parsed.port,
         )
-
-    def _start_ssh_tunnel(self, container: Container) -> None:
-        if self._context_endpoint.scheme != "ssh":
-            return
-        container_ip = self._get_container_ip(container)
-        remote = self._ssh_remote()
-        command = [
-            "ssh",
-            "-o",
-            "BatchMode=yes",
-            "-o",
-            "ExitOnForwardFailure=yes",
-            "-N",
-            "-L",
-            f"{self.port}:{container_ip}:{_CHAIN_RPC_PORT}",
-        ]
-        if self._context_endpoint.port is not None:
-            command.extend(["-p", str(self._context_endpoint.port)])
-        command.append(remote)
-        logger.info("Starting SSH tunnel for chain RPC via %s", remote)
-        self._ssh_tunnel = subprocess.Popen(
-            command,
-            stdout=subprocess.DEVNULL,
-            stderr=subprocess.PIPE,
-            text=True,
-        )
-
-    def _stop_ssh_tunnel(self) -> None:
-        if self._ssh_tunnel is None:
-            return
-        if self._ssh_tunnel.poll() is None:
-            self._ssh_tunnel.terminate()
-            try:
-                self._ssh_tunnel.wait(timeout=5)
-            except subprocess.TimeoutExpired:
-                self._ssh_tunnel.kill()
-                self._ssh_tunnel.wait(timeout=5)
-        self._ssh_tunnel = None
-
-    def _get_container_ip(self, container: Container) -> str:
-        try:
-            return self.get_container_ip(container)
-        except RuntimeError as exc:
-            raise RuntimeError(f"Could not determine IP address for container {self._container_name}") from exc
-
-    def _ssh_remote(self) -> str:
-        if self._context_endpoint.hostname is None:
-            raise RuntimeError(f"SSH docker context {self._context_endpoint.raw_host!r} is missing a host")
-        if self._context_endpoint.username:
-            return f"{self._context_endpoint.username}@{self._context_endpoint.hostname}"
-        return self._context_endpoint.hostname

@@ -14,7 +14,7 @@ from pylon_service.bittensor.recent import (
     SubnetContext,
 )
 from pylon_service.identities import Identity, identities
-from pylon_service.settings import recent_objects_settings
+from pylon_service.settings import recent_objects_settings, settings
 from pylon_service.stores import StoreName
 
 
@@ -50,6 +50,7 @@ def _create_recent_object_provider(request: Request, context: AbstractContext) -
     return RecentObjectProvider(
         soft_limit=recent_objects_settings.soft_limit_blocks,
         hard_limit=recent_objects_settings.hard_limit_blocks,
+        block_duration_seconds=settings.block_duration_seconds,
         store=request.app.stores.get(StoreName.RECENT_OBJECTS),
         context=context,
     )

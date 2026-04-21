@@ -27,12 +27,18 @@ async def test_put_weights_commit_reveal_enabled(identity_test_client_factory, m
         # The background task calls get_latest_block twice (start and during apply)
         async with mock_client.mock_behavior(
             get_latest_block=[
-                Block(number=BlockNumber(1000), hash=BlockHash("0xabc123")),  # First call: initial block in _prepare
-                Block(
-                    number=BlockNumber(1001), hash=BlockHash("0xabc124")
-                ),  # Second call: tempo check in _single_attempt
+                Block(number=BlockNumber(1000), hash=BlockHash("0xabc123")),
+                Block(number=BlockNumber(1000), hash=BlockHash("0xabc123")),
+                Block(number=BlockNumber(1001), hash=BlockHash("0xabc124")),
+                Block(number=BlockNumber(1001), hash=BlockHash("0xabc124")),
+                Block(number=BlockNumber(1001), hash=BlockHash("0xabc124")),
+                Block(number=BlockNumber(1001), hash=BlockHash("0xabc124")),
+                Block(number=BlockNumber(1001), hash=BlockHash("0xabc124")),
             ],
-            get_hyperparams=[SubnetHyperparams(commit_reveal_weights_enabled=CommitReveal.V4)],
+            get_hyperparams=[
+                SubnetHyperparams(commit_reveal_weights_enabled=CommitReveal.V4),
+                SubnetHyperparams(commit_reveal_weights_enabled=CommitReveal.V4),
+            ],
             commit_weights=[RevealRound(1005)],
         ):
             async with identity_test_client_factory("sn1") as client:
@@ -74,12 +80,18 @@ async def test_put_weights_commit_reveal_disabled(identity_test_client_factory, 
         # Set up behaviors that will persist for the background task
         async with mock_client.mock_behavior(
             get_latest_block=[
-                Block(number=BlockNumber(2000), hash=BlockHash("0xdef456")),  # First call: initial block in _prepare
-                Block(
-                    number=BlockNumber(2000), hash=BlockHash("0xdef456")
-                ),  # Second call: tempo check in _single_attempt
+                Block(number=BlockNumber(2000), hash=BlockHash("0xdef456")),
+                Block(number=BlockNumber(2000), hash=BlockHash("0xdef456")),
+                Block(number=BlockNumber(2000), hash=BlockHash("0xdef456")),
+                Block(number=BlockNumber(2000), hash=BlockHash("0xdef456")),
+                Block(number=BlockNumber(2000), hash=BlockHash("0xdef456")),
+                Block(number=BlockNumber(2000), hash=BlockHash("0xdef456")),
+                Block(number=BlockNumber(2000), hash=BlockHash("0xdef456")),
             ],
-            get_hyperparams=[SubnetHyperparams(commit_reveal_weights_enabled=CommitReveal.DISABLED)],
+            get_hyperparams=[
+                SubnetHyperparams(commit_reveal_weights_enabled=CommitReveal.DISABLED),
+                SubnetHyperparams(commit_reveal_weights_enabled=CommitReveal.DISABLED),
+            ],
             set_weights=[None],
         ):
             async with identity_test_client_factory("sn2") as client:
@@ -125,8 +137,16 @@ async def test_put_weights_retries_when_prepare_fails(
                 RuntimeError("Network error"),
                 Block(number=BlockNumber(1000), hash=BlockHash("0xabc123")),
                 Block(number=BlockNumber(1000), hash=BlockHash("0xabc123")),
+                Block(number=BlockNumber(1000), hash=BlockHash("0xabc123")),
+                Block(number=BlockNumber(1000), hash=BlockHash("0xabc123")),
+                Block(number=BlockNumber(1000), hash=BlockHash("0xabc123")),
+                Block(number=BlockNumber(1000), hash=BlockHash("0xabc123")),
+                Block(number=BlockNumber(1000), hash=BlockHash("0xabc123")),
             ],
-            get_hyperparams=[SubnetHyperparams(commit_reveal_weights_enabled=CommitReveal.DISABLED)],
+            get_hyperparams=[
+                SubnetHyperparams(commit_reveal_weights_enabled=CommitReveal.DISABLED),
+                SubnetHyperparams(commit_reveal_weights_enabled=CommitReveal.DISABLED),
+            ],
             set_weights=[None],
         ):
             async with identity_test_client_factory("sn1") as client:
@@ -140,7 +160,7 @@ async def test_put_weights_retries_when_prepare_fails(
 
                 await wait_for_background_tasks(ApplyWeights.tasks_running)
 
-        assert len(mock_client.calls["get_latest_block"]) == 8
+        assert len(mock_client.calls["get_latest_block"]) == 9
         assert mock_client.calls["set_weights"] == [
             (
                 1,
