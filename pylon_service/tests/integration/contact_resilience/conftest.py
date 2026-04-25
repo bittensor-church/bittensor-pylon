@@ -1,6 +1,6 @@
 import subprocess
 import time
-from collections.abc import Iterator
+from collections.abc import AsyncIterator, Iterator
 from contextlib import suppress
 from dataclasses import dataclass
 from typing import Any
@@ -13,8 +13,8 @@ from pylon_commons.types import BittensorNetwork
 
 from pylon_service.bittensor.contact import TurboBtContact
 from tests.helpers import find_free_port
-from tests.integration.contact.conftest import READ_SNAPSHOT_IMAGE
 from tests.integration.contact_resilience.helpers import reset_proxy
+from tests.integration.containers import LocalChainContainer
 from tests.integration.localchain.manager import DockerContextEndpoint, LocalChainManager
 
 TOXIPROXY_IMAGE = "ghcr.io/shopify/toxiproxy:2.12.0"
@@ -38,14 +38,16 @@ class ToxiProxyRuntime:
     listen_port: int
 
 
-@pytest.fixture(scope="package")
-def resilience_chain() -> Iterator[LocalChainManager]:
-    manager = LocalChainManager(image=READ_SNAPSHOT_IMAGE, startup_timeout=120.0)
+@pytest_asyncio.fixture(scope="package")
+async def resilience_chain() -> AsyncIterator[LocalChainManager]:
+    container = LocalChainContainer()
+    await container.ensure_prepared_image()
+    manager = LocalChainManager(container)
     try:
-        manager.start()
+        await manager.start()
         yield manager
     finally:
-        manager.stop()
+        await manager.stop()
 
 
 @pytest_asyncio.fixture

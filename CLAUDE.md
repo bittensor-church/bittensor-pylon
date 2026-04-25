@@ -404,6 +404,8 @@ The service endpoints are tested using `MockBittensorClient` (`pylon_service/tes
 
 Integration tests live in `pylon_service/tests/integration/` and test against a real Bittensor local chain running in Docker.
 
+**Before working on integration tests, read [`pylon_service/tests/integration/localchain/README.md`](pylon_service/tests/integration/localchain/README.md)** — it describes the localchain setup, seeded data, and important particularities (e.g., the drand workaround).
+
 ### Localchain (Docker Container)
 
 Tests use `localchain` — a Docker container running a local Bittensor blockchain (`ghcr.io/opentensor/subtensor-localnet:main`) with fast block times for quick testing. Before running tests, a snapshot image must be prepared:

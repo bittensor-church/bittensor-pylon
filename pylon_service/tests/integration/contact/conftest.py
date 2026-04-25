@@ -4,24 +4,21 @@ import pytest_asyncio
 from pylon_commons.types import BittensorNetwork, NetUid
 
 from pylon_service.bittensor.contact import TurboBtContact
+from tests.integration.containers import LocalChainContainer, LocalChainImage
 from tests.integration.localchain.dev_accounts import DevAccount
 from tests.integration.localchain.manager import LocalChainManager
 
-READ_SNAPSHOT_IMAGE = "prepared-localnet:latest"
 
-
-@pytest.fixture(scope="module")
-def read_chain():
-    manager = LocalChainManager(image=READ_SNAPSHOT_IMAGE, startup_timeout=120.0)
-    try:
-        manager.start()
-    except docker.errors.ImageNotFound as exc:
-        raise pytest.UsageError(f"Docker image '{READ_SNAPSHOT_IMAGE}' not found") from exc
-
+@pytest_asyncio.fixture(scope="module")
+async def read_chain():
+    container = LocalChainContainer()
+    await container.ensure_prepared_image()
+    manager = LocalChainManager(container)
+    await manager.start()
     try:
         yield manager
     finally:
-        manager.stop()
+        await manager.stop()
 
 
 @pytest_asyncio.fixture
@@ -35,18 +32,18 @@ def prepared_netuid() -> NetUid:
     return NetUid(1)
 
 
-@pytest.fixture(scope="module")
-def write_chain():
-    manager = LocalChainManager(startup_timeout=120.0)
+@pytest_asyncio.fixture(scope="module")
+async def write_chain():
+    manager = LocalChainManager()
     try:
-        manager.start()
+        await manager.start()
     except docker.errors.ImageNotFound as exc:
-        raise pytest.UsageError(f"Docker image '{LocalChainManager.IMAGE}' not found") from exc
+        raise pytest.UsageError(f"Docker image '{LocalChainImage.DEFAULT}' not found.") from exc
 
     try:
         yield manager
     finally:
-        manager.stop()
+        await manager.stop()
 
 
 @pytest_asyncio.fixture(scope="module")

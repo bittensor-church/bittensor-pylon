@@ -1,6 +1,6 @@
 import pytest
 import pytest_asyncio
-from pylon_client.artanis import BlockNumber, Hotkey, NetUid, PylonClient, PylonNotFound
+from pylon_client.artanis import BlockNumber, Hotkey, NetUid, PylonNotFound
 from pylon_client.artanis.v1 import GetNeuronsResponse
 
 from tests.integration.localchain.dev_accounts import DevAccount
@@ -10,10 +10,11 @@ STAKE_AMOUNT_TAO = 1
 
 
 @pytest_asyncio.fixture
-async def added_stake(localchain: LocalChainManager, pylon_client: PylonClient):
-    pre_response = pylon_client.v1.open_access.get_latest_neurons(netuid=NetUid(1))
-    saved_block = pre_response.block.number
-    saved_neurons = pre_response.neurons
+async def added_stake(localchain: LocalChainManager, pylon_client_factory):
+    with pylon_client_factory("sn1") as client:
+        pre_response = client.v1.open_access.get_latest_neurons(netuid=NetUid(1))
+        saved_block = pre_response.block.number
+        saved_neurons = pre_response.neurons
 
     bob = DevAccount.BOB
     await localchain.add_stake(wallet=bob.wallet, netuid=1, hotkey_ss58=bob.hotkey_ss58, amount_tao=STAKE_AMOUNT_TAO)
@@ -27,12 +28,13 @@ async def added_stake(localchain: LocalChainManager, pylon_client: PylonClient):
 
 
 @pytest.mark.asyncio
-async def test_get_neurons_at_specific_block(pylon_client: PylonClient, added_stake):
+async def test_get_neurons_at_specific_block(pylon_client_factory, added_stake):
     saved_block, saved_neurons = added_stake
     bob_hotkey = Hotkey(DevAccount.BOB.hotkey_ss58)
 
-    historical = pylon_client.v1.open_access.get_neurons(netuid=NetUid(1), block_number=BlockNumber(saved_block))
-    latest = pylon_client.v1.open_access.get_latest_neurons(netuid=NetUid(1))
+    with pylon_client_factory("sn1") as client:
+        historical = client.v1.open_access.get_neurons(netuid=NetUid(1), block_number=BlockNumber(saved_block))
+        latest = client.v1.open_access.get_latest_neurons(netuid=NetUid(1))
 
     assert isinstance(historical, GetNeuronsResponse)
     assert historical.block.number == saved_block
@@ -44,6 +46,7 @@ async def test_get_neurons_at_specific_block(pylon_client: PylonClient, added_st
     assert latest.neurons[bob_hotkey].stakes.total > historical.neurons[bob_hotkey].stakes.total
 
 
-def test_get_neurons_nonexistent_block(pylon_client: PylonClient):
-    with pytest.raises(PylonNotFound):
-        pylon_client.v1.open_access.get_neurons(netuid=NetUid(1), block_number=BlockNumber(999_999_999))
+def test_get_neurons_nonexistent_block(pylon_client_factory):
+    with pylon_client_factory("sn1") as client:
+        with pytest.raises(PylonNotFound):
+            client.v1.open_access.get_neurons(netuid=NetUid(1), block_number=BlockNumber(999_999_999))

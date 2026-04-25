@@ -5,7 +5,7 @@ from typing import ClassVar, TypeVar
 
 from prometheus_client import Histogram
 from pylon_commons.models import Block
-from pylon_commons.types import CommitmentDataBytes, Hotkey, NetUid, RevealedCommitmentData, Weight
+from pylon_commons.types import CommitmentDataBytes, Hotkey, NetUid, RevealedCommitmentData, Tempo, Weight
 from tenacity import (
     AsyncRetrying,
     RetryCallState,
@@ -163,7 +163,9 @@ class ApplyWeights(
 
     async def _prepare(self) -> None:
         self._start_block = await self._client.get_latest_block()
-        self._initial_tempo = get_epoch_containing_block(self._start_block.number, self._netuid)
+        hyperparams = await self._client.get_hyperparams(self._netuid, self._start_block)
+        tempo = hyperparams.tempo if hyperparams and hyperparams.tempo else Tempo(360)
+        self._initial_tempo = get_epoch_containing_block(self._start_block.number, self._netuid, tempo)
 
     async def _single_attempt(self) -> None:
         assert self._initial_tempo is not None, "_prepare sets _initial_tempo before retries"

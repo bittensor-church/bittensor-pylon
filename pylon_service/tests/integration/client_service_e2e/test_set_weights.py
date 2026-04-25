@@ -1,42 +1,45 @@
-from unittest.mock import patch
+import asyncio
 
 import pytest
 import pytest_asyncio
-from bittensor_wallet import Wallet
-from pylon_client.artanis import Hotkey, PylonClient, Weight
+from pylon_client.artanis import Hotkey, Weight
 from pylon_client.artanis.v1 import SetWeightsResponse
+from turbobt.client import Bittensor
 
-from pylon_service.api._unstable.tasks import ApplyWeights
-from tests.helpers import wait_until
 from tests.integration.localchain.dev_accounts import DevAccount
 from tests.integration.localchain.manager import LocalChainManager
 
-TARGET_HOTKEY = Hotkey(DevAccount.BOB.hotkey_ss58)
+TARGET_HOTKEY = Hotkey(DevAccount.ALICE.hotkey_ss58)
 DEFAULT_WEIGHTS_SET_RATE_LIMIT = 100
 
 
 @pytest_asyncio.fixture
-async def low_weights_rate_limit(localchain: LocalChainManager, wallet: Wallet):
-    await localchain.set_weights_rate_limit(sudo_wallet=wallet, netuid=1, rate_limit=20)
+async def low_weights_rate_limit(localchain: LocalChainManager):
+    wallet = DevAccount.ALICE.wallet
+    await localchain.set_weights_rate_limit(sudo_wallet=wallet, netuid=2, rate_limit=20)
     try:
         yield
     finally:
-        await localchain.set_weights_rate_limit(sudo_wallet=wallet, netuid=1, rate_limit=DEFAULT_WEIGHTS_SET_RATE_LIMIT)
+        await localchain.set_weights_rate_limit(sudo_wallet=wallet, netuid=2, rate_limit=DEFAULT_WEIGHTS_SET_RATE_LIMIT)
 
 
 @pytest.mark.asyncio
-async def test_set_weights(pylon_client: PylonClient, low_weights_rate_limit):
-    response = pylon_client.v1.identity.put_weights(weights={TARGET_HOTKEY: Weight(1.0)})
-    assert isinstance(response, SetWeightsResponse)
-    await wait_until(lambda: not ApplyWeights.tasks_running, timeout=60.0, sleep_interval=1.0)
-
-    with patch.object(
-        ApplyWeights, "_single_attempt", wraps=ApplyWeights._single_attempt, autospec=True
-    ) as mock_attempt:
-        response = pylon_client.v1.identity.put_weights(weights={TARGET_HOTKEY: Weight(1.0)})
+async def test_set_weights(pylon_client_factory, low_weights_rate_limit, localchain: LocalChainManager):
+    with pylon_client_factory("sn2") as client:
+        response = client.v1.identity.put_weights(weights={TARGET_HOTKEY: Weight(1.0)})
         assert isinstance(response, SetWeightsResponse)
-        # The task may succeed or not (in case epoch ends) - we don't care, we only check if it retries on errors like
-        # set weights rate limit exceeded.
-        await wait_until(lambda: not ApplyWeights.tasks_running, timeout=60.0, sleep_interval=1.0)
 
-    assert mock_attempt.call_count >= 2
+        async with Bittensor(uri=localchain.ws_url) as bt:
+            neurons = await asyncio.shield(bt.subnet(2).list_neurons())
+            bob_uid = next(n.uid for n in neurons if n.hotkey == DevAccount.BOB.hotkey_ss58)
+            alice_uid = next(n.uid for n in neurons if n.hotkey == DevAccount.ALICE.hotkey_ss58)
+
+            async with asyncio.timeout(30):
+                while True:
+                    weights = await asyncio.shield(bt.subnet(2).weights.get(bob_uid))
+                    if weights:
+                        break
+                    await asyncio.sleep(1)
+
+            assert alice_uid in weights
+            assert weights[alice_uid] == pytest.approx(1.0)

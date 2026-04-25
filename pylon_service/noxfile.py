@@ -45,9 +45,12 @@ def test_integration(session):
         "-s",
         "-vv",
         "--log-cli-level=INFO",
+        # Disabling contact tests - revert back to whole integration module when tests are fixed.
         "tests/integration/client_service_e2e/",
         *session.posargs,
         env={"PYLON_ENV_FILE": "tests/.test-env"},
+        interrupt_timeout=10,
+        terminate_timeout=2,
     )
 
 
@@ -106,6 +109,8 @@ def prepare_localchain(session):
         "python",
         "-m",
         "tests.integration.localchain.prepare_chain",
+        interrupt_timeout=10,
+        terminate_timeout=2,
     )
 
 

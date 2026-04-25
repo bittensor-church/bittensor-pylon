@@ -165,9 +165,8 @@ jobs:
         with:
           python-version: '3.13'
 
-      # Poor man's solution - image will not change often so better to rebuild it on demand.
       - name: Prepare local chain
         run: cd pylon_service && nox -s prepare-localchain
 
-#      - name: Run integration tests  # these are disabled for now
-#        run: cd pylon_service && nox -s test-integration
+      - name: Run integration tests
+        run: cd pylon_service && nox -s test-integration

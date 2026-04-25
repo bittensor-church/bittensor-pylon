@@ -22,6 +22,7 @@ dev = [
     "pytest-asyncio>=1.0.0",
     "polyfactory>=2.22.2",
     "pact-python>=2.0.0",
+    "bittensor-drand",
     "bittensor-pylon-client",
     "docker",
     "httpx",
@@ -32,6 +33,8 @@ dev = [
     "syrupy>=4,<5",
     "time-machine>=3,<4",
     "dirty-equals==0.11",
+    "testcontainers>=4.0,<5",
+    "python-dotenv>=1,<2",
 ]
 
 [project.urls]

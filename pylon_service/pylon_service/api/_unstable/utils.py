@@ -1,15 +1,13 @@
 from pydantic import BaseModel
 from pylon_commons.types import BlockNumber, NetUid, Tempo
 
-from pylon_service.settings import settings
-
 
 class Epoch(BaseModel):
     start: BlockNumber
     end: BlockNumber
 
 
-def get_epoch_containing_block(block: BlockNumber, netuid: NetUid, tempo: Tempo = settings.tempo) -> Epoch:
+def get_epoch_containing_block(block: BlockNumber, netuid: NetUid, tempo: Tempo) -> Epoch:
     """
     Reimplementing the logic from subtensor's Rust function:
         pub fn blocks_until_next_epoch(netuid: u16, tempo: u16, block: u64) -> u64
@@ -31,44 +29,3 @@ def get_epoch_containing_block(block: BlockNumber, netuid: NetUid, tempo: Tempo 
         prev_epoch = next_epoch - interval
 
     return Epoch(start=BlockNumber(prev_epoch), end=BlockNumber(next_epoch))
-
-
-class CommitWindow:
-    """
-    722     epoch commit window            1443
-    |_____________|_________________|________|
-    |   OFFSET    |  COMMIT WINDOW  | BUFFER |
-
-    """
-
-    def __init__(
-        self,
-        current_block: BlockNumber,
-    ):
-        self.current_block = current_block
-        self.interval = settings.tempo
-        self.commit_start_offset = settings.commit_window_start_offset
-        self.commit_end_buffer = settings.commit_window_end_buffer
-
-    @property
-    def start(self):
-        """
-        https://github.com/opentensor/subtensor/blob/af585b9b8a17d27508431257052da502055477b7/pallets/subtensor/src/subnets/weights.rs#L488
-        """
-        return self.current_block - self.current_block % self.interval
-
-    @property
-    def stop(self):
-        return self.start + self.interval
-
-    @property
-    def commit_start(self):
-        return self.start + self.commit_start_offset
-
-    @property
-    def commit_stop(self):
-        return self.stop - self.commit_end_buffer
-
-    @property
-    def commit_window(self):
-        return range(self.commit_start, self.commit_stop)

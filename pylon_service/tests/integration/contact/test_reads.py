@@ -118,6 +118,7 @@ EXPECTED_NEURONS = {
 }
 
 EXPECTED_HYPERPARAMS = {
+    "tempo": 360,
     "commit_reveal_weights_enabled": "v4",
     "max_weights_limit": 65535,
 }

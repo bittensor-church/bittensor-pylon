@@ -100,7 +100,7 @@ class RecentObjectUpdateTaskExecutor:
         self,
         updater: UpdateRecentObject,
         contexts: list[AbstractContext],
-        timeout: int,
+        timeout: float,
         retrying: AsyncRetrying | None = None,
     ) -> None:
         if retrying is None:
