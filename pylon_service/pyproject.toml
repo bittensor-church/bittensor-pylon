@@ -30,6 +30,7 @@ dev = [
     "nox",
     "paramiko",
     "syrupy>=4,<5",
+    "time-machine>=3,<4",
     "dirty-equals==0.11",
 ]
 

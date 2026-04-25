@@ -53,7 +53,7 @@ from turbobt.substrate.pallets.chain import Extrinsic as TurboBtExtrinsic
 from turbobt.substrate.pallets.chain import SignedBlock
 from websockets.exceptions import ConnectionClosed
 
-from pylon_service.bittensor.exceptions import BittensorTransportError
+from pylon_service.bittensor.exceptions import BittensorTransportError, SubnetStateUnavailable
 from pylon_service.bittensor.models import (
     AxonInfo,
     AxonProtocol,
@@ -135,7 +135,7 @@ class AbstractBittensorContact(ABC):
     ) -> NeuronCertificateKeypair | None: ...
 
     @abstractmethod
-    async def get_subnet_state(self, netuid: NetUid, block: Block) -> SubnetState: ...
+    async def get_subnet_state(self, netuid: NetUid, block: Block) -> SubnetState | None: ...
 
     @abstractmethod
     async def commit_weights(self, netuid: NetUid, weights: dict[NeuronUid, Weight]) -> RevealRound: ...
@@ -222,7 +222,7 @@ class BittensorPort(Protocol):
     async def generate_certificate_keypair(
         self, netuid: NetUid, algorithm: CertificateAlgorithm
     ) -> NeuronCertificateKeypair | None: ...
-    async def get_subnet_state(self, netuid: NetUid, block: Block) -> SubnetState: ...
+    async def get_subnet_state(self, netuid: NetUid, block: Block) -> SubnetState | None: ...
     async def commit_weights(self, netuid: NetUid, weights: dict[NeuronUid, Weight]) -> RevealRound: ...
     async def set_weights(self, netuid: NetUid, weights: dict[NeuronUid, Weight]) -> None: ...
     async def get_neurons(self, netuid: NetUid, block: Block) -> SubnetNeurons: ...
@@ -415,6 +415,8 @@ class TurboBtContact(AbstractBittensorContact):
             "get_neurons_list", lambda c: c.subnet(netuid).list_neurons(block_hash=block.hash)
         )
         state = await self.get_subnet_state(netuid, block)
+        if state is None:
+            raise SubnetStateUnavailable(f"Subnet state not available for netuid={netuid} at block={block.number}")
         stakes = state.hotkeys_stakes
         return [await self._translate_neuron(neuron, stakes[Hotkey(neuron.hotkey)]) for neuron in neurons]
 
@@ -514,8 +516,10 @@ class TurboBtContact(AbstractBittensorContact):
         bittensor_operation_duration,
         labels={"uri": Attr("uri"), "netuid": Param("netuid"), "hotkey": Attr("hotkey")},
     )
-    async def get_subnet_state(self, netuid: NetUid, block: Block) -> SubnetState:
+    async def get_subnet_state(self, netuid: NetUid, block: Block) -> SubnetState | None:
         state = await self._protect_turbobt("get_subnet_state", lambda c: c.subnet(netuid).get_state(block.hash))
+        if state is None:
+            return None
         return SubnetState(**state)  # type: ignore[arg-type]
 
     @track_operation(

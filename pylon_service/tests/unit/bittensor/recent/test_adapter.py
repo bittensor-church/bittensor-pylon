@@ -1,4 +1,5 @@
 import pytest
+import time_machine
 from pylon_commons.models import BittensorModel
 from pylon_commons.types import HotkeyName, NetUid, Timestamp
 
@@ -30,9 +31,10 @@ def cache_adapter(cache_key, mock_recent_objects_store) -> RecentCacheAdapter[An
 async def test_save(mock_recent_objects_store, cache_adapter, object_, cache_key) -> None:
     timestamp = Timestamp(123123123)
     cache_entry = _CacheEntry(data=object_.model_dump_json(), timestamp=timestamp)
-    async with mock_recent_objects_store.behave.mock(set=[None]):
-        result = await cache_adapter.save(timestamp, object_)
-        assert result is None
+    with time_machine.travel(123_123_123):
+        async with mock_recent_objects_store.behave.mock(set=[None]):
+            result = await cache_adapter.save(object_)
+            assert result is None
 
     assert mock_recent_objects_store.behave.calls["set"] == [(cache_key, cache_entry.model_dump_json(), None)]
 

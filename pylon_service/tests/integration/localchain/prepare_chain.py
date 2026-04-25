@@ -58,9 +58,13 @@ async def main() -> None:
             )
 
         log_step("Creating subnets")
+        existing_subnets = await manager.get_total_networks()
         for netuid in NETUIDS:
-            logger.info("Creating subnet %d", netuid)
-            await manager.register_subnet(wallet=alice.wallet)
+            if netuid < existing_subnets:
+                logger.info("Subnet %d already exists, skipping", netuid)
+            else:
+                logger.info("Creating subnet %d", netuid)
+                await manager.register_subnet(wallet=alice.wallet)
 
         log_step("Registering neurons")
         for netuid in NETUIDS:

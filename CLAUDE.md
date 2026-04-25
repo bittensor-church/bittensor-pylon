@@ -400,6 +400,95 @@ The service endpoints are tested using `MockBittensorClient` (`pylon_service/tes
    assert mock_client.calls["commit_weights"][0][0] == settings.bittensor_netuid
    ```
 
+## Integration Testing
+
+Integration tests live in `pylon_service/tests/integration/` and test against a real Bittensor local chain running in Docker.
+
+### Localchain (Docker Container)
+
+Tests use `localchain` — a Docker container running a local Bittensor blockchain (`ghcr.io/opentensor/subtensor-localnet:main`) with fast block times for quick testing. Before running tests, a snapshot image must be prepared:
+
+```bash
+# Build the prepared snapshot image (from repo root):
+nox -s prepare-localchain
+
+# Or from pylon_service:
+cd pylon_service && nox -s prepare-localchain
+```
+
+This runs `tests/integration/localchain/prepare_chain.py`, which:
+1. Starts a fresh container from the base subtensor image
+2. Seeds it with test data (transfers TAO, creates subnets 1 & 2, registers neurons, stakes, sets commitments)
+3. Commits the container state as Docker image `prepared-localnet:latest`
+
+### Running Integration Tests
+
+```bash
+# From repo root:
+nox -s test-integration
+
+# From pylon_service:
+cd pylon_service && nox -s test-integration
+
+# Run specific test:
+cd pylon_service && nox -s test-integration -- -k "test_name"
+```
+
+The `test-integration` nox session runs pytest with `PYLON_ENV_FILE=tests/.test-env` against `tests/integration/`.
+
+### Test Categories
+
+Integration tests are divided into distinct categories:
+
+#### 1. Client-Service E2E (`tests/integration/client_service_e2e/`)
+Full end-to-end flow tests: **PylonClient → Litestar pylon_service (in-process) → localchain**.
+- Pytest fixtures start a localchain container and a real Uvicorn server (in a daemon thread) per test package
+- A real `PylonClient` connects to that server
+- **Purpose**: Verify that flows work correctly and edge cases are handled — NOT to check exact data values from the chain
+- Key fixtures: `localchain` (package-scoped), `pylon_service` (package-scoped), `pylon_client` (package-scoped)
+
+#### 2. Contact Tests (`tests/integration/contact/`)
+Direct tests of Bittensor contacts (turbobt) against localchain, without the pylon service layer.
+- Read tests use the prepared snapshot (`prepared-localnet:latest`)
+- Write tests use a fresh unprepared chain
+- Key fixtures: `read_chain` (module-scoped), `write_chain` (module-scoped), `open_contact`, `wallet_contact`
+
+#### 3. Contact Resilience Tests (`tests/integration/contact_resilience/`)
+Chaos/fault-injection tests using toxiproxy to simulate network failures between contacts and the chain.
+
+### Key Infrastructure
+
+| Component | Location | Description |
+|-----------|----------|-------------|
+| `LocalChainManager` | `tests/integration/localchain/manager.py` | Manages Docker containers (start, stop, snapshot) |
+| `DevAccount` enum | `tests/integration/localchain/dev_accounts.py` | Pre-seeded dev accounts: alice, bob, charlie, dave |
+| `UvicornServer` | `tests/helpers.py` | Runs Litestar app in a daemon thread for e2e tests |
+| Snapshot script | `tests/integration/localchain/prepare_chain.py` | Seeds chain data and creates Docker snapshot |
+
+### CRITICAL: Test Isolation Rules
+
+**This is the most important rule for integration tests and MUST be followed without exception.**
+
+Tests share a single localchain container (per package/module scope) for performance. Because the chain is stateful, **every test MUST ensure it does not corrupt state for other tests**. The order of test execution MUST NOT affect test results.
+
+Concrete rules:
+1. **Read-only tests** need no special handling — they don't modify chain state
+2. **State-modifying tests** MUST do one of:
+   - **Restore state after the test**: Undo any chain mutations in teardown (e.g., reset weights, remove commitments)
+   - **Be self-sufficient**: Set up all required state at the beginning of the test, not relying on state left by other tests
+   - **Use unique resources**: Operate on unique netuids, hotkeys, or other identifiers that no other test touches
+3. **Never assume test execution order** — tests must pass regardless of whether they run first, last, or in isolation
+4. **Never leave "poison" state** — if a test sets weights, registers a neuron, or modifies hyperparameters, it must ensure this won't break unrelated tests that read from the same subnet
+
+When writing a new integration test that modifies state, always ask: "If another test reads the chain after mine, will it still get the data it expects?"
+
+### Spec vs Reality Mismatch (xfail rule)
+
+When a test fails because the **test specification differs from actual service/client behavior** (not because of a bug in the test itself), do NOT modify the application code to match the spec. Instead:
+1. Mark the test with `@pytest.mark.xfail(reason="<clear description of the mismatch>")` 
+2. Keep the test implementation as-is, reflecting the original specification
+3. Report all such cases in a summary after implementation is complete
+
 ## Development Workflow
 
 1. Create `.env` from template: `cp pylon_service/envs/test_env.template .env`

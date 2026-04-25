@@ -11,6 +11,8 @@ class CommitmentService:
     async def get_commitments(self, contact_router: BittensorPort, netuid: NetUid, block: Block) -> SubnetCommitments:
         commitments = await contact_router.get_commitments(netuid, block)
         state = await contact_router.get_subnet_state(netuid, block)
+        if state is None:
+            raise RuntimeError(f"Subnet state is unavailable for netuid {netuid} at block {block.number}.")
         registered_hotkeys = set(state.hotkeys)
         filtered = {
             hotkey: commitment for hotkey, commitment in commitments.commitments.items() if hotkey in registered_hotkeys
