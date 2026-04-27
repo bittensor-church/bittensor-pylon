@@ -8,21 +8,50 @@ creates a Docker snapshot image for repeatable test runs.
 Requirements:
     - docker
 
-Neuron layout (identical on both subnets):
-    Validator 1:     alice   (//Alice) — subnet owner, pre-funded on localnet
-    Validator 2:     bob     (//Bob)
-    Non-validator 1: charlie (//Charlie)
-    Non-validator 2: dave    (//Dave)
+Chain state after preparation::
 
-Subnet configuration:
-    Subnet 1: default tempo (100)
-    Subnet 2: low tempo (50) — for fast commit-reveal weight tests
+    ┌─────────────────────────────────────────────────────────────────────┐
+    │ Subnet 1 (tempo 100)              │ Subnet 2 (tempo 50)            │
+    ├─────────┬───────────┬─────────────┼─────────┬───────────┬──────────┤
+    │ UID     │ Account   │ Role        │ UID     │ Account   │ Role     │
+    ├─────────┼───────────┼─────────────┼─────────┼───────────┼──────────┤
+    │ 0       │ (builtin) │ validator   │ 0       │ (builtin) │ validat. │
+    │ 1       │ alice     │ validator   │ 1       │ alice     │ validat. │
+    │ 2       │ bob       │ validator   │ 2       │ bob       │ validat. │
+    │ 3       │ charlie   │ miner       │ 3       │ charlie   │ miner    │
+    │ 4       │ dave      │ miner       │ 4       │ dave      │ miner    │
+    │ 5 - 255 │ filler    │ miner       │ 5 - 255 │ filler    │ miner    │
+    └─────────┴───────────┴─────────────┴─────────┴───────────┴──────────┘
+    Total: 256 neurons per subnet (max capacity)
+
+    Validators: alice & bob (10k TAO staked each, per subnet)
+    Commitments: charlie & dave on subnet 1
+    Filler neurons: random wallets, no stake, no commitments
+
+Preparation steps (in order):
+
+    1.  Start fresh localchain
+    2.  Disable admin freeze window (sudo)
+    3.  Transfer 100k TAO from Alice to Bob, Charlie, Dave
+    4.  Create subnets 1 and 2
+    5.  Register Alice, Bob, Charlie, Dave on each subnet
+    6.  Enable subtokens on both subnets
+    7.  Stake 10k TAO for Alice and Bob on each subnet
+    8.  Set low tempo (50) on subnet 2
+    9.  Set commitments for Charlie and Dave on subnet 1
+    10. Create & fund 251 filler wallets
+    11. Register 251 filler neurons on each subnet (parallelized)
+    12. Set Drand.NextUnsignedAt (MUST be last before snapshot)
+    13. Create Docker snapshot
 """
 
 from __future__ import annotations
 
 import asyncio
 import logging
+import tempfile
+
+from bittensor_wallet import Wallet
 
 from tests.integration.containers import LocalChainImage
 from tests.integration.localchain.dev_accounts import DevAccount
@@ -40,11 +69,39 @@ LOW_TEMPO_NETUID = 2
 LOW_TEMPO = 50
 DRAND_WORKER_MARGIN = 80  # Roughly after how many blocks after starting the chain drand rounds will start fetching
 
+MAX_NEURONS = 256
+FILLER_NEURON_COUNT = MAX_NEURONS - len(DevAccount) - 1  # 251 (UID 0 is a pre-existing node)
+FILLER_TRANSFER_AMOUNT_TAO = 500
+FILLER_REGISTRATION_BATCH_SIZE = 64
+FILLER_TRANSFER_BATCH_SIZE = 256
+
 
 def log_step(message: str) -> None:
     print(f"\n{'=' * 40}")
     print(f"  {message}")
     print(f"{'=' * 40}\n")
+
+
+def create_filler_wallets(count: int, wallet_dir: str) -> list[Wallet]:
+    """
+    Create filler wallets in the given directory.
+
+    Args:
+        count: Number of wallets to create.
+        wallet_dir: Directory to store wallet files.
+
+    Returns:
+        List of created Wallet instances.
+    """
+    wallets: list[Wallet] = []
+    for i in range(count):
+        name = f"filler{i}"
+        uri = f"//Filler{i}"
+        wallet = Wallet(name=name, path=wallet_dir)
+        wallet.create_coldkey_from_uri(uri, use_password=False, overwrite=True)
+        wallet.create_hotkey_from_uri(uri, use_password=False, overwrite=True)
+        wallets.append(wallet)
+    return wallets
 
 
 async def main() -> None:
@@ -103,6 +160,33 @@ async def main() -> None:
             data = f"commitment-{dev.wallet_name}"
             logger.info("Setting commitment for %s: %r", dev.wallet_name, data)
             await manager.set_commitment(wallet=dev.wallet, netuid=1, data=data)
+
+        log_step("Tuning registration parameters for bulk registration")
+        for netuid in NETUIDS:
+            await manager.set_max_registrations_per_block(sudo_wallet=alice.wallet, netuid=netuid, max_regs=256)
+            await manager.set_target_registrations_per_interval(sudo_wallet=alice.wallet, netuid=netuid, target=256)
+            await manager.set_tx_rate_limit(sudo_wallet=alice.wallet, netuid=netuid, rate_limit=0)
+
+        log_step(f"Creating {FILLER_NEURON_COUNT} filler wallets")
+        with tempfile.TemporaryDirectory(prefix="filler-wallets-") as tmpdir:
+            filler_wallets = create_filler_wallets(FILLER_NEURON_COUNT, wallet_dir=tmpdir)
+            logger.info("Created %d filler wallets in %s", len(filler_wallets), tmpdir)
+
+            log_step(f"Funding {FILLER_NEURON_COUNT} filler wallets")
+            destinations = [(w.coldkeypub.ss58_address, FILLER_TRANSFER_AMOUNT_TAO) for w in filler_wallets]
+            await manager.batch_transfer(
+                wallet=alice.wallet,
+                destinations=destinations,
+                batch_size=FILLER_TRANSFER_BATCH_SIZE,
+            )
+
+            for netuid in NETUIDS:
+                log_step(f"Registering {FILLER_NEURON_COUNT} filler neurons on subnet {netuid}")
+                await manager.register_neurons_concurrent(
+                    wallets=filler_wallets,
+                    netuid=netuid,
+                    batch_size=FILLER_REGISTRATION_BATCH_SIZE,
+                )
 
         # Phase 1 of drand workaround — see localchain/README.md#drand-workaround
         log_step("Setting Drand.NextUnsignedAt")
