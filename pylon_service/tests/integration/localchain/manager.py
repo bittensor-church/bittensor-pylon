@@ -1,6 +1,8 @@
 from __future__ import annotations
 
+import asyncio
 import enum
+import itertools
 import json
 import logging
 import subprocess
@@ -13,6 +15,7 @@ from urllib.parse import urlparse
 
 import docker
 from bittensor_wallet import Wallet
+from turbobt.batch import Transaction
 from turbobt.client import Bittensor
 from turbobt.subtensor.exceptions import HotKeyAlreadyRegisteredInSubNet
 
@@ -39,6 +42,9 @@ class ChainStorage(enum.StrEnum):
     SERVING_RATE_LIMIT = "SubtensorModule.ServingRateLimit"
     SUBTOKEN_ENABLED = "SubtensorModule.SubtokenEnabled"
     TOTAL_NETWORKS = "SubtensorModule.TotalNetworks"
+    MAX_REGISTRATIONS_PER_BLOCK = "SubtensorModule.MaxRegistrationsPerBlock"
+    TARGET_REGISTRATIONS_PER_INTERVAL = "SubtensorModule.TargetRegistrationsPerInterval"
+    TX_RATE_LIMIT = "SubtensorModule.TxRateLimit"
     WEIGHTS_SET_RATE_LIMIT = "SubtensorModule.WeightsSetRateLimit"
 
 
@@ -527,6 +533,66 @@ class LocalChainManager:
             )
             await result.wait_for_finalization()
 
+    async def set_max_registrations_per_block(self, sudo_wallet: Wallet, netuid: int, max_regs: int) -> None:
+        """
+        Set the maximum number of neuron registrations allowed per block on a subnet.
+
+        Args:
+            sudo_wallet: Wallet with sudo privileges.
+            netuid: Subnet UID.
+            max_regs: Maximum registrations per block.
+
+        Raises:
+            RuntimeError: If the value is not updated successfully.
+        """
+        logger.info("Setting max registrations per block to %d on subnet %d", max_regs, netuid)
+        await self._set_storage(
+            sudo_wallet=sudo_wallet,
+            storage_name="MaxRegistrationsPerBlock",
+            storage_value=f"0x{max_regs.to_bytes(2, byteorder='little', signed=False).hex()}",
+            params=[netuid],
+        )
+
+    async def set_target_registrations_per_interval(self, sudo_wallet: Wallet, netuid: int, target: int) -> None:
+        """
+        Set the target registrations per interval for a subnet.
+
+        Args:
+            sudo_wallet: Wallet with sudo privileges.
+            netuid: Subnet UID.
+            target: Target registrations per interval.
+
+        Raises:
+            RuntimeError: If the value is not updated successfully.
+        """
+        logger.info("Setting target registrations per interval to %d on subnet %d", target, netuid)
+        await self._set_storage(
+            sudo_wallet=sudo_wallet,
+            storage_name="TargetRegistrationsPerInterval",
+            storage_value=f"0x{target.to_bytes(2, byteorder='little', signed=False).hex()}",
+            params=[netuid],
+        )
+
+    async def set_tx_rate_limit(self, sudo_wallet: Wallet, netuid: int, rate_limit: int) -> None:
+        """
+        Set the transaction rate limit for a subnet via sudo storage update.
+
+        Args:
+            sudo_wallet: Wallet with sudo privileges.
+            netuid: Subnet UID.
+            rate_limit: Transaction rate limit value in blocks.
+
+        Raises:
+            RuntimeError: If the rate limit is not updated successfully.
+        """
+        logger.info("Setting tx rate limit to %d on subnet %d", rate_limit, netuid)
+        await self._set_storage(
+            sudo_wallet=sudo_wallet,
+            storage_name="TxRateLimit",
+            storage_value=f"0x{rate_limit.to_bytes(8, byteorder='little', signed=False).hex()}",
+            params=[netuid],
+        )
+
     async def set_serving_rate_limit(self, sudo_wallet: Wallet, netuid: int, rate_limit: int) -> None:
         """
         Set the serving rate limit for a subnet via sudo storage update.
@@ -649,6 +715,89 @@ class LocalChainManager:
         )
 
         return direct_netuid, commit_netuid
+
+    # ---- Bulk operations (async) ----
+
+    async def batch_transfer(
+        self,
+        wallet: Wallet,
+        destinations: list[tuple[str, int]],
+        batch_size: int = 50,
+    ) -> None:
+        """
+        Transfer TAO to multiple destinations using batched extrinsics.
+
+        Groups transfers into sub-batches to stay within block weight limits.
+        Each sub-batch is submitted as a single ``Utility.batch_all`` extrinsic.
+
+        Args:
+            wallet: Source wallet for all transfers.
+            destinations: List of (ss58_address, amount_tao) pairs.
+            batch_size: Maximum transfers per batch extrinsic.
+        """
+        for batch_index, chunk in enumerate(itertools.batched(destinations, batch_size, strict=False)):
+            start = batch_index * batch_size + 1
+            logger.info("Batch transfer %d-%d of %d", start, start + len(chunk) - 1, len(destinations))
+            # Separate client because turbobt Transaction requires client.wallet to be set,
+            # and the shared client (_turbobt_client) has wallet=None.
+            async with Bittensor(wallet=wallet, uri=self.ws_url) as client:
+                async with Transaction(client):
+                    for dest_ss58, amount_tao in chunk:
+                        result = await client.subtensor.author.submitAndWatchExtrinsic(
+                            "Balances",
+                            "transfer_keep_alive",
+                            {"dest": dest_ss58, "value": amount_tao * _RAO_PER_TAO},
+                            key=wallet.coldkey,
+                        )
+                        await result.wait_for_finalization()
+
+    async def register_neurons_concurrent(
+        self,
+        wallets: list[Wallet],
+        netuid: int,
+        batch_size: int = 16,
+    ) -> None:
+        """
+        Register multiple neurons concurrently in batches.
+
+        Each wallet registers independently (different nonces), so
+        ``asyncio.gather`` is safe. Registrations are split into
+        batches to avoid overwhelming the local chain node.
+
+        Uses immortal era (``era=None``) to prevent "ancient birth block"
+        errors when multiple transactions compete for block space.
+
+        Args:
+            wallets: Wallets to register as neurons.
+            netuid: Subnet UID to register on.
+            batch_size: Maximum concurrent registrations per batch.
+        """
+        for batch_index, batch in enumerate(itertools.batched(wallets, batch_size, strict=False)):
+            start = batch_index * batch_size + 1
+            logger.info(
+                "Registering neurons %d-%d of %d on subnet %d",
+                start,
+                start + len(batch) - 1,
+                len(wallets),
+                netuid,
+            )
+            await asyncio.gather(*(self._register_neuron_immortal(wallet=w, netuid=netuid) for w in batch))
+
+    async def _register_neuron_immortal(self, wallet: Wallet, netuid: int) -> None:
+        """Register a neuron using an immortal era to avoid expiration during concurrent registration."""
+        async with self._turbobt_client() as client:
+            try:
+                extrinsic = await asyncio.shield(
+                    client.subtensor.subtensor_module.burned_register(
+                        netuid=netuid,
+                        hotkey=wallet.hotkey.ss58_address,
+                        wallet=wallet,
+                        era=None,
+                    )
+                )
+                await asyncio.shield(extrinsic.wait_for_finalization())
+            except HotKeyAlreadyRegisteredInSubNet:
+                logger.info("Hotkey %s already registered on subnet %d, skipping", wallet.hotkey.ss58_address, netuid)
 
     # ---- Private helpers ----
 

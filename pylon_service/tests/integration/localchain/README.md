@@ -50,9 +50,14 @@ stored in `tests/wallets/`:
 
 On localnet, coldkey and hotkey are derived from the same URI, so their SS58 addresses are identical.
 
+The snapshot also creates **251 filler wallets** from deterministic URIs (`//Filler0` through
+`//Filler250`) in a temporary wallet directory while preparing the chain. These wallets are used
+only to fill subnet neuron capacity and are not persisted as test wallets.
+
 ### TAO Transfers
 
 Alice (pre-funded by the localnet genesis) transfers **100,000 TAO** to each of: Bob, Charlie, Dave.
+Alice also transfers **500 TAO** to each filler wallet.
 
 ### Subnets
 
@@ -67,7 +72,16 @@ Subtokens are enabled on both subnets.
 
 ### Neurons
 
-All four accounts are registered as neurons on **both** subnets (8 registrations total).
+Each prepared subnet contains **256 neurons**:
+
+| UID Range | Account(s) | Role |
+|-----------|------------|------|
+| 0 | Built-in localnet neuron | Validator |
+| 1 | Alice | Validator |
+| 2 | Bob | Validator |
+| 3 | Charlie | Non-validator |
+| 4 | Dave | Non-validator |
+| 5-255 | Filler wallets | Non-validator |
 
 ### Stake
 
@@ -86,6 +100,9 @@ Set on **subnet 1** only:
 
 - **Admin freeze window**: Disabled (set to 0). The default of 10 blocks can cause silent sudo
   call failures.
+- **Bulk registration tuning**: `MaxRegistrationsPerBlock` and `TargetRegistrationsPerInterval`
+  are raised to 256, and `TxRateLimit` is set to 0 on both prepared subnets before filler
+  registration.
 - **Drand.NextUnsignedAt**: Set to `current_block + 80` — see [Drand Workaround](#drand-workaround)
   below.
 

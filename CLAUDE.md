@@ -420,7 +420,7 @@ cd pylon_service && nox -s prepare-localchain
 
 This runs `tests/integration/localchain/prepare_chain.py`, which:
 1. Starts a fresh container from the base subtensor image
-2. Seeds it with test data (transfers TAO, creates subnets 1 & 2, registers neurons, stakes, sets commitments)
+2. Seeds it with test data (transfers TAO, creates subnets 1 & 2, registers 256 neurons per subnet, stakes, sets commitments)
 3. Commits the container state as Docker image `prepared-localnet:latest`
 
 ### Running Integration Tests
