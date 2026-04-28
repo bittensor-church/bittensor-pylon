@@ -115,7 +115,7 @@ extend-immutable-calls = [
 
 [tool.pyright]
 pythonVersion = "3.13"
-exclude = ["noxfile.py", ".nox", ".venv"]
+exclude = ["noxfile.py", ".nox", ".venv", "tests/integration/mitmproxy/addon"]
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"

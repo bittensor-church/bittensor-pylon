@@ -8,8 +8,9 @@ import pytest_asyncio
 from pylon_client.artanis import Config, IdentityName, PylonAuthToken, PylonClient, PylonTimeout
 from testcontainers.core.network import Network
 
-from tests.integration.containers import LocalChainContainer, LocalChainImage, PylonServiceContainer
+from tests.integration.containers import LocalChainContainer, LocalChainImage, MitmproxyContainer, PylonServiceContainer
 from tests.integration.localchain.manager import LocalChainManager
+from tests.integration.mitmproxy import WSRecorderClient
 
 logger = logging.getLogger(__name__)
 
@@ -30,6 +31,9 @@ def pylon_service_image():
 
 @pytest_asyncio.fixture(scope="package")
 async def localchain(docker_network):
+    """
+    Note: to use the manager inside the test, you need to set the test's event loop scope to session.
+    """
     container = (
         LocalChainContainer(image=LocalChainImage.PREPARED_E2E)
         .with_network(docker_network)
@@ -44,7 +48,27 @@ async def localchain(docker_network):
 
 
 @pytest.fixture(scope="package")
-def pylon_service(docker_network, localchain, pylon_service_image):
+def mitmproxy(docker_network, localchain):
+    with (
+        MitmproxyContainer(upstream_ws_url=localchain.internal_http_url)
+        .with_network(docker_network)
+        .with_network_aliases("mitmproxy") as container
+    ):
+        yield container
+
+
+@pytest.fixture
+def ws_recorder(mitmproxy):
+    client = WSRecorderClient(mitmproxy.recorder_url)
+    client.clear()
+    try:
+        yield client
+    finally:
+        client.clear()
+
+
+@pytest.fixture(scope="package")
+def pylon_service(docker_network, localchain, mitmproxy, pylon_service_image):
     docker_host = os.environ.get("DOCKER_HOST")
     if docker_host and docker_host.startswith("ssh://"):
         logger.warning(
@@ -54,7 +78,7 @@ def pylon_service(docker_network, localchain, pylon_service_image):
         )
     with PylonServiceContainer(
         image=str(pylon_service_image),
-        chain_url="ws://localchain:9944",
+        chain_url=mitmproxy.internal_ws_url,
         wallets_path=str(_WALLETS_PATH),
     ).with_network(docker_network) as container:
         yield container

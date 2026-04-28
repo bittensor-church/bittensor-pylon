@@ -10,11 +10,12 @@ from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from dataclasses import dataclass
 from types import TracebackType
-from typing import TYPE_CHECKING, cast
+from typing import TYPE_CHECKING, Any, cast
 from urllib.parse import urlparse
 
 import bittensor_drand
 import docker
+import scalecodec
 from bittensor_wallet import Wallet
 from turbobt.batch import Transaction
 from turbobt.client import Bittensor
@@ -22,6 +23,7 @@ from turbobt.subtensor.exceptions import HotKeyAlreadyRegisteredInSubNet
 
 from tests.integration.containers import LocalChainContainer, LocalChainImage
 from tests.integration.localchain.dev_accounts import SUDO_WALLET
+from tests.integration.mitmproxy import ExtrinsicDecoder
 
 logger = logging.getLogger(__name__)
 
@@ -99,6 +101,14 @@ class LocalChainManager:
     @property
     def http_url(self) -> str:
         return self._container.http_url
+
+    @property
+    def internal_ws_url(self) -> str:
+        return self._container.internal_ws_url
+
+    @property
+    def internal_http_url(self) -> str:
+        return self._container.internal_http_url
 
     # ---- Docker lifecycle ----
 
@@ -653,6 +663,33 @@ class LocalChainManager:
             if header is None:
                 raise RuntimeError("Failed to get chain header")
             return header["number"]
+
+    async def get_extrinsic_decoder(self) -> ExtrinsicDecoder:
+        """
+        Return a callable that decodes a hex-encoded SCALE extrinsic into a dict.
+
+        Initializes the runtime metadata on the shared turbobt client and captures
+        the Extrinsic decoder class together with the chain's metadata, so the
+        returned decoder is bound to this chain's runtime.
+        """
+        async with self._turbobt_client() as client:
+            await client.subtensor._init_runtime()
+            assert client.subtensor._registry is not None
+            assert client.subtensor._metadata is not None
+            extrinsic_cls = client.subtensor._registry.get_decoder_class("Extrinsic")
+            assert extrinsic_cls is not None
+            metadata = client.subtensor._metadata
+
+        def _decode(extrinsic_bytes: str) -> dict[str, Any]:
+            return cast(
+                dict[str, Any],
+                extrinsic_cls(
+                    data=scalecodec.ScaleBytes(extrinsic_bytes),
+                    metadata=metadata,
+                ).decode(),
+            )
+
+        return _decode
 
     async def setup_mechanisms(
         self,

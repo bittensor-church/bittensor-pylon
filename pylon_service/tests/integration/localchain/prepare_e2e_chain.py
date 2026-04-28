@@ -10,21 +10,17 @@ Requirements:
 
 Chain state after preparation::
 
-    ┌─────────────────────────────────────────────────────────────────────┐
-    │ Subnet 1 (tempo 100)              │ Subnet 2 (tempo 50)            │
-    ├─────────┬───────────┬─────────────┼─────────┬───────────┬──────────┤
-    │ UID     │ Account   │ Role        │ UID     │ Account   │ Role     │
-    ├─────────┼───────────┼─────────────┼─────────┼───────────┼──────────┤
-    │ 0       │ (builtin) │ validator   │ 0       │ (builtin) │ validat. │
-    │ 1       │ alice     │ validator   │ 1       │ alice     │ validat. │
-    │ 2       │ bob       │ validator   │ 2       │ bob       │ validat. │
-    │ 3       │ charlie   │ miner       │ 3       │ charlie   │ miner    │
-    │ 4       │ dave      │ miner       │ 4       │ dave      │ miner    │
-    │ 5 - 255 │ filler    │ miner       │ 5 - 255 │ filler    │ miner    │
-    └─────────┴───────────┴─────────────┴─────────┴───────────┴──────────┘
-    Total: 256 neurons per subnet (max capacity)
+    Subnets 1 & 2: 256 neurons each (max capacity).
+    Subnet 3: Alice, Bob, Charlie, Dave and the built-in neuron. Used by
+        mechanism weight tests; filler wallets are intentionally absent.
+    Subnet 4: dedicated to test_set_weights_succeeds_after_registration — only
+        Alice and the built-in neuron are registered. That test permanently
+        mutates this subnet's state (registers Charlie, adds stake), so it must
+        remain single-tenant. New tests that permanently modify subnet state
+        should likewise get their own dedicated subnet — see localchain/README.md
+        for the rationale.
 
-    Validators: alice & bob (10k TAO staked each, per subnet)
+    Validators: alice & bob (10 TAO staked each, on subnets 1, 2 and 3)
     Commitments: charlie & dave on subnet 1
     Filler neurons: random wallets, no stake, no commitments
 
@@ -33,16 +29,17 @@ Preparation steps (in order):
     1.  Start fresh localchain
     2.  Disable admin freeze window (sudo)
     3.  Transfer 100k TAO from Alice to Bob, Charlie, Dave
-    4.  Create subnets 1 and 2
-    5.  Register Alice, Bob, Charlie, Dave on each subnet
-    6.  Enable subtokens on both subnets
-    7.  Stake 10k TAO for Alice and Bob on each subnet
-    8.  Set low tempo (50) on subnet 2
+    4.  Create subnets 1, 2 and 3
+    5.  Register Alice, Bob, Charlie, Dave on subnets 1, 2 and 3
+    6.  Enable subtokens on subnets 1, 2 and 3
+    7.  Stake 10 TAO for Alice and Bob on subnets 1, 2 and 3
+    8.  Set low tempo (50) on subnets 2 and 3; enable mechanisms on subnet 3
     9.  Set commitments for Charlie and Dave on subnet 1
     10. Create & fund 251 filler wallets
-    11. Register 251 filler neurons on each subnet (parallelized)
-    12. Set Drand.NextUnsignedAt (MUST be last before snapshot)
-    13. Create Docker snapshot
+    11. Register 251 filler neurons on subnets 1 and 2 (parallelized)
+    12. Create subnet 4; register only Alice; set low tempo and weights_rate_limit=0
+    13. Set Drand.NextUnsignedAt (MUST be last before snapshot)
+    14. Create Docker snapshot
 """
 
 from __future__ import annotations
@@ -53,7 +50,7 @@ import tempfile
 
 from bittensor_wallet import Wallet
 
-from tests.integration.containers import LocalChainImage
+from tests.integration.containers import LocalChainContainer, LocalChainImage
 from tests.integration.localchain.common import LOW_TEMPO, log_step
 from tests.integration.localchain.dev_accounts import DevAccount
 from tests.integration.localchain.manager import LocalChainManager
@@ -68,6 +65,8 @@ TRANSFER_AMOUNT_TAO = 100_000
 STAKE_AMOUNT_TAO = 10
 LOW_TEMPO_NETUIDS = [2, 3]
 MECHANISMS_NETUID = 3
+REGISTRATION_RETRY_NETUID = 4
+REGISTRATION_RETRY_TEMPO = LOW_TEMPO
 
 MAX_NEURONS = 256
 FILLER_NEURONS_NETUIDS = [1, 2]
@@ -100,6 +99,9 @@ def create_filler_wallets(count: int, wallet_dir: str) -> list[Wallet]:
 
 
 async def main() -> None:
+    log_step("Pulling base localchain image")
+    LocalChainContainer(image=LocalChainImage.DEFAULT).pull_image()
+
     async with LocalChainManager() as manager:
         log_step("Starting fresh local chain")
 
@@ -192,6 +194,17 @@ async def main() -> None:
                     netuid=netuid,
                     batch_size=FILLER_REGISTRATION_BATCH_SIZE,
                 )
+
+        log_step(f"Creating subnet {REGISTRATION_RETRY_NETUID} (only alice registered)")
+        existing_subnets = await manager.get_total_networks()
+        if REGISTRATION_RETRY_NETUID < existing_subnets:
+            logger.info("Subnet %d already exists, skipping", REGISTRATION_RETRY_NETUID)
+        else:
+            await manager.register_subnet(wallet=alice.wallet)
+        await manager.enable_subtokens(netuid=REGISTRATION_RETRY_NETUID)
+        await manager.register_neuron(wallet=alice.wallet, netuid=REGISTRATION_RETRY_NETUID)
+        await manager.set_tempo(netuid=REGISTRATION_RETRY_NETUID, tempo=REGISTRATION_RETRY_TEMPO)
+        await manager.set_weights_rate_limit(netuid=REGISTRATION_RETRY_NETUID, rate_limit=0)
 
         # Phase 1 of drand workaround — see localchain/README.md#drand-workaround
         log_step("Setting Drand.NextUnsignedAt")
