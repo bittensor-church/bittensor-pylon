@@ -134,7 +134,7 @@ from pylon_client.artanis.v1 import Block, Neuron
 
 ```bash
 # Install dependencies for a specific package
-cd pylon_client && uv sync --extra dev
+cd pylon_client && uv sync --group dev
 
 # Create test environment
 cp pylon_service/envs/test_env.template .env
@@ -187,35 +187,54 @@ cd pylon_service
 
 # Debug app, verbose logging, auto-reload
 PYLON_DEBUG=true uv run python -m pylon_service.uvicorn_entrypoint
-```
-
-
 
 # Production-like server
 uv run python -m pylon_service.uvicorn_entrypoint
 ```
 
+### Contributing
+
+Use [Conventional Commits](https://www.conventionalcommits.org/) for commit messages.
+Every commit that should appear in a changelog must include an `Impacts:` footer
+listing the affected packages:
+
+```
+feat: add new endpoint
+
+Impacts: service
+Issue: BACT-123
+```
+
+Valid `Impacts:` values: `client`, `service`, `commons`. Multiple values may be
+comma-separated (`Impacts: client, service`). Commits with `Impacts: commons` appear
+in BOTH client and service changelogs because `pylon_commons` is shared. Commits
+without an `Impacts:` footer are excluded from every changelog (intended for
+repo-infrastructure commits like CI tweaks).
+
+Install the pre-commit hook to validate commit message format locally:
+
+```bash
+uv tool install pre-commit
+pre-commit install --hook-type commit-msg
+```
+
 ### Release
 
-Version is determined from git tags using `hatch-vcs` - there are no version files in the code.
-
-Release commands create and push git tags on `origin/master` to trigger deployment:
-
-```bash
-# Release client to PyPI (creates client-v1.7.0 tag)
-nox -s release-client -- 1.7.0
-
-# Release service to Docker Hub (creates service-v1.2.0 tag)
-nox -s release-service -- 1.2.0
-
-# Or omit version to be prompted:
-nox -s release-client
-nox -s release-service
-```
-
-You can also run from the package directory:
+Versions are determined from git tags using `hatch-vcs`. Releases are made via
+package-level nox sessions that use [commitizen](https://commitizen-tools.github.io/commitizen/)
+to auto-bump the version, update the package's `CHANGELOG.md`, and create an annotated tag.
+Pushing the tag triggers the existing CD workflow.
 
 ```bash
-cd pylon_client && nox -s release -- 1.7.0
-cd pylon_service && nox -s release -- 1.2.0
+# Release client to PyPI
+cd pylon_client
+nox -s release
+
+# Release service to Docker Hub
+cd pylon_service
+nox -s release
 ```
+
+The release session computes the package-specific increment from commits whose
+`Impacts:` footer mentions the package or `commons`, shows a Commitizen dry-run,
+asks for confirmation, then creates and pushes the release commit and tag.

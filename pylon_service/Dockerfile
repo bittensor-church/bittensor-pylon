@@ -16,7 +16,7 @@ COPY pylon_service ./pylon_service
 
 # install uv and dependencies
 COPY --from=ghcr.io/astral-sh/uv:0.10 /uv /uvx /bin/
-RUN cd pylon_service && /bin/uv sync --no-dev --no-sources-package bittensor-pylon-client
+RUN cd pylon_service && /bin/uv sync --frozen --no-dev --no-sources-package bittensor-pylon-client
 
 EXPOSE 8000
 CMD ["pylon_service/.venv/bin/python", "-m", "pylon_service.uvicorn_entrypoint"]

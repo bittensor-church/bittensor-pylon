@@ -15,7 +15,7 @@ dependencies = [
     "apscheduler",
 ]
 
-[project.optional-dependencies]
+[dependency-groups]
 dev = [
     "pytest",
     "pytest-cov>=6,<7",
@@ -35,6 +35,8 @@ dev = [
     "dirty-equals==0.11",
     "testcontainers>=4.0,<5",
     "python-dotenv>=1,<2",
+    "commitizen==4.13.9",
+    "pylon-cz",
 ]
 
 [project.urls]
@@ -61,6 +63,18 @@ package = true
 [tool.uv.sources]
 bittensor-pylon-commons = { path = "../pylon_commons", editable = true }
 bittensor-pylon-client = { path = "../pylon_client", editable = true }
+pylon-cz = { path = "../tools/pylon_cz", editable = true }
+
+[tool.commitizen]
+name = "pylon_service_cz"
+version_provider = "scm"
+annotated_tag = true
+tag_format = "service-v$version"
+ignored_tag_formats = ["client-v$version", "common-v$version"]
+changelog_file = "CHANGELOG.md"
+changelog_merge_prerelease = true
+update_changelog_on_bump = true
+bump_message = "chore: bump pylon_service $current_version -> $new_version"
 
 [tool.ruff]
 line-length = 120

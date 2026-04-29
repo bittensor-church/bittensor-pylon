@@ -13,7 +13,7 @@ dependencies = [
     "apscheduler",
 ]
 
-[project.optional-dependencies]
+[dependency-groups]
 dev = [
     "pytest",
     "pytest-asyncio>=1.0.0",
@@ -22,6 +22,8 @@ dev = [
     "pact-python>=2.0.0",
     "ruff",
     "pyright",
+    "commitizen==4.13.9",
+    "pylon-cz",
 ]
 
 [project.urls]
@@ -44,6 +46,20 @@ packages = ["pylon_client"]
 
 [tool.uv]
 package = true
+
+[tool.uv.sources]
+pylon-cz = { path = "../tools/pylon_cz", editable = true }
+
+[tool.commitizen]
+name = "pylon_client_cz"
+version_provider = "scm"
+annotated_tag = true
+tag_format = "client-v$version"
+ignored_tag_formats = ["service-v$version", "common-v$version"]
+changelog_file = "CHANGELOG.md"
+changelog_merge_prerelease = true
+update_changelog_on_bump = true
+bump_message = "chore: bump pylon_client $current_version -> $new_version"
 
 [tool.ruff]
 line-length = 120
