@@ -110,9 +110,7 @@ class IdentityApi(AbstractIdentityApi):
             identity_name=self.identity_name,
         )
 
-    def _put_weights_request(
-        self, weights: dict[Hotkey, Weight], mechanism_id: MechanismId | None
-    ) -> SetWeightsRequest:
+    def _put_weights_request(self, weights: dict[Hotkey, Weight], mechanism_id: MechanismId) -> SetWeightsRequest:
         return SetWeightsRequest(
             netuid=self.netuid,
             identity_name=self.identity_name,

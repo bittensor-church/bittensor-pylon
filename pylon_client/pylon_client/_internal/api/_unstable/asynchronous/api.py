@@ -112,9 +112,7 @@ class AsyncIdentityApi(AbstractAsyncIdentityApi):
             identity_name=self.identity_name,
         )
 
-    async def _put_weights_request(
-        self, weights: dict[Hotkey, Weight], mechanism_id: MechanismId | None
-    ) -> SetWeightsRequest:
+    async def _put_weights_request(self, weights: dict[Hotkey, Weight], mechanism_id: MechanismId) -> SetWeightsRequest:
         return SetWeightsRequest(
             netuid=self.netuid,
             identity_name=self.identity_name,

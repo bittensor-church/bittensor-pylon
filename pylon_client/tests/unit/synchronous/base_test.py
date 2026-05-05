@@ -71,15 +71,6 @@ class BaseEndpointTest(ABC):
         mock_method = getattr(service_mock, self.http_method.lower())
         return mock_method(endpoint_url)
 
-    @pytest.fixture
-    def route_mock_factory(self, service_mock):
-        mock_method = getattr(service_mock, self.http_method.lower())
-
-        def factory(endpoint: Endpoint | None = None, extra_params: dict | None = None):
-            return mock_method(self._create_url(endpoint, extra_params))
-
-        return factory
-
     def _create_url(self, endpoint: Endpoint | None = None, extra_params: dict | None = None):
         params = self.route_params.copy()
         if extra_params:

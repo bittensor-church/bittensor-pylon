@@ -1,3 +1,4 @@
+from .bodies import SetWeightsBody
 from .._unstable.requests import (  # noqa: F401
     AuthenticatedPylonRequest,
     GenerateCertificateKeypairRequest,
@@ -13,9 +14,8 @@ from .._unstable.requests import (  # noqa: F401
     PylonRequest,
     PylonResponseT,
     SetCommitmentRequest,
-    SetWeightsRequest,
 )
-from .responses import GetCommitmentResponse, GetCommitmentsResponse
+from .responses import GetCommitmentResponse, GetCommitmentsResponse, SetWeightsResponse
 
 __all__ = [
     "AuthenticatedPylonRequest",
@@ -39,6 +39,13 @@ __all__ = [
 ]
 
 from ..types import Hotkey
+
+class SetWeightsRequest(SetWeightsBody, IdentityPylonRequest[SetWeightsResponse]):
+    """
+    V1 class used to perform setting weights by the Pylon client.
+    """
+
+    response_cls = SetWeightsResponse
 
 
 class GetCommitmentsRequest(AuthenticatedPylonRequest[GetCommitmentsResponse]):

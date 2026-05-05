@@ -438,6 +438,7 @@ class AbstractAsyncIdentityApi(AbstractAsyncApi, ABC):
         Returns:
             SetWeightsResponse indicating the weights update has been scheduled.
         """
+        mechanism_id = mechanism_id if mechanism_id is not None else MechanismId(0)
         return await self._send_identity_request(partial(self._put_weights_request, weights, mechanism_id))
 
     async def get_commitments(self) -> GetCommitmentsResponse:
@@ -616,7 +617,7 @@ class AbstractAsyncIdentityApi(AbstractAsyncApi, ABC):
 
     @abstractmethod
     async def _put_weights_request(
-        self, weights: dict[Hotkey, Weight], mechanism_id: MechanismId | None
+        self, weights: dict[Hotkey, Weight], mechanism_id: MechanismId
     ) -> SetWeightsRequest: ...
 
     @abstractmethod

@@ -219,15 +219,6 @@ class IdentityController(Controller):
     ) -> GetCommitmentResponse:
         return await commitment_service.get_commitment(bt_contact_router, netuid, hotkey)
 
-    @identity_handler(Endpoint.SUBNET_WEIGHTS)
-    async def put_weights_endpoint(
-        self, data: SetWeightsBody, bt_contact_router: BittensorContactRouter, netuid: NetUid
-    ) -> Response:
-        ApplyWeights(bt_contact_router, data.weights, netuid, MechanismId(0)).schedule()
-        return Response(
-            {"detail": "weights update scheduled", "count": len(data.weights)}, status_code=status_codes.HTTP_200_OK
-        )
-
     @identity_handler(Endpoint.SUBNET_MECHANISMS_WEIGHTS)
     async def put_mechanism_weights_endpoint(
         self, data: SetWeightsBody, bt_contact_router: BittensorContactRouter, netuid: NetUid, mechanism_id: MechanismId

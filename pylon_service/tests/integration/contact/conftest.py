@@ -26,6 +26,7 @@ async def contact_chain():
     await container.ensure_prepared_image()
     manager = LocalChainManager(container)
     await manager.start()
+    # Phase 2 of drand workaround — see localchain/README.md#drand-workaround
     await manager.synchronize_drand_last_stored_round()
     try:
         yield manager

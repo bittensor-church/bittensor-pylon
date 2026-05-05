@@ -1,5 +1,5 @@
 {
-  "detail": "Validation failed for PUT /api/_unstable/identity/sn1/subnet/1/weights",
+  "detail": "Validation failed for PUT /api/_unstable/identity/sn1/subnet/1/mechanism/1/weights",
   "extra": [
     {
       "key": "weights",

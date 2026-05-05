@@ -106,6 +106,7 @@ async def main() -> None:
         for subnet_config in SUBNET_CONFIGS:
             await _prepare_subnet(manager=manager, subnet_config=subnet_config)
 
+        # Phase 1 of drand workaround — see localchain/README.md#drand-workaround
         log_step("Setting Drand.NextUnsignedAt")
         await manager.offset_drand_next_unsigned_at()
 

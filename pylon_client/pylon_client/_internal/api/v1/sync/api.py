@@ -3,13 +3,18 @@ from functools import partial
 from pylon_client._internal.api._unstable.sync.api import IdentityApi as UnstableIdentityApi
 from pylon_client._internal.api._unstable.sync.api import OpenAccessApi as UnstableOpenAccessApi
 from pylon_client._internal.pylon_commons.apiver import ApiVersion
-from pylon_client._internal.pylon_commons.types import Hotkey, NetUid
+from pylon_client._internal.pylon_commons.types import Hotkey, NetUid, Weight
 from pylon_client._internal.pylon_commons.v1.requests import (
     GetCommitmentRequest,
     GetCommitmentsRequest,
     GetOwnCommitmentRequest,
+    SetWeightsRequest,
 )
-from pylon_client._internal.pylon_commons.v1.responses import GetCommitmentResponse, GetCommitmentsResponse
+from pylon_client._internal.pylon_commons.v1.responses import (
+    GetCommitmentResponse,
+    GetCommitmentsResponse,
+    SetWeightsResponse,
+)
 
 
 class OpenAccessApi(UnstableOpenAccessApi):
@@ -51,6 +56,23 @@ class OpenAccessApi(UnstableOpenAccessApi):
 class IdentityApi(UnstableIdentityApi):
     api_version = ApiVersion.V1
 
+    def put_weights(self, weights: dict[Hotkey, Weight]) -> SetWeightsResponse:  # type: ignore[reportIncompatibleMethodOverride]
+        """
+        Submits weights for neurons in the authenticated identity's subnet.
+
+        Weights are applied asynchronously by the Pylon service. The method returns immediately after
+        scheduling the weight update, without waiting for blockchain confirmation. The service handles
+        commit-reveal or direct weight setting based on subnet hyperparameters.
+
+        Args:
+            weights: Dictionary mapping neuron hotkeys to their respective weight values. Weights should
+                be normalized (sum to 1.0) and only include neurons that should receive non-zero weights.
+
+        Returns:
+            SetWeightsResponse indicating the weights update has been scheduled.
+        """
+        return self._send_identity_request(partial(self._put_weights_request, weights))
+
     def get_commitments(self) -> GetCommitmentsResponse:  # type: ignore[reportIncompatibleMethodOverride]
         """
         Retrieves all hex data commitments for the authenticated identity's subnet at the latest available block.
@@ -87,6 +109,13 @@ class IdentityApi(UnstableIdentityApi):
             PylonNotFound: If a commitment could not be found or there is only a timelock encrypted commitment.
         """
         return self._send_identity_request(self._get_own_commitment_request)
+
+    def _put_weights_request(self, weights: dict[Hotkey, Weight]) -> SetWeightsRequest:  # type: ignore[reportIncompatibleMethodOverride]
+        return SetWeightsRequest(
+            netuid=self.netuid,
+            identity_name=self.identity_name,
+            weights=weights,
+        )
 
     def _get_commitments_request(self) -> GetCommitmentsRequest:  # type: ignore[reportIncompatibleMethodOverride]
         return GetCommitmentsRequest(

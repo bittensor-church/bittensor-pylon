@@ -1,53 +1,22 @@
-import json
 from http import HTTPMethod
 
 import pytest
-from httpx import Response, codes
 from pydantic import ValidationError
 
 from pylon_client._internal.pylon_commons._unstable.endpoints import Endpoint as EndpointUnstable
-from pylon_client._internal.pylon_commons.v1.requests import SetWeightsRequest
+from pylon_client._internal.pylon_commons._unstable.requests import SetWeightsRequest
 from pylon_client.artanis import Hotkey, IdentityName, MechanismId, NetUid, Weight
 from pylon_client.artanis.unstable import SetWeightsResponse
 from tests.unit.synchronous.base_test import IdentityEndpointTest
 
 
 class TestSyncIdentitySetWeights(IdentityEndpointTest):
-    endpoint = EndpointUnstable.SUBNET_WEIGHTS
-    route_params = {"identity_name": "sn1", "netuid": 1}
+    endpoint = EndpointUnstable.SUBNET_MECHANISMS_WEIGHTS
+    route_params = {"identity_name": "sn1", "netuid": 1, "mechanism_id": 1}
     http_method = HTTPMethod.PUT
 
     def make_endpoint_call(self, client):
-        return client.unstable.identity.put_weights(weights={Hotkey("h1"): Weight(0.2)})
-
-    def test_put_weights(self, pylon_client, service_mock, route_mock_factory, success_response):
-        self._setup_login_mock(service_mock)
-        route_mock = route_mock_factory()
-        route_mock.mock(return_value=Response(status_code=codes.OK, json=success_response.model_dump(mode="json")))
-
-        with pylon_client:
-            response = pylon_client.unstable.identity.put_weights(weights={Hotkey("h1"): Weight(0.2)})
-
-        assert response == success_response
-        assert service_mock.calls.last.request.url.path.endswith("/weights")
-        assert json.loads(route_mock.calls.last.request.content) == {"weights": {"h1": 0.2}}
-
-    def test_put_weights_with_mechanism_id(self, pylon_client, service_mock, route_mock_factory, success_response):
-        self._setup_login_mock(service_mock)
-        route_mock = route_mock_factory(
-            endpoint=EndpointUnstable.SUBNET_MECHANISMS_WEIGHTS,
-            extra_params={"mechanism_id": 1},
-        )
-        route_mock.mock(return_value=Response(status_code=codes.OK, json=success_response.model_dump(mode="json")))
-
-        with pylon_client:
-            response = pylon_client.unstable.identity.put_weights(
-                weights={Hotkey("h1"): Weight(0.2)}, mechanism_id=MechanismId(1)
-            )
-
-        assert response == success_response
-        assert service_mock.calls.last.request.url.path.endswith("/mechanism/1/weights")
-        assert json.loads(route_mock.calls.last.request.content) == {"weights": {"h1": 0.2}}
+        return client.unstable.identity.put_weights(weights={Hotkey("h1"): Weight(0.2)}, mechanism_id=MechanismId(1))
 
     @pytest.fixture
     def success_response(self) -> SetWeightsResponse:
@@ -96,7 +65,9 @@ def test_sync_set_weights_request_validation_error(invalid_weights, expected_err
     Test that SetWeightsRequest validates input correctly.
     """
     with pytest.raises(ValidationError) as exc_info:
-        SetWeightsRequest(netuid=NetUid(1), identity_name=IdentityName("test"), weights=invalid_weights)
+        SetWeightsRequest(
+            netuid=NetUid(1), identity_name=IdentityName("test"), weights=invalid_weights, mechanism_id=MechanismId(0)
+        )
 
     errors = exc_info.value.errors(include_url=False, include_context=False, include_input=False)
     assert errors == expected_errors

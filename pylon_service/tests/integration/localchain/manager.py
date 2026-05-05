@@ -40,10 +40,16 @@ _DRAND_WORKER_MARGIN = 80  # Roughly after how many blocks after starting the ch
 class ChainStorage(enum.StrEnum):
     ADMIN_FREEZE_WINDOW = "SubtensorModule.AdminFreezeWindow"
     COMMIT_REVEAL_WEIGHTS_ENABLED = "SubtensorModule.CommitRevealWeightsEnabled"
+    DRAND_LAST_STORED_ROUND = "Drand.LastStoredRound"
     DRAND_NEXT_UNSIGNED_AT = "Drand.NextUnsignedAt"
+    DRAND_OLDEST_STORED_ROUND = "Drand.OldestStoredRound"
+    MECHANISM_COUNT_CURRENT = "SubtensorModule.MechanismCountCurrent"
     SERVING_RATE_LIMIT = "SubtensorModule.ServingRateLimit"
     SUBTOKEN_ENABLED = "SubtensorModule.SubtokenEnabled"
     TOTAL_NETWORKS = "SubtensorModule.TotalNetworks"
+    MAX_REGISTRATIONS_PER_BLOCK = "SubtensorModule.MaxRegistrationsPerBlock"
+    TARGET_REGISTRATIONS_PER_INTERVAL = "SubtensorModule.TargetRegistrationsPerInterval"
+    TX_RATE_LIMIT = "SubtensorModule.TxRateLimit"
 
 
 @dataclass(frozen=True)
@@ -489,8 +495,7 @@ class LocalChainManager:
 
         logger.info("Setting Drand.NextUnsignedAt to %d", block_number)
         await self._set_storage(
-            pallet_name="Drand",
-            storage_name="NextUnsignedAt",
+            storage=ChainStorage.DRAND_NEXT_UNSIGNED_AT,
             storage_value=f"0x{block_number.to_bytes(4, byteorder='little', signed=False).hex()}",
         )
 
@@ -503,15 +508,13 @@ class LocalChainManager:
 
         logger.info("Setting Drand.LastStoredRound to %d", round_number)
         await self._set_storage(
-            pallet_name="Drand",
-            storage_name="LastStoredRound",
+            storage=ChainStorage.DRAND_LAST_STORED_ROUND,
             storage_value=f"0x{round_number.to_bytes(8, byteorder='little', signed=False).hex()}",
         )
 
         logger.info("Setting Drand.OldestStoredRound to %d", round_number)
         await self._set_storage(
-            pallet_name="Drand",
-            storage_name="OldestStoredRound",
+            storage=ChainStorage.DRAND_OLDEST_STORED_ROUND,
             storage_value=f"0x{round_number.to_bytes(8, byteorder='little', signed=False).hex()}",
         )
 
@@ -553,7 +556,7 @@ class LocalChainManager:
         """
         logger.info("Setting max registrations per block to %d on subnet %d", max_regs, netuid)
         await self._set_storage(
-            storage_name="MaxRegistrationsPerBlock",
+            storage=ChainStorage.MAX_REGISTRATIONS_PER_BLOCK,
             storage_value=f"0x{max_regs.to_bytes(2, byteorder='little', signed=False).hex()}",
             params=[netuid],
         )
@@ -571,7 +574,7 @@ class LocalChainManager:
         """
         logger.info("Setting target registrations per interval to %d on subnet %d", target, netuid)
         await self._set_storage(
-            storage_name="TargetRegistrationsPerInterval",
+            storage=ChainStorage.TARGET_REGISTRATIONS_PER_INTERVAL,
             storage_value=f"0x{target.to_bytes(2, byteorder='little', signed=False).hex()}",
             params=[netuid],
         )
@@ -589,7 +592,7 @@ class LocalChainManager:
         """
         logger.info("Setting tx rate limit to %d on subnet %d", rate_limit, netuid)
         await self._set_storage(
-            storage_name="TxRateLimit",
+            storage=ChainStorage.TX_RATE_LIMIT,
             storage_value=f"0x{rate_limit.to_bytes(8, byteorder='little', signed=False).hex()}",
             params=[netuid],
         )
@@ -607,7 +610,7 @@ class LocalChainManager:
         """
         logger.info("Setting serving rate limit to %d on subnet %d", rate_limit, netuid)
         await self._set_storage(
-            storage_name="ServingRateLimit",
+            storage=ChainStorage.SERVING_RATE_LIMIT,
             storage_value=f"0x{rate_limit.to_bytes(8, byteorder='little', signed=False).hex()}",
             params=[netuid],
         )
@@ -681,7 +684,7 @@ class LocalChainManager:
             )
             await extrinsic.wait_for_finalization()
 
-            value = await client.subtensor.state.getStorage("SubtensorModule.MechanismCountCurrent", netuid)
+            value = await self.get_storage(ChainStorage.MECHANISM_COUNT_CURRENT, netuid)
             if value != mechanism_count:
                 raise RuntimeError(f"MechanismCountCurrent is {value} after sudo call, expected {mechanism_count}")
 
@@ -791,11 +794,11 @@ class LocalChainManager:
 
     async def _set_storage(
         self,
-        storage_name: str,
+        storage: ChainStorage,
         storage_value: str,
-        pallet_name: str = "SubtensorModule",
         params: list[object] | None = None,
     ) -> None:
+        pallet_name, storage_name = storage.split(".")
         async with self._turbobt_client() as client:
             await client.subtensor._init_runtime()
             assert client.subtensor._metadata is not None

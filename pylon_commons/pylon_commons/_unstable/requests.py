@@ -206,7 +206,7 @@ class SetWeightsRequest(SetWeightsBody, IdentityPylonRequest[SetWeightsResponse]
     Class used to perform setting weights by the Pylon client.
     """
 
-    mechanism_id: MechanismId | None = None
+    mechanism_id: MechanismId
 
     response_cls = SetWeightsResponse
 

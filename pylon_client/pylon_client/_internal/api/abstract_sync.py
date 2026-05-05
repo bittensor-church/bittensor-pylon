@@ -431,6 +431,7 @@ class AbstractIdentityApi(AbstractApi, ABC):
         Returns:
             SetWeightsResponse indicating the weights update has been scheduled.
         """
+        mechanism_id = mechanism_id if mechanism_id is not None else MechanismId(0)
         return self._send_identity_request(partial(self._put_weights_request, weights, mechanism_id))
 
     def get_commitments(self) -> GetCommitmentsResponse:
@@ -612,9 +613,7 @@ class AbstractIdentityApi(AbstractApi, ABC):
     def _get_recent_neurons_request(self) -> GetRecentNeuronsRequest: ...
 
     @abstractmethod
-    def _put_weights_request(
-        self, weights: dict[Hotkey, Weight], mechanism_id: MechanismId | None
-    ) -> SetWeightsRequest: ...
+    def _put_weights_request(self, weights: dict[Hotkey, Weight], mechanism_id: MechanismId) -> SetWeightsRequest: ...
 
     @abstractmethod
     def _get_commitments_request(self) -> GetCommitmentsRequest: ...

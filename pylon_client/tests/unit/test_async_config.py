@@ -3,6 +3,7 @@ from httpx import ConnectError, Response, codes
 from tenacity import stop_after_attempt
 
 from pylon_client._internal.pylon_commons._unstable.endpoints import Endpoint as EndpointUnstable
+from pylon_client._internal.pylon_commons.types import MechanismId
 from pylon_client.artanis import (
     ASYNC_DEFAULT_RETRIES,
     AsyncConfig,
@@ -27,7 +28,9 @@ from pylon_client.artanis.unstable import SetWeightsResponse
 @pytest.mark.asyncio
 async def test_async_config_retries_success(service_mock, test_url, attempts):
     identities_url = EndpointUnstable.IDENTITIES.absolute_url()
-    weights_url = EndpointUnstable.SUBNET_WEIGHTS.absolute_url(identity_name_=IdentityName("sn1"), netuid_=NetUid(1))
+    weights_url = EndpointUnstable.SUBNET_MECHANISMS_WEIGHTS.absolute_url(
+        identity_name_=IdentityName("sn1"), netuid_=NetUid(1), mechanism_id=MechanismId(0)
+    )
 
     identities_response_json = {"identities": {"sn1": 1}}
     service_mock.get(identities_url).mock(return_value=Response(status_code=codes.OK, json=identities_response_json))
@@ -60,7 +63,9 @@ async def test_async_config_retries_success(service_mock, test_url, attempts):
 @pytest.mark.asyncio
 async def test_async_config_retries_error(service_mock, test_url):
     identities_url = EndpointUnstable.IDENTITIES.absolute_url()
-    weights_url = EndpointUnstable.SUBNET_WEIGHTS.absolute_url(identity_name_=IdentityName("sn1"), netuid_=NetUid(1))
+    weights_url = EndpointUnstable.SUBNET_MECHANISMS_WEIGHTS.absolute_url(
+        identity_name_=IdentityName("sn1"), netuid_=NetUid(1), mechanism_id=MechanismId(0)
+    )
 
     identities_response_json = {"identities": {"sn1": 1}}
     service_mock.get(identities_url).mock(return_value=Response(status_code=codes.OK, json=identities_response_json))

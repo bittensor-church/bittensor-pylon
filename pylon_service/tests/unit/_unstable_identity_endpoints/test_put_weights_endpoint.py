@@ -11,17 +11,8 @@ from pylon_service.api._unstable.tasks import ApplyWeights
 from tests.helpers import wait_for_background_tasks
 
 
-@pytest.mark.parametrize(
-    "mechanism_url_infix,expected_mechanism_id",
-    [
-        pytest.param("", 0, id="no_mechanism_id"),
-        pytest.param("mechanism/1/", 1, id="with_mechanism_id"),
-    ],
-)
 @pytest.mark.asyncio
 async def test_put_weights_commit_reveal_enabled(
-    mechanism_url_infix: str,
-    expected_mechanism_id: int,
     identity_test_client_factory,
     mock_bt_client_factory,
     snapshot_json,
@@ -56,7 +47,7 @@ async def test_put_weights_commit_reveal_enabled(
         ):
             async with identity_test_client_factory("sn1") as client:
                 response = await client.put(
-                    f"/api/_unstable/identity/sn1/subnet/1/{mechanism_url_infix}weights",
+                    "/api/_unstable/identity/sn1/subnet/1/mechanism/1/weights",
                     json={"weights": weights},
                 )
 
@@ -70,7 +61,7 @@ async def test_put_weights_commit_reveal_enabled(
         assert mock_client.calls["commit_weights"] == [
             (
                 1,
-                MechanismId(expected_mechanism_id),
+                MechanismId(1),
                 {
                     NeuronUid(1): 0.5,
                     NeuronUid(2): 0.3,
@@ -80,17 +71,8 @@ async def test_put_weights_commit_reveal_enabled(
         ]
 
 
-@pytest.mark.parametrize(
-    "mechanism_url_infix,expected_mechanism_id",
-    [
-        pytest.param("", 0, id="no_mechanism_id"),
-        pytest.param("mechanism/1/", 1, id="with_mechanism_id"),
-    ],
-)
 @pytest.mark.asyncio
 async def test_put_weights_commit_reveal_disabled(
-    mechanism_url_infix: str,
-    expected_mechanism_id: int,
     identity_test_client_factory,
     mock_bt_client_factory,
     snapshot_json,
@@ -123,7 +105,7 @@ async def test_put_weights_commit_reveal_disabled(
         ):
             async with identity_test_client_factory("sn2") as client:
                 response = await client.put(
-                    f"/api/_unstable/identity/sn2/subnet/2/{mechanism_url_infix}weights",
+                    "/api/_unstable/identity/sn2/subnet/2/mechanism/1/weights",
                     json={"weights": weights},
                 )
 
@@ -137,7 +119,7 @@ async def test_put_weights_commit_reveal_disabled(
         assert mock_client.calls["set_weights"] == [
             (
                 2,
-                MechanismId(expected_mechanism_id),
+                MechanismId(1),
                 {
                     NeuronUid(1): 0.7,
                     NeuronUid(2): 0.3,
@@ -179,7 +161,7 @@ async def test_put_weights_retries_when_prepare_fails(
         ):
             async with identity_test_client_factory("sn1") as client:
                 response = await client.put(
-                    "/api/_unstable/identity/sn1/subnet/1/weights",
+                    "/api/_unstable/identity/sn1/subnet/1/mechanism/1/weights",
                     json={"weights": weights},
                 )
 
@@ -192,7 +174,7 @@ async def test_put_weights_retries_when_prepare_fails(
         assert mock_client.calls["set_weights"] == [
             (
                 1,
-                MechanismId(0),
+                MechanismId(1),
                 {
                     NeuronUid(1): 0.5,
                     NeuronUid(2): 0.5,
@@ -229,7 +211,7 @@ async def test_put_weights_validation_errors(identity_test_client_factory, json_
     """
     async with identity_test_client_factory("sn1") as client:
         response = await client.put(
-            "/api/_unstable/identity/sn1/subnet/1/weights",
+            "/api/_unstable/identity/sn1/subnet/1/mechanism/1/weights",
             json=json_data,
         )
 
@@ -241,7 +223,7 @@ async def test_put_weights_validation_errors(identity_test_client_factory, json_
 async def test_unstable_identity_put_weights_unknown_identity_returns_404(identity_test_client_factory, snapshot_json):
     async with identity_test_client_factory("sn1") as client:
         response = await client.put(
-            "/api/_unstable/identity/unknown/subnet/1/weights",
+            "/api/_unstable/identity/unknown/subnet/1/mechanism/1/weights",
             json={"weights": {"hotkey1": 1.0}},
         )
 

@@ -62,11 +62,7 @@ def test_get_own_commitment_without_commitment_identity(pylon_client_factory):
 
 def test_get_all_revealed_commitments_open_access(pylon_client_factory):
     with pylon_client_factory("sn1") as client:
-        comms = client.unstable.open_access.get_commitments(netuid=NetUid(1))
-        round = client.unstable.open_access.get_drand_last_stored_round()
-        print(f"round: {round} commitments: {comms}")
         response = client.unstable.open_access.get_all_revealed_commitments(netuid=NetUid(1))
-        print("all revealed commitments:", response)
         assert isinstance(response, GetAllRevealedCommitmentsResponse)
         assert response.block.number > 0
         assert response.block.hash

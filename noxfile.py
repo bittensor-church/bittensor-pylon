@@ -40,7 +40,8 @@ def test_integration(session):
 
 @nox.session(name="prepare-localchain", python=False, default=False)
 def prepare_localchain(session):
-    _run_nox_in_package(session, "pylon_service", "prepare-localchain")
+    _run_nox_in_package(session, "pylon_service", "prepare-e2e-localchain")
+    _run_nox_in_package(session, "pylon_service", "prepare-contact-localchain")
 
 
 @nox.session(name="format", python=False)

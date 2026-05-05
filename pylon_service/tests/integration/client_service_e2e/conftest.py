@@ -38,6 +38,7 @@ async def localchain(docker_network):
     )
     await container.ensure_prepared_image()
     async with LocalChainManager(container) as manager:
+        # Phase 2 of drand workaround — see localchain/README.md#drand-workaround
         await manager.synchronize_drand_last_stored_round()
         yield manager
 
