@@ -3,14 +3,12 @@ import os
 from contextlib import contextmanager
 from pathlib import Path
 
-import bittensor_drand
 import pytest
 import pytest_asyncio
 from pylon_client.artanis import Config, IdentityName, PylonAuthToken, PylonClient, PylonTimeout
 from testcontainers.core.network import Network
 
-from tests.integration.containers import LocalChainContainer, PylonServiceContainer
-from tests.integration.localchain.dev_accounts import DevAccount
+from tests.integration.containers import LocalChainContainer, LocalChainImage, PylonServiceContainer
 from tests.integration.localchain.manager import LocalChainManager
 
 logger = logging.getLogger(__name__)
@@ -33,7 +31,7 @@ def pylon_service_image():
 @pytest_asyncio.fixture(scope="package")
 async def localchain(docker_network):
     container = (
-        LocalChainContainer()
+        LocalChainContainer(image=LocalChainImage.PREPARED_E2E)
         .with_network(docker_network)
         .with_network_aliases("localchain")
         .with_env("RUST_LOG", "pallet_drand=debug,sc_offchain=debug")
@@ -41,10 +39,7 @@ async def localchain(docker_network):
     await container.ensure_prepared_image()
     async with LocalChainManager(container) as manager:
         # Phase 2 of drand workaround — see localchain/README.md#drand-workaround
-        latest_round = bittensor_drand.get_latest_round()
-        logger.info("Setting Drand.LastStoredRound to %d on localchain", latest_round)
-        await manager.set_drand_last_stored_round(DevAccount.ALICE.wallet, latest_round)
-        await manager.set_drand_oldest_stored_round(DevAccount.ALICE.wallet, latest_round)
+        await manager.synchronize_drand_last_stored_round()
         yield manager
 
 

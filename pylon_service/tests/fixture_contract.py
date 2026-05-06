@@ -25,11 +25,25 @@ EXPECTED_IDENTITIES = {
         token=PylonAuthToken("sn1_token"),
         hotkey_ss58="5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY",
     ),
+    IdentityName("sn1c"): ExpectedIdentity(
+        wallet_name=WalletName("charlie"),
+        hotkey_name=HotkeyName("default"),
+        netuid=NetUid(1),
+        token=PylonAuthToken("sn1c_token"),
+        hotkey_ss58="5FLSigC9HGRKVhB9FiEo4Y3koPsNmBmLJbpXg2mp1hXcS59Y",
+    ),
     IdentityName("sn2"): ExpectedIdentity(
         wallet_name=WalletName("bob"),
         hotkey_name=HotkeyName("default"),
         netuid=NetUid(2),
         token=PylonAuthToken("sn2_token"),
+        hotkey_ss58="5FHneW46xGXgs5mUiveU4sbTyGBzmstUspZC92UhjJM694ty",
+    ),
+    IdentityName("sn3"): ExpectedIdentity(
+        wallet_name=WalletName("bob"),
+        hotkey_name=HotkeyName("default"),
+        netuid=NetUid(3),
+        token=PylonAuthToken("sn3_token"),
         hotkey_ss58="5FHneW46xGXgs5mUiveU4sbTyGBzmstUspZC92UhjJM694ty",
     ),
     IdentityName("sn11"): ExpectedIdentity(

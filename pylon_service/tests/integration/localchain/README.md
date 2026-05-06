@@ -15,21 +15,25 @@ of end-to-end verification. Localchain solves this by:
 
 ## Building the Snapshot
 
-Before running integration tests, you must build the prepared snapshot image:
+Before running integration tests, you must build the prepared snapshot images:
+- `prepared-e2e-localnet:latest` for e2e tests
+- `prepared-contact-localnet:latest` for contact tests
 
 ```bash
 # From the repository root:
-nox -s prepare-localchain
+nox -s prepare-e2e-localchain
+nox -s prepare-contact-localchain
 
 # Or from pylon_service:
-cd pylon_service && nox -s prepare-localchain
+cd pylon_service && nox -s prepare-e2e-localchain
+cd pylon_service && nox -s prepare-contact-localchain
 ```
 
-This runs `prepare_chain.py`, which:
+This runs `prepare_e2e_chain.py` or `prepare_contact_chain.py` respectively, which:
 
 1. Starts a fresh `ghcr.io/opentensor/subtensor-localnet:main` container
 2. Seeds it with test data (see [Seeded Data](#seeded-data) below)
-3. Commits the container state as Docker image `prepared-localnet:latest`
+3. Commits the container state as Docker image `prepared-e2elocalnet:latest` or `prepared-contact-localnet:latest`
 
 The resulting snapshot preserves the full chain state and can be started repeatedly without
 re-running the seeding process.
@@ -50,27 +54,32 @@ stored in `tests/wallets/`:
 
 On localnet, coldkey and hotkey are derived from the same URI, so their SS58 addresses are identical.
 
-The snapshot also creates **251 filler wallets** from deterministic URIs (`//Filler0` through
+### Seeded data for e2e tests
+
+#### Filler Accounts
+
+The snapshot creates **251 filler wallets** from deterministic URIs (`//Filler0` through
 `//Filler250`) in a temporary wallet directory while preparing the chain. These wallets are used
 only to fill subnet neuron capacity and are not persisted as test wallets.
 
-### TAO Transfers
+#### TAO Transfers
 
 Alice (pre-funded by the localnet genesis) transfers **100,000 TAO** to each of: Bob, Charlie, Dave.
 Alice also transfers **500 TAO** to each filler wallet.
 
-### Subnets
+
+#### Subnets
 
 Two subnets are registered (owned by Alice):
 
-| Subnet | Netuid | Tempo | Purpose |
-|--------|--------|-------|---------|
-| Subnet 1 | 1 | 100 (default) | General testing |
-| Subnet 2 | 2 | 50 (low) | Fast commit-reveal weight tests |
+| Subnet   | Netuid | Tempo | Purpose                                                      |
+|----------|--------|-------|--------------------------------------------------------------|
+| Subnet 1 | 1      | 100 (default) | Read testing                                                 |
+| Subnet 2 | 2      | 50 (low) | Fast commit-reveal weight. Write tests.                      |
+| Subnet 3 | 3      | 50 (low) | Fast commit-reveal weight tests and mechanisms. Write tests. |
+Subtokens are enabled on all subnets.
 
-Subtokens are enabled on both subnets.
-
-### Neurons
+#### Neurons
 
 Each prepared subnet contains **256 neurons**:
 
@@ -83,18 +92,65 @@ Each prepared subnet contains **256 neurons**:
 | 4 | Dave | Non-validator |
 | 5-255 | Filler wallets | Non-validator |
 
-### Stake
+#### Stake
 
-Validators (Alice and Bob) each stake **10,000 TAO** on both subnets (4 stake operations total).
+Validators (Alice and Bob) each stake **10 TAO** on subnets 1-3 (6 stake operations total).
 
-### Commitments
+#### Commitments
 
 Set on **subnet 1** only:
 
-| Account | Commitment |
-|---------|------------|
-| Charlie | `"commitment-charlie"` |
-| Dave    | `"commitment-dave"` |
+| Account | Type | Value                         |
+|---------|------|-------------------------------|
+| Alice   | revealed commitment | `"revealed-commitment-alice"` |
+| Bob     | revealed commitment | `"revealed-commitment-bob"`   |
+| Charlie | commitment | `"commitment-charlie"`        |
+| Dave    | commitment | `"commitment-dave"`           |
+
+### Seeded data for contact tests
+
+#### TAO Transfers
+
+Alice (pre-funded by the localnet genesis) transfers **100,000 TAO** to each of: Bob, Charlie, Dave.
+
+#### Subnets
+
+Four subnets are registered (owned by Alice):
+
+| Subnet   | Netuid | Tempo | Purpose                                                      |
+|----------|--------|-------|--------------------------------------------------------------|
+| Subnet 2 | 2      | 50    | No commit-reveal tests                                       |
+| Subnet 3 | 3      | 50    | Commit-reveal weight tests                                   |
+| Subnet 4 | 4      | 50    | No commit-reveal weight with mechanism for set weight tests  |
+| Subnet 5 | 5      | 50    | Commit-reveal weight with mechanisms for commit weight tests |
+
+Subtokens are enabled on all subnets.
+
+#### Neurons
+
+Each prepared subnet contains **4 neurons**:
+
+| UID Range | Account(s) | Role |
+|-----------|------------|------|
+| 1 | Alice | Validator |
+| 2 | Bob | Validator |
+| 3 | Charlie | Non-validator |
+| 4 | Dave | Non-validator |
+
+#### Stake
+
+Validators (Alice and Bob) each stake **10 TAO** on all subnets.
+
+#### Commitments
+
+Set on **subnet 1** only:
+
+| Account | Type                | Value                           |
+|---------|---------------------|---------------------------------|
+| Alice   | revealed commitment | `"revealed-commitment-alice"`   |
+| Bob     | commitment          | `"commitment-bob"`              |
+| Charlie | revealed commitment | `"revealed-commitment-charlie"` |
+| Dave    | commitment          | `"commitment-dave"`             |
 
 ### Other Configuration
 
@@ -134,11 +190,14 @@ will not work.
 
 The workaround uses a two-phase approach:
 
-**Phase 1 — At snapshot build time** (`prepare_chain.py`):
+**Phase 1 — At snapshot build time** (`prepare_e2e_chain.py`, `prepare_contact_chain.py`):
 
 Set `Drand.NextUnsignedAt` to `current_block + DRAND_WORKER_MARGIN` (currently 80 blocks). This
 tells the offchain worker to **not start fetching** until 80 blocks after the snapshot block.
 This buys time to update `LastStoredRound` before the worker begins.
+```python
+await manager.offset_drand_next_unsigned_at()
+```
 
 **Phase 2 — At container start time** (test fixtures):
 
@@ -147,12 +206,12 @@ Immediately after starting the container, set `Drand.LastStoredRound` and
 `bittensor_drand.get_latest_round()`). This way, when the worker eventually starts (after the
 margin expires), it begins from the current round instead of the stale one.
 
+Wait for the chain to catch up by waiting for the block number to exceed `Drand.NextUnsignedAt` set in phase 1. 
+
 ```python
 # In test conftest.py (simplified):
 with LocalChainManager(container) as manager:
-    latest_round = bittensor_drand.get_latest_round()
-    await manager.set_drand_last_stored_round(alice.wallet, latest_round)
-    await manager.set_drand_oldest_stored_round(alice.wallet, latest_round)
+    await manager.synchronize_drand_last_stored_round()
     yield manager
 ```
 
@@ -166,6 +225,10 @@ time to process, delaying the worker from getting to the current round for tens 
 
 By delaying the worker's start via `NextUnsignedAt` (phase 1), we ensure it has not yet queued
 any work by the time `LastStoredRound` is updated (phase 2).
+
+Waiting for the chain to catch up is necessary because the worker will not process 
+drand based operations (commit weight, set reveal commitment) until `LastStoredRound` 
+is being updated.
 
 > **Important**: `Drand.NextUnsignedAt` must always be set as the **last operation** before the
 > Docker snapshot is committed. If more operations are added after it, they consume the block

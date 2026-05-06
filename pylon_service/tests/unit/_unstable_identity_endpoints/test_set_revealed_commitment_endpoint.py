@@ -11,13 +11,13 @@ async def test_set_revealed_commitment_identity_success(
             async with identity_test_client_factory("sn1") as client:
                 response = await client.post(
                     "/api/_unstable/identity/sn1/subnet/1/commitments/revealed",
-                    json={"commitment": "model-a", "blocks_until_reveal": 12, "block_time": 12},
+                    json={"commitment": "model-a", "blocks_until_reveal": 12},
                 )
 
         assert response.status_code == HTTP_201_CREATED
         assert response.json() == snapshot_json
         assert mock_client.calls["set_revealed_commitment"] == [
-            (1, "model-a", 12, 12),
+            (1, "model-a", 12),
         ]
 
 
@@ -35,15 +35,15 @@ async def test_set_revealed_commitment_identity_retries_on_failure(
             async with identity_test_client_factory("sn1") as client:
                 response = await client.post(
                     "/api/_unstable/identity/sn1/subnet/1/commitments/revealed",
-                    json={"commitment": "model-a", "blocks_until_reveal": 12, "block_time": 12},
+                    json={"commitment": "model-a", "blocks_until_reveal": 12},
                 )
 
         assert response.status_code == HTTP_201_CREATED
         assert response.json() == snapshot_json
         assert mock_client.calls["set_revealed_commitment"] == [
-            (1, "model-a", 12, 12),
-            (1, "model-a", 12, 12),
-            (1, "model-a", 12, 12),
+            (1, "model-a", 12),
+            (1, "model-a", 12),
+            (1, "model-a", 12),
         ]
 
 
@@ -58,7 +58,7 @@ async def test_set_revealed_commitment_identity_blockchain_error(
             async with identity_test_client_factory("sn1") as client:
                 response = await client.post(
                     "/api/_unstable/identity/sn1/subnet/1/commitments/revealed",
-                    json={"commitment": "model-a", "blocks_until_reveal": 12, "block_time": 12},
+                    json={"commitment": "model-a", "blocks_until_reveal": 12},
                 )
 
         assert response.status_code == HTTP_502_BAD_GATEWAY
@@ -69,9 +69,8 @@ async def test_set_revealed_commitment_identity_blockchain_error(
 @pytest.mark.parametrize(
     "payload",
     [
-        pytest.param({"commitment": 123, "blocks_until_reveal": 12, "block_time": 12}, id="invalid_commitment_type"),
-        pytest.param({"commitment": "model-a", "blocks_until_reveal": "soon", "block_time": 12}, id="invalid_blocks"),
-        pytest.param({"commitment": "model-a", "blocks_until_reveal": 12}, id="missing_block_time"),
+        pytest.param({"commitment": 123, "blocks_until_reveal": 12}, id="invalid_commitment_type"),
+        pytest.param({"commitment": "model-a", "blocks_until_reveal": "soon"}, id="invalid_blocks"),
     ],
 )
 async def test_set_revealed_commitment_identity_invalid_data(
@@ -94,7 +93,7 @@ async def test_unstable_identity_set_revealed_commitment_unknown_identity_return
     async with identity_test_client_factory("sn1") as client:
         response = await client.post(
             "/api/_unstable/identity/unknown/subnet/1/commitments/revealed",
-            json={"commitment": "model-a", "blocks_until_reveal": 12, "block_time": 12},
+            json={"commitment": "model-a", "blocks_until_reveal": 12},
         )
 
     assert response.status_code == HTTP_404_NOT_FOUND

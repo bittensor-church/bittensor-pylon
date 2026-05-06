@@ -10,9 +10,10 @@ from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from dataclasses import dataclass
 from types import TracebackType
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, cast
 from urllib.parse import urlparse
 
+import bittensor_drand
 import docker
 from bittensor_wallet import Wallet
 from turbobt.batch import Transaction
@@ -20,6 +21,7 @@ from turbobt.client import Bittensor
 from turbobt.subtensor.exceptions import HotKeyAlreadyRegisteredInSubNet
 
 from tests.integration.containers import LocalChainContainer, LocalChainImage
+from tests.integration.localchain.dev_accounts import SUDO_WALLET
 
 logger = logging.getLogger(__name__)
 
@@ -32,6 +34,8 @@ _CONTACT_TEST_AXON_PORT = 12345
 
 _RAO_PER_TAO = 1_000_000_000
 
+_DRAND_WORKER_MARGIN = 80  # Roughly after how many blocks after starting the chain drand rounds will start fetching
+
 
 class ChainStorage(enum.StrEnum):
     ADMIN_FREEZE_WINDOW = "SubtensorModule.AdminFreezeWindow"
@@ -39,13 +43,13 @@ class ChainStorage(enum.StrEnum):
     DRAND_LAST_STORED_ROUND = "Drand.LastStoredRound"
     DRAND_NEXT_UNSIGNED_AT = "Drand.NextUnsignedAt"
     DRAND_OLDEST_STORED_ROUND = "Drand.OldestStoredRound"
+    MECHANISM_COUNT_CURRENT = "SubtensorModule.MechanismCountCurrent"
     SERVING_RATE_LIMIT = "SubtensorModule.ServingRateLimit"
     SUBTOKEN_ENABLED = "SubtensorModule.SubtokenEnabled"
     TOTAL_NETWORKS = "SubtensorModule.TotalNetworks"
     MAX_REGISTRATIONS_PER_BLOCK = "SubtensorModule.MaxRegistrationsPerBlock"
     TARGET_REGISTRATIONS_PER_INTERVAL = "SubtensorModule.TargetRegistrationsPerInterval"
     TX_RATE_LIMIT = "SubtensorModule.TxRateLimit"
-    WEIGHTS_SET_RATE_LIMIT = "SubtensorModule.WeightsSetRateLimit"
 
 
 @dataclass(frozen=True)
@@ -215,16 +219,13 @@ class LocalChainManager:
 
     # ---- Chain operations (async, use turbobt) ----
 
-    async def disable_admin_freeze_window(self, sudo_wallet: Wallet) -> None:
+    async def disable_admin_freeze_window(self) -> None:
         """
         Set AdminFreezeWindow to 0 via sudo set_storage call.
 
         On a fresh localnet the default AdminFreezeWindow is 10 blocks,
         which can cause sudo calls to silently fail. Setting it to 0
         eliminates this problem for all subsequent sudo operations.
-
-        Args:
-            sudo_wallet: Wallet with sudo privileges (typically alice on localnet).
 
         Raises:
             RuntimeError: If AdminFreezeWindow is not 0 after the call.
@@ -241,7 +242,7 @@ class LocalChainManager:
                 "System",
                 "set_storage",
                 {"items": [[storage_key, "0x0000"]]},
-                wallet=sudo_wallet,
+                wallet=SUDO_WALLET,
             )
             await result.wait_for_finalization()
 
@@ -295,7 +296,7 @@ class LocalChainManager:
             except HotKeyAlreadyRegisteredInSubNet:
                 logger.info("Hotkey %s already registered on subnet %d, skipping", wallet.hotkey.ss58_address, netuid)
 
-    async def enable_subtokens(self, sudo_wallet: Wallet, netuid: int) -> None:
+    async def enable_subtokens(self, netuid: int) -> None:
         """
         Enable subtokens on a subnet via sudo call.
 
@@ -303,7 +304,6 @@ class LocalChainManager:
         blocks staking. Requires AdminFreezeWindow=0 to avoid silent failures.
 
         Args:
-            sudo_wallet: Wallet with sudo privileges.
             netuid: Subnet UID to enable subtokens for.
 
         Raises:
@@ -315,7 +315,7 @@ class LocalChainManager:
                 "AdminUtils",
                 "sudo_set_subtoken_enabled",
                 {"netuid": netuid, "subtoken_enabled": True},
-                wallet=sudo_wallet,
+                wallet=SUDO_WALLET,
             )
             await result.wait_for_finalization()
 
@@ -327,12 +327,11 @@ class LocalChainManager:
                 )
         logger.info("Subtokens enabled on subnet %d", netuid)
 
-    async def enable_commit_reveal_weights(self, sudo_wallet: Wallet, netuid: int) -> None:
+    async def enable_commit_reveal_weights(self, netuid: int) -> None:
         """
         Enable commit-reveal weights on a subnet via the admin hyperparameter extrinsic.
 
         Args:
-            sudo_wallet: Wallet with sudo privileges.
             netuid: Subnet UID to enable commit-reveal weights for.
 
         Raises:
@@ -343,7 +342,7 @@ class LocalChainManager:
             result = await client.subtensor.admin_utils.sudo_set_commit_reveal_weights_enabled(
                 netuid=netuid,
                 enabled=True,
-                wallet=sudo_wallet,
+                wallet=SUDO_WALLET,
             )
             await result.wait_for_finalization()
         value = await self.get_storage(ChainStorage.COMMIT_REVEAL_WEIGHTS_ENABLED, netuid)
@@ -351,12 +350,11 @@ class LocalChainManager:
             raise RuntimeError(f"CommitRevealWeightsEnabled is still False for subnet {netuid} after sudo call.")
         logger.info("Commit-reveal weights enabled on subnet %d", netuid)
 
-    async def disable_commit_reveal_weights(self, sudo_wallet: Wallet, netuid: int) -> None:
+    async def disable_commit_reveal_weights(self, netuid: int) -> None:
         """
         Disable commit-reveal weights on a subnet via the admin hyperparameter extrinsic.
 
         Args:
-            sudo_wallet: Wallet with sudo privileges.
             netuid: Subnet UID to disable commit-reveal weights for.
 
         Raises:
@@ -367,7 +365,7 @@ class LocalChainManager:
             result = await client.subtensor.admin_utils.sudo_set_commit_reveal_weights_enabled(
                 netuid=netuid,
                 enabled=False,
-                wallet=sudo_wallet,
+                wallet=SUDO_WALLET,
             )
             await result.wait_for_finalization()
         value = await self.get_storage(ChainStorage.COMMIT_REVEAL_WEIGHTS_ENABLED, netuid)
@@ -426,8 +424,33 @@ class LocalChainManager:
         """
         logger.info("Setting commitment on subnet %d for %s", netuid, wallet.hotkey.ss58_address)
         async with self._turbobt_client() as client:
-            result = await client.subnet(netuid).commitments.set(data.encode(), wallet=wallet)
-            await result.wait_for_finalization()
+            await client.subnet(netuid).commitments.set(data.encode(), wallet=wallet)
+
+    async def set_revealed_commitment(self, wallet: Wallet, netuid: int, data: str, blocks_until_reveal: int) -> None:
+        """
+        Set a revealed commitment for a hotkey on a subnet.
+
+        Args:
+            wallet: Wallet to set the commitment for.
+            netuid: Subnet UID.
+            data: Commitment data string.
+            blocks_to_reveal: Number of blocks to reveal the commitment.
+        """
+        logger.info("Setting revealed commitment on subnet %d for %s", netuid, wallet.hotkey.ss58_address)
+        async with self._turbobt_client() as client:
+            await client.subnet(netuid).commitments.set_revealed(
+                data, blocks_until_reveal=blocks_until_reveal, wallet=wallet
+            )
+
+    async def wait_for_commitment_reveal(self, netuid: int, expected_count: int) -> None:
+        logger.info("Waiting for commitments to be revealed")
+        async with self._turbobt_client() as client:
+            async with asyncio.timeout(30):
+                while True:
+                    revealed_commitments = await client.subnet(netuid).commitments.fetch_revealed()
+                    if len(revealed_commitments) == expected_count:
+                        break
+                    await asyncio.sleep(1)
 
     # ---- Storage operations (async) ----
 
@@ -446,12 +469,11 @@ class LocalChainManager:
         async with self._turbobt_client() as client:
             return await client.subtensor.state.getStorage(storage.value, *params)
 
-    async def set_weights_rate_limit(self, sudo_wallet: Wallet, netuid: int, rate_limit: int) -> None:
+    async def set_weights_rate_limit(self, netuid: int, rate_limit: int) -> None:
         """
         Set the weights rate limit for a subnet via sudo call.
 
         Args:
-            sudo_wallet: Wallet with sudo privileges.
             netuid: Subnet UID.
             rate_limit: Rate limit value in blocks.
         """
@@ -460,67 +482,55 @@ class LocalChainManager:
             result = await client.subtensor.admin_utils.sudo_set_weights_set_rate_limit(
                 netuid=netuid,
                 weights_set_rate_limit=rate_limit,
-                wallet=sudo_wallet,
+                wallet=SUDO_WALLET,
             )
             await result.wait_for_finalization()
 
-    async def set_drand_last_stored_round(self, sudo_wallet: Wallet, round_number: int) -> None:
+    async def offset_drand_next_unsigned_at(self):
         """
-        Set the latest Drand round known to the local chain via sudo storage update.
-
-        Args:
-            sudo_wallet: Wallet with sudo privileges.
-            round_number: Drand round number to store.
+        Phase 1 of drand workaround — see localchain/README.md#drand-workaround
         """
-        logger.info("Setting Drand.LastStoredRound to %d", round_number)
-        await self._set_storage(
-            sudo_wallet=sudo_wallet,
-            pallet_name="Drand",
-            storage_name="LastStoredRound",
-            storage_value=f"0x{round_number.to_bytes(8, byteorder='little', signed=False).hex()}",
-        )
+        current_block = await self.get_current_block_number()
+        block_number = current_block + _DRAND_WORKER_MARGIN
 
-    async def set_drand_oldest_stored_round(self, sudo_wallet: Wallet, round_number: int) -> None:
-        """
-        Set the oldest Drand round known to the local chain via sudo storage update.
-
-        Args:
-            sudo_wallet: Wallet with sudo privileges.
-            round_number: Drand round number to store.
-        """
-        logger.info("Setting Drand.OldestStoredRound to %d", round_number)
-        await self._set_storage(
-            sudo_wallet=sudo_wallet,
-            pallet_name="Drand",
-            storage_name="OldestStoredRound",
-            storage_value=f"0x{round_number.to_bytes(8, byteorder='little', signed=False).hex()}",
-        )
-
-    async def set_drand_next_unsigned_at(self, sudo_wallet: Wallet, block_number: int) -> None:
-        """
-        Set the next block at which an unsigned Drand extrinsic should be submitted.
-
-        Args:
-            sudo_wallet: Wallet with sudo privileges.
-            block_number: Target block number.
-
-        Raises:
-            RuntimeError: If the stored value does not match the expected value after write.
-        """
         logger.info("Setting Drand.NextUnsignedAt to %d", block_number)
         await self._set_storage(
-            sudo_wallet=sudo_wallet,
-            pallet_name="Drand",
-            storage_name="NextUnsignedAt",
+            storage=ChainStorage.DRAND_NEXT_UNSIGNED_AT,
             storage_value=f"0x{block_number.to_bytes(4, byteorder='little', signed=False).hex()}",
         )
 
-    async def set_tempo(self, sudo_wallet: Wallet, netuid: int, tempo: int) -> None:
+    async def synchronize_drand_last_stored_round(self) -> None:
+        """
+        Phase 2 of drand workaround — see localchain/README.md#drand-workaround
+        """
+        latest_round = bittensor_drand.get_latest_round()
+        round_number = latest_round - 1
+
+        logger.info("Setting Drand.LastStoredRound to %d", round_number)
+        await self._set_storage(
+            storage=ChainStorage.DRAND_LAST_STORED_ROUND,
+            storage_value=f"0x{round_number.to_bytes(8, byteorder='little', signed=False).hex()}",
+        )
+
+        logger.info("Setting Drand.OldestStoredRound to %d", round_number)
+        await self._set_storage(
+            storage=ChainStorage.DRAND_OLDEST_STORED_ROUND,
+            storage_value=f"0x{round_number.to_bytes(8, byteorder='little', signed=False).hex()}",
+        )
+
+        drand_next_unsigned_at = cast(int, await self.get_storage(ChainStorage.DRAND_NEXT_UNSIGNED_AT))
+        print(f"Waiting for block to reach current Drand.NextUnsignedAt: {drand_next_unsigned_at}")
+        for _ in range(30):
+            block = await self.get_current_block_number()
+            if block >= drand_next_unsigned_at:
+                break
+            await asyncio.sleep(1)
+
+    async def set_tempo(self, netuid: int, tempo: int) -> None:
         """
         Set the tempo (epoch length) for a subnet via sudo call.
 
         Args:
-            sudo_wallet: Wallet with sudo privileges.
             netuid: Subnet UID.
             tempo: Tempo value in blocks.
         """
@@ -529,16 +539,15 @@ class LocalChainManager:
             result = await client.subtensor.admin_utils.sudo_set_tempo(
                 netuid=netuid,
                 tempo=tempo,
-                wallet=sudo_wallet,
+                wallet=SUDO_WALLET,
             )
             await result.wait_for_finalization()
 
-    async def set_max_registrations_per_block(self, sudo_wallet: Wallet, netuid: int, max_regs: int) -> None:
+    async def set_max_registrations_per_block(self, netuid: int, max_regs: int) -> None:
         """
         Set the maximum number of neuron registrations allowed per block on a subnet.
 
         Args:
-            sudo_wallet: Wallet with sudo privileges.
             netuid: Subnet UID.
             max_regs: Maximum registrations per block.
 
@@ -547,18 +556,16 @@ class LocalChainManager:
         """
         logger.info("Setting max registrations per block to %d on subnet %d", max_regs, netuid)
         await self._set_storage(
-            sudo_wallet=sudo_wallet,
-            storage_name="MaxRegistrationsPerBlock",
+            storage=ChainStorage.MAX_REGISTRATIONS_PER_BLOCK,
             storage_value=f"0x{max_regs.to_bytes(2, byteorder='little', signed=False).hex()}",
             params=[netuid],
         )
 
-    async def set_target_registrations_per_interval(self, sudo_wallet: Wallet, netuid: int, target: int) -> None:
+    async def set_target_registrations_per_interval(self, netuid: int, target: int) -> None:
         """
         Set the target registrations per interval for a subnet.
 
         Args:
-            sudo_wallet: Wallet with sudo privileges.
             netuid: Subnet UID.
             target: Target registrations per interval.
 
@@ -567,18 +574,16 @@ class LocalChainManager:
         """
         logger.info("Setting target registrations per interval to %d on subnet %d", target, netuid)
         await self._set_storage(
-            sudo_wallet=sudo_wallet,
-            storage_name="TargetRegistrationsPerInterval",
+            storage=ChainStorage.TARGET_REGISTRATIONS_PER_INTERVAL,
             storage_value=f"0x{target.to_bytes(2, byteorder='little', signed=False).hex()}",
             params=[netuid],
         )
 
-    async def set_tx_rate_limit(self, sudo_wallet: Wallet, netuid: int, rate_limit: int) -> None:
+    async def set_tx_rate_limit(self, netuid: int, rate_limit: int) -> None:
         """
         Set the transaction rate limit for a subnet via sudo storage update.
 
         Args:
-            sudo_wallet: Wallet with sudo privileges.
             netuid: Subnet UID.
             rate_limit: Transaction rate limit value in blocks.
 
@@ -587,18 +592,16 @@ class LocalChainManager:
         """
         logger.info("Setting tx rate limit to %d on subnet %d", rate_limit, netuid)
         await self._set_storage(
-            sudo_wallet=sudo_wallet,
-            storage_name="TxRateLimit",
+            storage=ChainStorage.TX_RATE_LIMIT,
             storage_value=f"0x{rate_limit.to_bytes(8, byteorder='little', signed=False).hex()}",
             params=[netuid],
         )
 
-    async def set_serving_rate_limit(self, sudo_wallet: Wallet, netuid: int, rate_limit: int) -> None:
+    async def set_serving_rate_limit(self, netuid: int, rate_limit: int) -> None:
         """
         Set the serving rate limit for a subnet via sudo storage update.
 
         Args:
-            sudo_wallet: Wallet with sudo privileges.
             netuid: Subnet UID.
             rate_limit: Rate limit value in blocks.
 
@@ -607,8 +610,7 @@ class LocalChainManager:
         """
         logger.info("Setting serving rate limit to %d on subnet %d", rate_limit, netuid)
         await self._set_storage(
-            sudo_wallet=sudo_wallet,
-            storage_name="ServingRateLimit",
+            storage=ChainStorage.SERVING_RATE_LIMIT,
             storage_value=f"0x{rate_limit.to_bytes(8, byteorder='little', signed=False).hex()}",
             params=[netuid],
         )
@@ -652,69 +654,45 @@ class LocalChainManager:
                 raise RuntimeError("Failed to get chain header")
             return header["number"]
 
-    async def prepare_contact_write_subnets(
+    async def setup_mechanisms(
         self,
-        sudo_wallet: Wallet,
-        participant_wallets: list[Wallet],
-        transfer_amount_tao: int = 100_000,
-        stake_amount_tao: int = 10_000,
-    ) -> tuple[int, int]:
-        """
-        Prepare one direct-weights subnet and one commit-reveal subnet for contact integration tests.
-
-        Args:
-            sudo_wallet: The sudo wallet and subnet owner.
-            participant_wallets: Wallets that should be funded and registered on both subnets.
-            transfer_amount_tao: TAO amount to transfer to non-owner participants for registration costs.
-            stake_amount_tao: TAO amount to stake for the owner on each subnet.
-
-        Returns:
-            A pair of netuids `(direct_netuid, commit_netuid)`.
-        """
-        await self.disable_admin_freeze_window(sudo_wallet=sudo_wallet)
-
-        for wallet in participant_wallets:
-            if wallet.coldkeypub.ss58_address == sudo_wallet.coldkeypub.ss58_address:
-                continue
-            await self.transfer(
-                wallet=sudo_wallet,
-                destination_ss58=wallet.coldkeypub.ss58_address,
-                amount_tao=transfer_amount_tao,
+        netuid: int,
+    ):
+        max_allowed_uids = 64
+        mechanism_count = 2
+        logger.info("Setting up mechanisms on subnet %d", netuid)
+        async with self._turbobt_client() as client:
+            extrinsic = await client.subtensor.sudo.sudo(
+                "AdminUtils",
+                "sudo_set_max_allowed_uids",
+                {
+                    "netuid": netuid,
+                    "max_allowed_uids": max_allowed_uids,
+                },
+                wallet=SUDO_WALLET,
             )
+            await extrinsic.wait_for_finalization()
 
-        direct_netuid = await self.get_total_networks()
-        await self.register_subnet(wallet=sudo_wallet)
-        commit_netuid = await self.get_total_networks()
-        await self.register_subnet(wallet=sudo_wallet)
+            extrinsic = await client.subtensor.sudo.sudo(
+                "AdminUtils",
+                "sudo_set_mechanism_count",
+                {
+                    "netuid": netuid,
+                    "mechanism_count": mechanism_count,
+                },
+                wallet=SUDO_WALLET,
+            )
+            await extrinsic.wait_for_finalization()
 
-        for netuid in (direct_netuid, commit_netuid):
-            for wallet in participant_wallets:
-                await self.register_neuron(wallet=wallet, netuid=netuid)
-            await self.enable_subtokens(sudo_wallet=sudo_wallet, netuid=netuid)
+            value = await self.get_storage(ChainStorage.MECHANISM_COUNT_CURRENT, netuid)
+            if value != mechanism_count:
+                raise RuntimeError(f"MechanismCountCurrent is {value} after sudo call, expected {mechanism_count}")
 
-        await self.add_stake(
-            wallet=sudo_wallet,
-            netuid=direct_netuid,
-            hotkey_ss58=sudo_wallet.hotkey.ss58_address,
-            amount_tao=stake_amount_tao,
-        )
-        await self.add_stake(
-            wallet=sudo_wallet,
-            netuid=commit_netuid,
-            hotkey_ss58=sudo_wallet.hotkey.ss58_address,
-            amount_tao=stake_amount_tao,
-        )
-        await self.disable_commit_reveal_weights(sudo_wallet=sudo_wallet, netuid=direct_netuid)
-        await self.enable_commit_reveal_weights(sudo_wallet=sudo_wallet, netuid=commit_netuid)
-        await self.set_serving_rate_limit(sudo_wallet=sudo_wallet, netuid=direct_netuid, rate_limit=0)
-        await self.serve_axon(
-            wallet=sudo_wallet,
-            netuid=direct_netuid,
-            ip=_CONTACT_TEST_AXON_IP,
-            port=_CONTACT_TEST_AXON_PORT,
-        )
+        logger.info("Mechanisms set up successfully")
 
-        return direct_netuid, commit_netuid
+    async def get_subnet_hyperparameters(self, netuid: int):
+        async with self._turbobt_client() as client:
+            return await client.subnet(netuid).get_hyperparameters()
 
     # ---- Bulk operations (async) ----
 
@@ -816,12 +794,11 @@ class LocalChainManager:
 
     async def _set_storage(
         self,
-        sudo_wallet: Wallet,
-        storage_name: str,
+        storage: ChainStorage,
         storage_value: str,
-        pallet_name: str = "SubtensorModule",
         params: list[object] | None = None,
     ) -> None:
+        pallet_name, storage_name = storage.split(".")
         async with self._turbobt_client() as client:
             await client.subtensor._init_runtime()
             assert client.subtensor._metadata is not None
@@ -832,7 +809,7 @@ class LocalChainManager:
                 "System",
                 "set_storage",
                 {"items": [[storage_key, storage_value]]},
-                wallet=sudo_wallet,
+                wallet=SUDO_WALLET,
             )
             await result.wait_for_finalization()
 

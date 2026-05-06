@@ -2,7 +2,6 @@ import logging
 
 from litestar import Controller, Response, status_codes
 from litestar.di import Provide
-from litestar.exceptions import NotFoundException
 from pylon_commons._unstable.bodies import SetCommitmentBody, SetRevealedCommitmentBody, SetWeightsBody
 from pylon_commons._unstable.endpoints import Endpoint
 from pylon_commons._unstable.requests import GenerateCertificateKeypairRequest
@@ -20,7 +19,7 @@ from pylon_commons._unstable.responses import (
     SetRevealedCommitmentResponse,
 )
 from pylon_commons.models import Hotkey, NeuronCertificate
-from pylon_commons.types import BlockNumber, ExtrinsicIndex, NetUid
+from pylon_commons.types import BlockNumber, ExtrinsicIndex, MechanismId, NetUid
 
 from pylon_service.api._unstable import services
 from pylon_service.api._unstable.tasks import ApplyWeights, SetCommitment, SetRevealedCommitment
@@ -97,128 +96,6 @@ class OpenAccessController(Controller):
         "recent_object_provider": Provide(recent_object_provider_open_access_dep),
     }
 
-    @identity_handler(Endpoint.NEURONS)
-    async def get_neurons(
-        self, bt_contact_router: BittensorContactRouter, block_number: BlockNumber, netuid: NetUid
-    ) -> GetNeuronsResponse:
-        return await neuron_service.get_neurons(bt_contact_router, netuid, block_number)
-
-    @identity_handler(Endpoint.LATEST_NEURONS)
-    async def get_latest_neurons(self, bt_contact_router: BittensorContactRouter, netuid: NetUid) -> GetNeuronsResponse:
-        return await neuron_service.get_latest_neurons(bt_contact_router, netuid)
-
-    @identity_handler(Endpoint.RECENT_NEURONS)
-    async def get_recent_neurons(self, recent_object_provider: RecentObjectProvider) -> GetNeuronsResponse:
-        return await neuron_service.get_recent_neurons(recent_object_provider)
-
-    @identity_handler(Endpoint.VALIDATORS)
-    async def get_validators(
-        self, bt_contact_router: BittensorContactRouter, block_number: BlockNumber, netuid: NetUid
-    ) -> GetValidatorsResponse:
-        return await neuron_service.get_validators(bt_contact_router, netuid, block_number)
-
-    @identity_handler(Endpoint.LATEST_VALIDATORS)
-    async def get_latest_validators(
-        self, bt_contact_router: BittensorContactRouter, netuid: NetUid
-    ) -> GetValidatorsResponse:
-        return await neuron_service.get_latest_validators(bt_contact_router, netuid)
-
-    @identity_handler(Endpoint.CERTIFICATES)
-    async def get_certificates_endpoint(
-        self, bt_contact_router: BittensorContactRouter, netuid: NetUid
-    ) -> dict[Hotkey, NeuronCertificate]:
-        return await certificate_service.get_certificates(bt_contact_router, netuid)
-
-    @identity_handler(Endpoint.CERTIFICATES_HOTKEY)
-    async def get_certificate_endpoint(
-        self, hotkey: Hotkey, bt_contact_router: BittensorContactRouter, netuid: NetUid
-    ) -> NeuronCertificate:
-        return await certificate_service.get_certificate(bt_contact_router, netuid, hotkey)
-
-    @identity_handler(Endpoint.LATEST_COMMITMENTS)
-    async def get_commitments_endpoint(
-        self, bt_contact_router: BittensorContactRouter, netuid: NetUid
-    ) -> GetCommitmentsResponse:
-        return await commitment_service.get_commitments(bt_contact_router, netuid)
-
-    @identity_handler(Endpoint.LATEST_COMMITMENTS_HOTKEY)
-    async def get_commitment_endpoint(
-        self, hotkey: Hotkey, bt_contact_router: BittensorContactRouter, netuid: NetUid
-    ) -> GetCommitmentResponse:
-        return await commitment_service.get_commitment(bt_contact_router, netuid, hotkey)
-
-    @handler(Endpoint.LATEST_COMMITMENTS_REVEALED)
-    async def get_all_revealed_commitments_endpoint(
-        self, bt_contact_router: BittensorContactRouter, netuid: NetUid
-    ) -> GetAllRevealedCommitmentsResponse:
-        """
-        Get all revealed commitments for the subnet.
-        """
-        block = await bt_contact_router.get_latest_block()
-        result = await bt_contact_router.get_all_revealed_commitments(netuid, block)
-        return GetAllRevealedCommitmentsResponse.model_validate(result, from_attributes=True)
-
-    @handler(Endpoint.LATEST_COMMITMENTS_REVEALED_HOTKEY)
-    async def get_revealed_commitments_endpoint(
-        self, hotkey: Hotkey, bt_contact_router: BittensorContactRouter, netuid: NetUid
-    ) -> GetRevealedCommitmentsResponse:
-        """
-        Get revealed commitments for a hotkey.
-
-        Raises:
-            NotFoundException: If commitments could not be found in the blockchain.
-        """
-        block = await bt_contact_router.get_latest_block()
-        commitments = await bt_contact_router.get_revealed_commitments(netuid, block, hotkey=hotkey)
-        if commitments is None:
-            raise NotFoundException(detail="Commitments not found.")
-        return GetRevealedCommitmentsResponse(block=block, commitments=commitments)
-
-
-class IdentityController(Controller):
-    path = "/identity/{identity_name:str}/subnet/{netuid:int}"
-    guards = [identity_auth_guard]
-    before_request = check_identity_netuid
-    dependencies = {
-        "identity": Provide(identity_dep),
-        "bt_contact_router": Provide(bt_contact_router_identity_dep),
-        "recent_object_provider": Provide(recent_object_provider_identity_dep),
-    }
-
-    @handler(Endpoint.REVEALED_COMMITMENTS)
-    async def set_revealed_commitment_endpoint(
-        self, bt_contact_router: BittensorContactRouter, data: SetRevealedCommitmentBody, netuid: NetUid
-    ) -> SetRevealedCommitmentResponse:
-        """
-        Set a revealed commitment (model metadata) on chain for the wallet's hotkey.
-
-        Raises:
-            BadGatewayException: When commitment could not be set after all retries.
-        """
-        try:
-            reveal_round = await SetRevealedCommitment(
-                bt_contact_router, netuid, data.commitment, data.blocks_until_reveal, data.block_time
-            )()
-        except Exception as exc:
-            raise BadGatewayException(detail=str(exc)) from exc
-        return SetRevealedCommitmentResponse(reveal_round=reveal_round)
-
-    @handler(Endpoint.LATEST_COMMITMENTS_REVEALED_SELF)
-    async def get_own_revealed_commitments_endpoint(
-        self, bt_contact_router: BittensorContactRouter, netuid: NetUid
-    ) -> GetRevealedCommitmentsResponse:
-        """
-        Get revealed commitments for the identity's wallet.
-
-        Raises:
-            NotFoundException: If commitments could not be found in the blockchain.
-        """
-        block = await bt_contact_router.get_latest_block()
-        commitments = await bt_contact_router.get_revealed_commitments(netuid, block)
-        if commitments is None:
-            raise NotFoundException(detail="Commitments not found.")
-        return GetRevealedCommitmentsResponse(block=block, commitments=commitments)
-
     @handler(Endpoint.NEURONS)
     async def get_neurons(
         self, bt_contact_router: BittensorContactRouter, block_number: BlockNumber, netuid: NetUid
@@ -269,11 +146,84 @@ class IdentityController(Controller):
     ) -> GetCommitmentResponse:
         return await commitment_service.get_commitment(bt_contact_router, netuid, hotkey)
 
-    @identity_handler(Endpoint.SUBNET_WEIGHTS)
-    async def put_weights_endpoint(
-        self, data: SetWeightsBody, bt_contact_router: BittensorContactRouter, netuid: NetUid
+    @handler(Endpoint.LATEST_COMMITMENTS_REVEALED)
+    async def get_all_revealed_commitments_endpoint(
+        self, bt_contact_router: BittensorContactRouter, netuid: NetUid
+    ) -> GetAllRevealedCommitmentsResponse:
+        return await commitment_service.get_all_revealed_commitments(bt_contact_router, netuid)
+
+    @handler(Endpoint.LATEST_COMMITMENTS_REVEALED_HOTKEY)
+    async def get_revealed_commitments_endpoint(
+        self, hotkey: Hotkey, bt_contact_router: BittensorContactRouter, netuid: NetUid
+    ) -> GetRevealedCommitmentsResponse:
+        return await commitment_service.get_revealed_commitments(bt_contact_router, netuid, hotkey)
+
+
+class IdentityController(Controller):
+    path = "/identity/{identity_name:str}/subnet/{netuid:int}"
+    guards = [identity_auth_guard]
+    before_request = check_identity_netuid
+    dependencies = {
+        "identity": Provide(identity_dep),
+        "bt_contact_router": Provide(bt_contact_router_identity_dep),
+        "recent_object_provider": Provide(recent_object_provider_identity_dep),
+    }
+
+    @identity_handler(Endpoint.NEURONS)
+    async def get_neurons(
+        self, bt_contact_router: BittensorContactRouter, block_number: BlockNumber, netuid: NetUid
+    ) -> GetNeuronsResponse:
+        return await neuron_service.get_neurons(bt_contact_router, netuid, block_number)
+
+    @identity_handler(Endpoint.LATEST_NEURONS)
+    async def get_latest_neurons(self, bt_contact_router: BittensorContactRouter, netuid: NetUid) -> GetNeuronsResponse:
+        return await neuron_service.get_latest_neurons(bt_contact_router, netuid)
+
+    @identity_handler(Endpoint.RECENT_NEURONS)
+    async def get_recent_neurons(self, recent_object_provider: RecentObjectProvider) -> GetNeuronsResponse:
+        return await neuron_service.get_recent_neurons(recent_object_provider)
+
+    @identity_handler(Endpoint.VALIDATORS)
+    async def get_validators(
+        self, bt_contact_router: BittensorContactRouter, block_number: BlockNumber, netuid: NetUid
+    ) -> GetValidatorsResponse:
+        return await neuron_service.get_validators(bt_contact_router, netuid, block_number)
+
+    @identity_handler(Endpoint.LATEST_VALIDATORS)
+    async def get_latest_validators(
+        self, bt_contact_router: BittensorContactRouter, netuid: NetUid
+    ) -> GetValidatorsResponse:
+        return await neuron_service.get_latest_validators(bt_contact_router, netuid)
+
+    @identity_handler(Endpoint.CERTIFICATES)
+    async def get_certificates_endpoint(
+        self, bt_contact_router: BittensorContactRouter, netuid: NetUid
+    ) -> dict[Hotkey, NeuronCertificate]:
+        return await certificate_service.get_certificates(bt_contact_router, netuid)
+
+    @identity_handler(Endpoint.CERTIFICATES_HOTKEY)
+    async def get_certificate_endpoint(
+        self, hotkey: Hotkey, bt_contact_router: BittensorContactRouter, netuid: NetUid
+    ) -> NeuronCertificate:
+        return await certificate_service.get_certificate(bt_contact_router, netuid, hotkey)
+
+    @identity_handler(Endpoint.LATEST_COMMITMENTS)
+    async def get_commitments_endpoint(
+        self, bt_contact_router: BittensorContactRouter, netuid: NetUid
+    ) -> GetCommitmentsResponse:
+        return await commitment_service.get_commitments(bt_contact_router, netuid)
+
+    @identity_handler(Endpoint.LATEST_COMMITMENTS_HOTKEY)
+    async def get_commitment_endpoint(
+        self, hotkey: Hotkey, bt_contact_router: BittensorContactRouter, netuid: NetUid
+    ) -> GetCommitmentResponse:
+        return await commitment_service.get_commitment(bt_contact_router, netuid, hotkey)
+
+    @identity_handler(Endpoint.SUBNET_MECHANISMS_WEIGHTS)
+    async def put_mechanism_weights_endpoint(
+        self, data: SetWeightsBody, bt_contact_router: BittensorContactRouter, netuid: NetUid, mechanism_id: MechanismId
     ) -> Response:
-        ApplyWeights(bt_contact_router, data.weights, netuid).schedule()
+        ApplyWeights(bt_contact_router, data.weights, netuid, mechanism_id).schedule()
         return Response(
             {"detail": "weights update scheduled", "count": len(data.weights)}, status_code=status_codes.HTTP_200_OK
         )
@@ -298,6 +248,36 @@ class IdentityController(Controller):
         self, bt_contact_router: BittensorContactRouter, netuid: NetUid
     ) -> GetCommitmentResponse:
         return await commitment_service.get_own_commitment(bt_contact_router, netuid)
+
+    @identity_handler(Endpoint.REVEALED_COMMITMENTS)
+    async def set_revealed_commitment_endpoint(
+        self, bt_contact_router: BittensorContactRouter, data: SetRevealedCommitmentBody, netuid: NetUid
+    ) -> SetRevealedCommitmentResponse:
+        try:
+            reveal_round = await SetRevealedCommitment(
+                bt_contact_router, netuid, data.commitment, data.blocks_until_reveal
+            )()
+        except Exception as exc:
+            raise BadGatewayException(detail=str(exc)) from exc
+        return SetRevealedCommitmentResponse(reveal_round=reveal_round)
+
+    @identity_handler(Endpoint.LATEST_COMMITMENTS_REVEALED)
+    async def get_all_revealed_commitments_endpoint(
+        self, bt_contact_router: BittensorContactRouter, netuid: NetUid
+    ) -> GetAllRevealedCommitmentsResponse:
+        return await commitment_service.get_all_revealed_commitments(bt_contact_router, netuid)
+
+    @identity_handler(Endpoint.LATEST_COMMITMENTS_REVEALED_HOTKEY)
+    async def get_revealed_commitments_endpoint(
+        self, hotkey: Hotkey, bt_contact_router: BittensorContactRouter, netuid: NetUid
+    ) -> GetRevealedCommitmentsResponse:
+        return await commitment_service.get_revealed_commitments(bt_contact_router, netuid, hotkey)
+
+    @identity_handler(Endpoint.LATEST_COMMITMENTS_REVEALED_SELF)
+    async def get_own_revealed_commitments_endpoint(
+        self, bt_contact_router: BittensorContactRouter, netuid: NetUid
+    ) -> GetRevealedCommitmentsResponse:
+        return await commitment_service.get_own_revealed_commitments(bt_contact_router, netuid)
 
     @identity_handler(Endpoint.CERTIFICATES_GENERATE)
     async def generate_certificate_keypair_endpoint(

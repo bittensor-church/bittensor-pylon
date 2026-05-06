@@ -12,7 +12,6 @@ from bittensor_wallet import Wallet
 from polyfactory.pytest_plugin import register_fixture
 from pylon_commons.types import ArchiveBlocksCutoff, IdentityName
 from syrupy.extensions.json import JSONSnapshotExtension
-from syrupy.matchers import path_type
 
 from pylon_service import identities as identities_module
 from pylon_service import lifespans, main
@@ -52,17 +51,6 @@ def pytest_configure() -> None:
 @pytest.fixture
 def snapshot_json(snapshot):
     return snapshot.use_extension(JSONSnapshotExtension)
-
-
-@pytest.fixture
-def response_matchers():
-    def factory(*, timestamp_paths: tuple[str, ...] = (), regex_paths: dict[str, tuple[type, ...]] | None = None):
-        mapping: dict[str, tuple[type, ...]] = {path: (int,) for path in timestamp_paths}
-        if regex_paths:
-            mapping.update(regex_paths)
-        return path_type(mapping, regex=True)
-
-    return factory
 
 
 @pytest_asyncio.fixture(scope="session", loop_scope="session")

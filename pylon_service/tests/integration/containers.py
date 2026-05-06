@@ -25,7 +25,8 @@ class LocalChainImage(enum.StrEnum):
     """Docker images available for the local subtensor chain."""
 
     DEFAULT = "ghcr.io/opentensor/subtensor-localnet:main"
-    PREPARED = "prepared-localnet:latest"
+    PREPARED_E2E = "prepared-e2e-localnet:latest"
+    PREPARED_CONTACT = "prepared-contact-localnet:latest"
 
 
 class LocalChainContainer(DockerContainer):
@@ -38,13 +39,14 @@ class LocalChainContainer(DockerContainer):
 
     def __init__(
         self,
-        image: LocalChainImage = LocalChainImage.PREPARED,
+        image: LocalChainImage,
         startup_timeout: int = 30,
         *,
         host_rpc_port: int | None = None,
         **kwargs: Any,
     ) -> None:
-        super().__init__(image.value, **kwargs)
+        super().__init__(image, **kwargs)
+        self._local_chain_image = image
         self._host_rpc_port = host_rpc_port if host_rpc_port is not None else find_free_port()
         self.with_bind_ports(_CHAIN_RPC_PORT, self._host_rpc_port)
         self.waiting_for(
@@ -58,26 +60,38 @@ class LocalChainContainer(DockerContainer):
 
     def _prepared_image_exists(self) -> bool:
         docker_client = self.get_docker_client()
-        images = docker_client.client.images.list(name=LocalChainImage.PREPARED)
+        images = docker_client.client.images.list(name=self.image)
         return len(images) > 0
 
     async def ensure_prepared_image(self) -> None:
         """
         Ensure the prepared localchain Docker image exists, building it if necessary.
 
-        If the image is not found locally, runs the prepare_chain script
+        If the image is not found locally, runs a proper chain prepare script
         to create it from a fresh chain.
+
+        Raises:
+            RuntimeError: If the image cannot be prepared due to an unknown image type.
         """
         if self._prepared_image_exists():
             return
         logger.warning(
             "Docker image '%s' not found locally — building it now.",
-            LocalChainImage.PREPARED,
+            self.image,
         )
-        from tests.integration.localchain import prepare_chain
+        if self.image == LocalChainImage.PREPARED_E2E:
+            from tests.integration.localchain import prepare_e2e_chain
 
-        await prepare_chain.main()
-        logger.info("Docker image '%s' built successfully", LocalChainImage.PREPARED)
+            prepare_fn = prepare_e2e_chain.main
+        elif self.image == LocalChainImage.PREPARED_CONTACT:
+            from tests.integration.localchain import prepare_contact_chain
+
+            prepare_fn = prepare_contact_chain.main
+        else:
+            raise RuntimeError(f"Unable to prepare image: {self.image}")
+
+        await prepare_fn()
+        logger.info("Docker image '%s' built successfully", self.image)
 
     @property
     def rpc_port(self) -> int:
@@ -125,7 +139,6 @@ class PylonServiceContainer(DockerContainer):
         )
 
         self.with_volume_mapping(str(wallets_path), "/app/wallets", "ro")
-
         envs = {k: v for k, v in dotenv_values(_TEST_ENV_PATH).items() if v is not None}
         envs.update(
             PYLON_BITTENSOR_NETWORK=chain_url,

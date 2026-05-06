@@ -114,8 +114,9 @@ class HttpTranslator(AbstractRequestTranslator[Request, HttpCommunicatorT]):
         self, request: GetAllRevealedCommitmentsRequest, communicator: HttpCommunicatorT
     ) -> Request:
         url = self._build_url(self._endpoint_cls.LATEST_COMMITMENTS_REVEALED, request)
+        headers = self._get_auth_headers(request, communicator)
         return communicator.raw_client.build_request(
-            method=self._endpoint_cls.LATEST_COMMITMENTS_REVEALED.method, url=url
+            method=self._endpoint_cls.LATEST_COMMITMENTS_REVEALED.method, url=url, headers=headers
         )
 
     def _translate_get_commitment(self, request: GetCommitmentRequest, communicator: HttpCommunicatorT) -> Request:
@@ -129,8 +130,9 @@ class HttpTranslator(AbstractRequestTranslator[Request, HttpCommunicatorT]):
         self, request: GetRevealedCommitmentsRequest, communicator: HttpCommunicatorT
     ) -> Request:
         url = self._build_url(self._endpoint_cls.LATEST_COMMITMENTS_REVEALED_HOTKEY, request)
+        headers = self._get_auth_headers(request, communicator)
         return communicator.raw_client.build_request(
-            method=self._endpoint_cls.LATEST_COMMITMENTS_REVEALED_HOTKEY.method, url=url
+            method=self._endpoint_cls.LATEST_COMMITMENTS_REVEALED_HOTKEY.method, url=url, headers=headers
         )
 
     def _translate_get_own_commitment(
@@ -146,15 +148,16 @@ class HttpTranslator(AbstractRequestTranslator[Request, HttpCommunicatorT]):
         self, request: GetOwnRevealedCommitmentsRequest, communicator: HttpCommunicatorT
     ) -> Request:
         url = self._build_url(self._endpoint_cls.LATEST_COMMITMENTS_REVEALED_SELF, request)
+        headers = self._get_auth_headers(request, communicator)
         return communicator.raw_client.build_request(
-            method=self._endpoint_cls.LATEST_COMMITMENTS_REVEALED_SELF.method, url=url
+            method=self._endpoint_cls.LATEST_COMMITMENTS_REVEALED_SELF.method, url=url, headers=headers
         )
 
     def _translate_set_weights(self, request: SetWeightsRequest, communicator: HttpCommunicatorT) -> Request:
-        url = self._build_url(self._endpoint_cls.SUBNET_WEIGHTS, request)
+        url = self._build_url(self._endpoint_cls.SUBNET_MECHANISMS_WEIGHTS, request)
         headers = self._get_auth_headers(request, communicator)
         return communicator.raw_client.build_request(
-            method=self._endpoint_cls.SUBNET_WEIGHTS.method,
+            method=self._endpoint_cls.SUBNET_MECHANISMS_WEIGHTS.method,
             url=url,
             headers=headers,
             json=request.model_dump(include={"weights"}),
@@ -174,10 +177,12 @@ class HttpTranslator(AbstractRequestTranslator[Request, HttpCommunicatorT]):
         self, request: SetRevealedCommitmentRequest, communicator: HttpCommunicatorT
     ) -> Request:
         url = self._build_url(self._endpoint_cls.REVEALED_COMMITMENTS, request)
+        headers = self._get_auth_headers(request, communicator)
         return communicator.raw_client.build_request(
             method=self._endpoint_cls.REVEALED_COMMITMENTS.method,
             url=url,
-            json=request.model_dump(include={"commitment", "blocks_until_reveal", "block_time"}),
+            headers=headers,
+            json=request.model_dump(include={"commitment", "blocks_until_reveal"}),
         )
 
     def _translate_get_identities(self, request: GetIdentitiesRequest, communicator: HttpCommunicatorT) -> Request:

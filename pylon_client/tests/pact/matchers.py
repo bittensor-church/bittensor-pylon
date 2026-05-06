@@ -161,6 +161,47 @@ def set_commitment_response_matcher() -> dict:
     return {}
 
 
+def set_revealed_commitment_response_matcher() -> dict:
+    return {
+        "reveal_round": match.int(123456),
+    }
+
+
+def revealed_commitment_matcher(hotkey: str) -> dict:
+    return {
+        "reveal_block_number": match.int(BLOCK_NUMBER),
+        "hotkey": match.str(hotkey),
+        "commitment": match.str(COMMITMENT_HEX),
+    }
+
+
+def revealed_commitments_response_matcher(hotkey_1: str, hotkey_2: str) -> dict:
+    return {
+        "block": block_matcher(),
+        "commitments": match.each_value_matches(
+            match.each_key_matches(  # type: ignore[reportArgumentType]
+                {
+                    hotkey_1: match.each_like(revealed_commitment_matcher(hotkey_1)),
+                    hotkey_2: match.each_like(revealed_commitment_matcher(hotkey_2)),
+                },
+                rules=match.str(hotkey_1),
+            ),
+            rules=match.each_like(revealed_commitment_matcher(hotkey_1)),
+        ),
+    }
+
+
+def all_revealed_commitments_response_matcher(hotkey_1: str, hotkey_2: str) -> dict:
+    return revealed_commitments_response_matcher(hotkey_1, hotkey_2)
+
+
+def single_revealed_commitment_response_matcher(hotkey: str) -> dict:
+    return {
+        "block": block_matcher(),
+        "commitments": match.each_like(revealed_commitment_matcher(hotkey)),
+    }
+
+
 def latest_block_info_response_matcher() -> dict:
     return {
         **block_matcher(),

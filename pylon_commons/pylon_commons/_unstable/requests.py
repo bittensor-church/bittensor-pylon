@@ -4,7 +4,7 @@ import typing
 from pydantic import BaseModel, Field, field_validator
 
 from ..apiver import ApiVersion
-from ..types import BlockNumber, ExtrinsicIndex, Hotkey, IdentityName, NetUid
+from ..types import BlockNumber, ExtrinsicIndex, Hotkey, IdentityName, MechanismId, NetUid
 from .bodies import SetCommitmentBody, SetRevealedCommitmentBody, SetWeightsBody
 from .models import CertificateAlgorithm
 from .responses import (
@@ -205,6 +205,8 @@ class SetWeightsRequest(SetWeightsBody, IdentityPylonRequest[SetWeightsResponse]
     """
     Class used to perform setting weights by the Pylon client.
     """
+
+    mechanism_id: MechanismId
 
     response_cls = SetWeightsResponse
 

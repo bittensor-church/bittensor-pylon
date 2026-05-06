@@ -5,14 +5,18 @@ Tests for the PUT /subnet/weights endpoint.
 import pytest
 from litestar.status_codes import HTTP_200_OK, HTTP_400_BAD_REQUEST, HTTP_404_NOT_FOUND
 from pylon_commons.models import Block, CommitReveal, SubnetHyperparams
-from pylon_commons.types import BlockHash, BlockNumber, NeuronUid, RevealRound
+from pylon_commons.types import BlockHash, BlockNumber, MechanismId, NeuronUid, RevealRound
 
 from pylon_service.api._unstable.tasks import ApplyWeights
 from tests.helpers import wait_for_background_tasks
 
 
 @pytest.mark.asyncio
-async def test_put_weights_commit_reveal_enabled(identity_test_client_factory, mock_bt_client_factory, snapshot_json):
+async def test_put_weights_commit_reveal_enabled(
+    identity_test_client_factory,
+    mock_bt_client_factory,
+    snapshot_json,
+):
     """
     Test setting weights when commit-reveal is enabled.
     """
@@ -43,7 +47,7 @@ async def test_put_weights_commit_reveal_enabled(identity_test_client_factory, m
         ):
             async with identity_test_client_factory("sn1") as client:
                 response = await client.put(
-                    "/api/_unstable/identity/sn1/subnet/1/weights",
+                    "/api/_unstable/identity/sn1/subnet/1/mechanism/1/weights",
                     json={"weights": weights},
                 )
 
@@ -57,6 +61,7 @@ async def test_put_weights_commit_reveal_enabled(identity_test_client_factory, m
         assert mock_client.calls["commit_weights"] == [
             (
                 1,
+                MechanismId(1),
                 {
                     NeuronUid(1): 0.5,
                     NeuronUid(2): 0.3,
@@ -67,7 +72,11 @@ async def test_put_weights_commit_reveal_enabled(identity_test_client_factory, m
 
 
 @pytest.mark.asyncio
-async def test_put_weights_commit_reveal_disabled(identity_test_client_factory, mock_bt_client_factory, snapshot_json):
+async def test_put_weights_commit_reveal_disabled(
+    identity_test_client_factory,
+    mock_bt_client_factory,
+    snapshot_json,
+):
     """
     Test setting weights when commit-reveal is disabled.
     """
@@ -96,7 +105,7 @@ async def test_put_weights_commit_reveal_disabled(identity_test_client_factory, 
         ):
             async with identity_test_client_factory("sn2") as client:
                 response = await client.put(
-                    "/api/_unstable/identity/sn2/subnet/2/weights",
+                    "/api/_unstable/identity/sn2/subnet/2/mechanism/1/weights",
                     json={"weights": weights},
                 )
 
@@ -110,6 +119,7 @@ async def test_put_weights_commit_reveal_disabled(identity_test_client_factory, 
         assert mock_client.calls["set_weights"] == [
             (
                 2,
+                MechanismId(1),
                 {
                     NeuronUid(1): 0.7,
                     NeuronUid(2): 0.3,
@@ -151,7 +161,7 @@ async def test_put_weights_retries_when_prepare_fails(
         ):
             async with identity_test_client_factory("sn1") as client:
                 response = await client.put(
-                    "/api/_unstable/identity/sn1/subnet/1/weights",
+                    "/api/_unstable/identity/sn1/subnet/1/mechanism/1/weights",
                     json={"weights": weights},
                 )
 
@@ -164,6 +174,7 @@ async def test_put_weights_retries_when_prepare_fails(
         assert mock_client.calls["set_weights"] == [
             (
                 1,
+                MechanismId(1),
                 {
                     NeuronUid(1): 0.5,
                     NeuronUid(2): 0.5,
@@ -200,7 +211,7 @@ async def test_put_weights_validation_errors(identity_test_client_factory, json_
     """
     async with identity_test_client_factory("sn1") as client:
         response = await client.put(
-            "/api/_unstable/identity/sn1/subnet/1/weights",
+            "/api/_unstable/identity/sn1/subnet/1/mechanism/1/weights",
             json=json_data,
         )
 
@@ -212,7 +223,7 @@ async def test_put_weights_validation_errors(identity_test_client_factory, json_
 async def test_unstable_identity_put_weights_unknown_identity_returns_404(identity_test_client_factory, snapshot_json):
     async with identity_test_client_factory("sn1") as client:
         response = await client.put(
-            "/api/_unstable/identity/unknown/subnet/1/weights",
+            "/api/_unstable/identity/unknown/subnet/1/mechanism/1/weights",
             json={"weights": {"hotkey1": 1.0}},
         )
 

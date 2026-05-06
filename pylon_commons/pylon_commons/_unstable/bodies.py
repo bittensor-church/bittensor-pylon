@@ -65,4 +65,3 @@ class SetRevealedCommitmentBody(PylonBody):
 
     commitment: RevealedCommitmentData
     blocks_until_reveal: int
-    block_time: int | float

@@ -52,6 +52,7 @@ from pylon_client._internal.pylon_commons.types import (
     ExtrinsicIndex,
     Hotkey,
     IdentityName,
+    MechanismId,
     NetUid,
     Weight,
 )
@@ -414,7 +415,9 @@ class AbstractIdentityApi(AbstractApi, ABC):
         """
         return self._send_identity_request(self._get_recent_neurons_request)
 
-    def put_weights(self, weights: dict[Hotkey, Weight]) -> SetWeightsResponse:
+    def put_weights(
+        self, weights: dict[Hotkey, Weight], mechanism_id: MechanismId = MechanismId(0)
+    ) -> SetWeightsResponse:
         """
         Submits weights for neurons in the authenticated identity's subnet.
 
@@ -425,11 +428,12 @@ class AbstractIdentityApi(AbstractApi, ABC):
         Args:
             weights: Dictionary mapping neuron hotkeys to their respective weight values. Weights should
                 be normalized (sum to 1.0) and only include neurons that should receive non-zero weights.
+            mechanism_id: The ID of the mechanism used for weight setting. Defaults to 0.
 
         Returns:
             SetWeightsResponse indicating the weights update has been scheduled.
         """
-        return self._send_identity_request(partial(self._put_weights_request, weights))
+        return self._send_identity_request(partial(self._put_weights_request, weights, mechanism_id))
 
     def get_commitments(self) -> GetCommitmentsResponse:
         """
@@ -518,11 +522,9 @@ class AbstractIdentityApi(AbstractApi, ABC):
         """
         return self._send_identity_request(partial(self._set_commitment_request, commitment))
 
-    def set_revealed_commitment(
-        self, commitment: str, blocks_until_reveal: int = 360, block_time: int | float = 12
-    ) -> SetRevealedCommitmentResponse:
+    def set_revealed_commitment(self, commitment: str, blocks_until_reveal: int = 360) -> SetRevealedCommitmentResponse:
         """
-        Sets a commitment (model metadata) on-chain for the authenticated identity's wallet hotkey.
+        Sets a time-encrypted commitment on-chain for the authenticated identity's wallet hotkey.
 
         The commitment is applied asynchronously by the Pylon service. The method returns immediately after
         scheduling the commitment update, without waiting for blockchain confirmation.
@@ -530,13 +532,12 @@ class AbstractIdentityApi(AbstractApi, ABC):
         Args:
             commitment:
             blocks_until_reveal: Number of blocks from now after which the commitment should be revealed. Defaults to 360 blocks.
-            block_time: Average block time in seconds. Defaults to 12 seconds.
 
         Returns:
             SetRevealedCommitmentResponse containing a reveal round number.
         """
         return self._send_identity_request(
-            partial(self._set_revealed_commitment_request, commitment, blocks_until_reveal, block_time)
+            partial(self._set_revealed_commitment_request, commitment, blocks_until_reveal)
         )
 
     def get_validators(self, block_number: BlockNumber) -> GetValidatorsResponse:
@@ -613,7 +614,7 @@ class AbstractIdentityApi(AbstractApi, ABC):
     def _get_recent_neurons_request(self) -> GetRecentNeuronsRequest: ...
 
     @abstractmethod
-    def _put_weights_request(self, weights: dict[Hotkey, Weight]) -> SetWeightsRequest: ...
+    def _put_weights_request(self, weights: dict[Hotkey, Weight], mechanism_id: MechanismId) -> SetWeightsRequest: ...
 
     @abstractmethod
     def _get_commitments_request(self) -> GetCommitmentsRequest: ...
@@ -638,7 +639,7 @@ class AbstractIdentityApi(AbstractApi, ABC):
 
     @abstractmethod
     def _set_revealed_commitment_request(
-        self, commitment: str, blocks_until_reveal: int = 360, block_time: int | float = 12
+        self, commitment: str, blocks_until_reveal: int = 360
     ) -> SetRevealedCommitmentRequest: ...
 
     @abstractmethod

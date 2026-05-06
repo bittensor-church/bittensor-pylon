@@ -1,9 +1,11 @@
 from pylon_commons._unstable.responses import (
+    GetAllRevealedCommitmentsResponse,
     GetCommitmentResponse,
     GetCommitmentsResponse,
     GetExtrinsicResponse,
     GetLatestBlockInfoResponse,
     GetNeuronsResponse,
+    GetRevealedCommitmentsResponse,
     GetValidatorsResponse,
 )
 from pylon_commons.types import BlockNumber, ExtrinsicIndex, Hotkey, NetUid
@@ -101,3 +103,21 @@ class CommitmentService:
     async def get_own_commitment(self, contact_router: BittensorPort, netuid: NetUid) -> GetCommitmentResponse:
         block, commitment = await self._domain.get_own_commitment(contact_router, netuid)
         return GetCommitmentResponse(block=block, commitment=commitment)
+
+    async def get_all_revealed_commitments(
+        self, contact_router: BittensorPort, netuid: NetUid
+    ) -> GetAllRevealedCommitmentsResponse:
+        block, commitments = await self._domain.get_all_revealed_commitments(contact_router, netuid)
+        return GetAllRevealedCommitmentsResponse.model_validate(commitments, from_attributes=True)
+
+    async def get_revealed_commitments(
+        self, contact_router: BittensorPort, netuid: NetUid, hotkey: Hotkey | None = None
+    ) -> GetRevealedCommitmentsResponse:
+        block, commitments = await self._domain.get_revealed_commitments(contact_router, netuid, hotkey=hotkey)
+        return GetRevealedCommitmentsResponse(block=block, commitments=commitments)
+
+    async def get_own_revealed_commitments(
+        self, contact_router: BittensorPort, netuid: NetUid
+    ) -> GetRevealedCommitmentsResponse:
+        block, commitments = await self._domain.get_own_revealed_commitments(contact_router, netuid)
+        return GetRevealedCommitmentsResponse(block=block, commitments=commitments)

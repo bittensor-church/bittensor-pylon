@@ -32,6 +32,7 @@ from pylon_client._internal.pylon_commons.types import (
     CommitmentDataHex,
     ExtrinsicIndex,
     Hotkey,
+    MechanismId,
     NetUid,
     RevealedCommitmentData,
     Weight,
@@ -109,11 +110,12 @@ class IdentityApi(AbstractIdentityApi):
             identity_name=self.identity_name,
         )
 
-    def _put_weights_request(self, weights: dict[Hotkey, Weight]) -> SetWeightsRequest:
+    def _put_weights_request(self, weights: dict[Hotkey, Weight], mechanism_id: MechanismId) -> SetWeightsRequest:
         return SetWeightsRequest(
             netuid=self.netuid,
             identity_name=self.identity_name,
             weights=weights,
+            mechanism_id=mechanism_id,
         )
 
     def _get_commitments_request(self) -> GetCommitmentsRequest:
@@ -162,14 +164,13 @@ class IdentityApi(AbstractIdentityApi):
         )
 
     def _set_revealed_commitment_request(
-        self, commitment: str, blocks_until_reveal: int = 360, block_time: int | float = 12
+        self, commitment: str, blocks_until_reveal: int = 360
     ) -> SetRevealedCommitmentRequest:
         return SetRevealedCommitmentRequest(
             netuid=self.netuid,
             identity_name=self.identity_name,
             commitment=RevealedCommitmentData(commitment),
             blocks_until_reveal=blocks_until_reveal,
-            block_time=block_time,
         )
 
     def _get_validators_request(self, block_number: BlockNumber) -> GetValidatorsRequest:

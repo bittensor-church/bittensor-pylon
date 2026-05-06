@@ -4,19 +4,21 @@ import pytest
 from pydantic import ValidationError
 
 from pylon_client._internal.pylon_commons._unstable.endpoints import Endpoint as EndpointUnstable
-from pylon_client._internal.pylon_commons.v1.requests import SetWeightsRequest
-from pylon_client.artanis import Hotkey, IdentityName, NetUid, Weight
+from pylon_client._internal.pylon_commons._unstable.requests import SetWeightsRequest
+from pylon_client.artanis import Hotkey, IdentityName, MechanismId, NetUid, Weight
 from pylon_client.artanis.unstable import SetWeightsResponse
 from tests.unit.asynchronous.base_test import IdentityEndpointTest
 
 
 class TestIdentitySetWeights(IdentityEndpointTest):
-    endpoint = EndpointUnstable.SUBNET_WEIGHTS
-    route_params = {"identity_name": "sn1", "netuid": 1}
+    endpoint = EndpointUnstable.SUBNET_MECHANISMS_WEIGHTS
+    route_params = {"identity_name": "sn1", "netuid": 1, "mechanism_id": 1}
     http_method = HTTPMethod.PUT
 
     async def make_endpoint_call(self, client):
-        return await client.unstable.identity.put_weights(weights={Hotkey("h1"): Weight(0.2)})
+        return await client.unstable.identity.put_weights(
+            weights={Hotkey("h1"): Weight(0.2)}, mechanism_id=MechanismId(1)
+        )
 
     @pytest.fixture
     def success_response(self) -> SetWeightsResponse:
@@ -65,7 +67,9 @@ def test_set_weights_request_validation_error(invalid_weights, expected_errors):
     Test that SetWeightsRequest validates input correctly.
     """
     with pytest.raises(ValidationError) as exc_info:
-        SetWeightsRequest(netuid=NetUid(1), identity_name=IdentityName("test"), weights=invalid_weights)
+        SetWeightsRequest(
+            netuid=NetUid(1), identity_name=IdentityName("test"), weights=invalid_weights, mechanism_id=MechanismId(0)
+        )
 
     errors = exc_info.value.errors(include_url=False, include_context=False, include_input=False)
     assert errors == expected_errors

@@ -221,8 +221,8 @@ dev = [
     { name = "python-dotenv" },
     { name = "ruff" },
     { name = "syrupy" },
-    { name = "time-machine" },
     { name = "testcontainers" },
+    { name = "time-machine" },
 ]
 
 [package.metadata]
@@ -249,9 +249,9 @@ requires-dist = [
     { name = "sentry-sdk", extras = ["litestar"] },
     { name = "syrupy", marker = "extra == 'dev'", specifier = ">=4,<5" },
     { name = "tenacity" },
-    { name = "time-machine", marker = "extra == 'dev'", specifier = ">=3,<4" },
     { name = "testcontainers", marker = "extra == 'dev'", specifier = ">=4.0,<5" },
-    { name = "turbobt", specifier = ">=1.1.1" },
+    { name = "time-machine", marker = "extra == 'dev'", specifier = ">=3,<4" },
+    { name = "turbobt", specifier = ">=1.2.0" },
     { name = "uvicorn", specifier = ">=0.35.0" },
 ]
 provides-extras = ["dev"]
@@ -1632,6 +1632,22 @@ wheels = [
 ]
 
 [[package]]
+name = "testcontainers"
+version = "4.14.2"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "docker" },
+    { name = "python-dotenv" },
+    { name = "typing-extensions" },
+    { name = "urllib3" },
+    { name = "wrapt" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/ca/ac/a597c3a0e02b26cbed6dd07df68be1e57684766fd1c381dee9b170a99690/testcontainers-4.14.2.tar.gz", hash = "sha256:1340ccf16fe3acd9389a6c9e1d9ab21d9fe99a8afdf8165f89c3e69c1967d239", size = 166841, upload-time = "2026-03-18T05:19:16.696Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/13/2d/26b8b30067d94339afee62c3edc9b803a6eb9332f521ba77d8aaab5de873/testcontainers-4.14.2-py3-none-any.whl", hash = "sha256:0d0522c3cd8f8d9627cda41f7a6b51b639fa57bdc492923c045117933c668d68", size = 125712, upload-time = "2026-03-18T05:19:15.29Z" },
+]
+
+[[package]]
 name = "time-machine"
 version = "3.2.0"
 source = { registry = "https://pypi.org/simple" }
@@ -1684,24 +1700,8 @@ wheels = [
 ]
 
 [[package]]
-name = "testcontainers"
-version = "4.14.2"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "docker" },
-    { name = "python-dotenv" },
-    { name = "typing-extensions" },
-    { name = "urllib3" },
-    { name = "wrapt" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/ca/ac/a597c3a0e02b26cbed6dd07df68be1e57684766fd1c381dee9b170a99690/testcontainers-4.14.2.tar.gz", hash = "sha256:1340ccf16fe3acd9389a6c9e1d9ab21d9fe99a8afdf8165f89c3e69c1967d239", size = 166841, upload-time = "2026-03-18T05:19:16.696Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/13/2d/26b8b30067d94339afee62c3edc9b803a6eb9332f521ba77d8aaab5de873/testcontainers-4.14.2-py3-none-any.whl", hash = "sha256:0d0522c3cd8f8d9627cda41f7a6b51b639fa57bdc492923c045117933c668d68", size = 125712, upload-time = "2026-03-18T05:19:15.29Z" },
-]
-
-[[package]]
 name = "turbobt"
-version = "1.1.1"
+version = "1.2.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "bittensor-drand" },
@@ -1712,9 +1712,9 @@ dependencies = [
     { name = "websockets" },
     { name = "xxhash" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/08/32/1a77d3fa72185c8cbf22371586284cf67d94dbf97b7d06048d8a0b5280fb/turbobt-1.1.1.tar.gz", hash = "sha256:d21860d08d91e1af378660732fd8042995a607cf3783b07a8e7c7883dc4bb865", size = 139995, upload-time = "2026-04-09T14:53:17.538Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/ba/78/d023d7c914f99c36242be9adf8e7382dd44a2088ede20f02cf8404669842/turbobt-1.2.0.tar.gz", hash = "sha256:d4bd380ec419566d7faea8df37c2573e214d6924a48b3545a56b979aed5a0c8e", size = 140858, upload-time = "2026-04-30T09:02:12.798Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/33/cd/66b7d7ab8da2081e67d041198c503c924fdeb5cc8720eb7e404504f72fbc/turbobt-1.1.1-py3-none-any.whl", hash = "sha256:dd2212a2bf649b67b6a42765aa62cf57e1da466b5b429311858077bf130dc3a8", size = 46067, upload-time = "2026-04-09T14:53:16.385Z" },
+    { url = "https://files.pythonhosted.org/packages/f5/16/df92a743c8542baec825b0e8cd0088c0751c6033db49db0d98eb96db57b0/turbobt-1.2.0-py3-none-any.whl", hash = "sha256:5c4d0438e1decfab794cea0f3bca004d0b6dc3a3776db542bf19a430f14c9b14", size = 46219, upload-time = "2026-04-30T09:02:10.866Z" },
 ]
 
 [[package]]
