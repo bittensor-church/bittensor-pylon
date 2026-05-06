@@ -240,7 +240,7 @@ for which the client is configured.
 | `get_recent_neurons()`                                     | Get cached neurons (fast, may be slightly behind latest)             |
 | `get_latest_validators()`                                  | Get validators at latest block                                       |
 | `get_validators(block_number)`                             | Get validators at specific block                                     |
-| `put_weights(weights)`                                     | Submit weights to subnet (with automatic retries until end of epoch) |
+| `put_weights(weights, mechanism_id)`                       | Submit weights to subnet (with automatic retries until end of epoch) |
 | `get_commitments()`                                        | Get all commitments for the subnet                                   |
 | `get_commitment(hotkey)`                                   | Get commitment for specific hotkey                                   |
 | `get_own_commitment()`                                     | Get commitment for identity's own wallet                             |
