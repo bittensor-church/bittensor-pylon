@@ -1,4 +1,3 @@
-from .bodies import SetWeightsBody
 from .._unstable.requests import (  # noqa: F401
     AuthenticatedPylonRequest,
     GenerateCertificateKeypairRequest,
@@ -15,6 +14,7 @@ from .._unstable.requests import (  # noqa: F401
     PylonResponseT,
     SetCommitmentRequest,
 )
+from .bodies import SetWeightsBody
 from .responses import GetCommitmentResponse, GetCommitmentsResponse, SetWeightsResponse
 
 __all__ = [
@@ -39,6 +39,7 @@ __all__ = [
 ]
 
 from ..types import Hotkey
+
 
 class SetWeightsRequest(SetWeightsBody, IdentityPylonRequest[SetWeightsResponse]):
     """

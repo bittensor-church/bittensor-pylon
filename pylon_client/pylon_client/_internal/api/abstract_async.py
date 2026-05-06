@@ -421,7 +421,7 @@ class AbstractAsyncIdentityApi(AbstractAsyncApi, ABC):
         return await self._send_identity_request(self._get_recent_neurons_request)
 
     async def put_weights(
-        self, weights: dict[Hotkey, Weight], mechanism_id: MechanismId | None = None
+        self, weights: dict[Hotkey, Weight], mechanism_id: MechanismId = MechanismId(0)
     ) -> SetWeightsResponse:
         """
         Submits weights for neurons in the authenticated identity's subnet.
@@ -438,7 +438,6 @@ class AbstractAsyncIdentityApi(AbstractAsyncApi, ABC):
         Returns:
             SetWeightsResponse indicating the weights update has been scheduled.
         """
-        mechanism_id = mechanism_id if mechanism_id is not None else MechanismId(0)
         return await self._send_identity_request(partial(self._put_weights_request, weights, mechanism_id))
 
     async def get_commitments(self) -> GetCommitmentsResponse:

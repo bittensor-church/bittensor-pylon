@@ -96,6 +96,8 @@ extend-immutable-calls = [
     "pylon_client._internal.pylon_commons.types.Trust",
     "pylon_client._internal.pylon_commons.types.ValidatorTrust",
     "pylon_client._internal.pylon_commons.types.Weight",
+    "pylon_client._internal.pylon_commons.types.MechanismId",
+    "pylon_client._internal.pylon_commons.types.RevealedCommitmentData"
 ]
 
 [tool.pyright]
