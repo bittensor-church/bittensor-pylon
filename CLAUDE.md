@@ -27,7 +27,7 @@ pylon_commons (no dependencies on other packages)
 ### Package Management
 - Uses `uv` as the package manager (faster than pip)
 - Each package has its own `pyproject.toml` and `noxfile.py`
-- Install dependencies for a specific package: `cd pylon_service && uv sync --extra dev`
+- Install dependencies for a specific package: `cd pylon_service && uv sync --group dev`
 - Build a specific package: `cd pylon_client && uv build`
 
 ### Running Python Commands
@@ -494,42 +494,39 @@ When a test fails because the **test specification differs from actual service/c
 ## Development Workflow
 
 1. Create `.env` from template: `cp pylon_service/envs/test_env.template .env`
-2. Install dependencies: `cd pylon_service && uv sync --extra dev`
+2. Install dependencies: `cd pylon_service && uv sync --group dev`
 3. Run tests: `nox -s test` (from root) or `cd pylon_service && nox -s test`
 4. Format code: `nox -s format`
 5. Run service: `cd pylon_service && uvicorn pylon_service.main:app --reload --host 127.0.0.1 --port 8000`
 
 ### Release Process
 
-The project has two independent products with separate release workflows. Version is determined from git tags using `hatch-vcs` - there are no version files in the code.
+The project has two independent products with separate release workflows. Releases are managed by `release-toolkit`,
+which computes the version bump from commits matching each package's `impacts` filter, updates `CHANGELOG.md`, creates
+a bump commit, and pushes the annotated release tag. Versions are determined from git tags using `hatch-vcs` - there are
+no version files in the code.
 
 #### Client Release (PyPI)
 
 The client library is published to PyPI when a `client-v*` tag is pushed:
 
 ```bash
-# From repository root, run release with version:
-nox -s release-client -- 1.7.0
-
-# Or be prompted for version:
-nox -s release-client
+cd pylon_client && rt release
 ```
 
-This creates and pushes a `client-v1.7.0` tag, triggering the CD workflow to publish to PyPI.
+This runs `rt release`, which creates the changelog bump commit and pushes the `client-v<version>` tag, triggering the
+release workflow to publish to PyPI.
 
 #### Service Release (Docker Hub)
 
 The service is published to Docker Hub when a `service-v*` tag is pushed:
 
 ```bash
-# From repository root, run release with version:
-nox -s release-service -- 1.2.0
-
-# Or be prompted for version:
-nox -s release-service
+cd pylon_service && rt release
 ```
 
-This creates and pushes a `service-v1.2.0` tag, triggering the CD workflow to publish to Docker Hub.
+This runs `rt release`, which creates the changelog bump commit and pushes the `service-v<version>` tag, triggering the
+release workflow to publish to Docker Hub.
 
 #### Version Management
 

@@ -1,4 +1,4 @@
-name: CD PyPI Client
+name: Release (client)
 
 on:
   push:
@@ -41,3 +41,15 @@ jobs:
 
       - name: Publish package distributions to PyPI
         uses: pypa/gh-action-pypi-publish@release/v1
+
+  release:
+    needs: pypi-publish
+    uses: reef-technologies/release-toolkit/.github/workflows/release-notify.yml@v0.2.0
+    with:
+      package_dir: pylon_client
+      tag_prefix: client-v
+      python_version: '3.11'
+    secrets:
+      SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+    permissions:
+      contents: write

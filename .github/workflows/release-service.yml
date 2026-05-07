@@ -1,4 +1,4 @@
-name: CD Docker
+name: Release (service)
 
 on:
   push:
@@ -44,3 +44,15 @@ jobs:
             ${{ env.DOCKER_REPO_NAME }}:latest
           cache-from: type=gha
           cache-to: type=gha,mode=max
+
+  release:
+    needs: docker-push
+    uses: reef-technologies/release-toolkit/.github/workflows/release-notify.yml@v0.2.0
+    with:
+      package_dir: pylon_service
+      tag_prefix: service-v
+      python_version: '3.13'
+    secrets:
+      SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+    permissions:
+      contents: write

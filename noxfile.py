@@ -56,16 +56,6 @@ def lint(session):
         _run_nox_in_package(session, package, "lint")
 
 
-@nox.session(name="release-client", python=False, default=False)
-def release_client(session):
-    _run_nox_in_package(session, "pylon_client", "release")
-
-
-@nox.session(name="release-service", python=False, default=False)
-def release_service(session):
-    _run_nox_in_package(session, "pylon_service", "release")
-
-
 @nox.session(name="build-docker", python=False, default=False)
 def build_docker(session):
     session.run(

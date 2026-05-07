@@ -13,8 +13,9 @@ dependencies = [
     "apscheduler",
 ]
 
-[project.optional-dependencies]
+[dependency-groups]
 dev = [
+    "release-toolkit>=0.2.1,<1",
     "pytest",
     "pytest-asyncio>=1.0.0",
     "respx>=0.22.0",
@@ -107,3 +108,14 @@ exclude = ["noxfile.py", ".nox", ".venv"]
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
 asyncio_default_fixture_loop_scope = "session"
+
+[tool.commitizen]
+name = "impacts_cz"
+version_provider = "scm"
+tag_format = "client-v$version"
+annotated_tag = true
+changelog_file = "CHANGELOG.md"
+update_changelog_on_bump = true
+changelog_merge_prerelease = true
+bump_message = "bump: client $current_version -> $new_version"
+impacts = ["client", "commons"]
