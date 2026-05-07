@@ -4,8 +4,17 @@ from abc import ABC, abstractmethod
 from typing import ClassVar, TypeVar
 
 from prometheus_client import Histogram
-from pylon_commons.models import Block
-from pylon_commons.types import CommitmentDataBytes, Hotkey, MechanismId, NetUid, RevealedCommitmentData, Tempo, Weight
+from pylon_commons.models import Block, CommitReveal
+from pylon_commons.types import (
+    CommitmentDataBytes,
+    Hotkey,
+    MechanismId,
+    NetUid,
+    NeuronUid,
+    RevealedCommitmentData,
+    Tempo,
+    Weight,
+)
 from tenacity import (
     AsyncRetrying,
     RetryCallState,
@@ -25,13 +34,10 @@ from pylon_service.metrics import (
     set_revealed_commitment_job_duration,
     track_operation,
 )
-from pylon_service.services.commitments import CommitmentService
-from pylon_service.services.weights import WeightsService
+from pylon_service.service_errors import HyperparamsNotFoundError
 from pylon_service.settings import settings
 
 logger = logging.getLogger(__name__)
-commitment_service = CommitmentService()
-weights_service = WeightsService()
 
 
 class StopRetrying(Exception):
@@ -184,6 +190,24 @@ class ApplyWeights(
 
         await asyncio.wait_for(asyncio.shield(self._apply_weights(latest_block)), 120)
 
+    async def _translate_weights(self, latest_block: Block) -> dict[NeuronUid, Weight]:
+        translated_weights: dict[NeuronUid, Weight] = {}
+        missing: list[Hotkey] = []
+        neurons = await self._client.get_neurons_list(self._netuid, latest_block)
+        hotkey_to_uid = {neuron.hotkey: neuron.uid for neuron in neurons}
+        for hotkey, weight in self._weights.items():
+            uid = hotkey_to_uid.get(hotkey)
+            if uid is None:
+                missing.append(hotkey)
+                continue
+            translated_weights[uid] = weight
+        if missing:
+            logger.warning(
+                "Some of the hotkeys passed for weight commitment are missing. Weights will not be committed for: %s",
+                missing,
+            )
+        return translated_weights
+
     @track_operation(
         duration_metric=apply_weights_attempt_duration,
         labels={
@@ -192,8 +216,17 @@ class ApplyWeights(
         },
     )
     async def _apply_weights(self, latest_block: Block) -> None:
-        logger.info("Applying weights via weights service")
-        await weights_service.apply_weights(self._client, self._netuid, self._mechanism_id, self._weights)
+        logger.info("Applying weights")
+        hyperparams = await self._client.get_hyperparams(self._netuid, latest_block)
+        if hyperparams is None:
+            raise HyperparamsNotFoundError("Failed to fetch hyperparameters")
+
+        translated_weights = await self._translate_weights(latest_block)
+        commit_reveal_enabled = hyperparams.commit_reveal_weights_enabled
+        if commit_reveal_enabled and commit_reveal_enabled != CommitReveal.DISABLED:
+            await self._client.commit_weights(self._netuid, self._mechanism_id, translated_weights)
+        else:
+            await self._client.set_weights(self._netuid, self._mechanism_id, translated_weights)
 
 
 class SetCommitment(
@@ -228,7 +261,7 @@ class SetCommitment(
     async def _single_attempt(self) -> None:
         logger.info("Set commitment attempt")
         await asyncio.wait_for(
-            asyncio.shield(commitment_service.set_commitment(self._client, self._netuid, self._data)),
+            asyncio.shield(self._client.set_commitment(self._netuid, self._data)),
             timeout=120,
         )
 
@@ -271,9 +304,7 @@ class SetRevealedCommitment(
         logger.info("Set revealed commitment attempt")
         return await asyncio.wait_for(
             asyncio.shield(
-                commitment_service.set_revealed_commitment(
-                    self._client, self._netuid, self._commitment, self._blocks_until_reveal
-                )
+                self._client.set_revealed_commitment(self._netuid, self._commitment, self._blocks_until_reveal)
             ),
             timeout=120,
         )

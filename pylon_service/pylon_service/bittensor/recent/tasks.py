@@ -9,13 +9,11 @@ from tenacity import AsyncRetrying, stop_before_delay, wait_exponential
 from pylon_service.bittensor.contact import BittensorPort
 from pylon_service.bittensor.exceptions import SubnetStateUnavailable
 from pylon_service.bittensor.pool import BittensorContactPool
-from pylon_service.services.neurons import NeuronService
 
 from .adapter import RecentCacheAdapter
 from .context import AbstractContext, SubnetContext
 
 logger = logging.getLogger(__name__)
-neuron_service = NeuronService()
 
 
 class _SkipRecentObjectUpdate(Exception):
@@ -79,7 +77,7 @@ class UpdateRecentNeurons(UpdateRecentObject[SubnetNeurons, SubnetContext]):
     ) -> SubnetNeurons:
         block = await client.get_latest_block()
         try:
-            return await neuron_service.get_neurons(client, context.netuid, block)
+            return await client.get_neurons(context.netuid, block)
         except SubnetStateUnavailable as exc:
             raise _SkipRecentObjectUpdate(
                 f"subnet state is unavailable for netuid {context.netuid} at block {block.number}; "

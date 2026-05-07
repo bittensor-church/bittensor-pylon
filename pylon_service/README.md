@@ -6,7 +6,10 @@ This README defines the intended internal structure of `pylon_service` and the A
 and agents should follow while modifying it. It is a design and maintenance guide, not just an overview of the current
 implementation.
 
-Pylon exposes its public HTTP API obeying semver and apiver. While semver is straightforward to follow in HTTP APIs, apiver may be tricky, especially when optimizing the number of model classes and compatibility layers. And matters get even trickier when you consider that some of the models used by pylon are also used by pylon_client (which also uses apiver). This is why, in the rest of this document, apiver considerations are a first-class problem.
+Pylon exposes its public HTTP API obeying semver and apiver. While semver is straightforward to follow in HTTP APIs,
+apiver may be tricky, especially when optimizing the number of model classes and compatibility layers.
+And matters get even trickier when you consider that some of the models used by pylon are also used by pylon_client (which also uses apiver). 
+This is why, in the rest of this document, apiver considerations are a first-class problem.
 
 
 ## Imported standards
@@ -24,49 +27,58 @@ standards have been applied here):
 - tests mock only the external boundary, which here means the `Contact`
 - routers, services, handlers, cache logic, and stores stay real in tests whenever practical
 
-## Status
-
-Some of the code in this package still reflects an older structure. This README describes the structure we are moving
-toward and should be used as the decision rule during refactors.
-
 ## Layering
 
-The service is organized into four layers:
+The service is organized into the following layers:
 
 ```text
-HTTP handlers                             - Translates public models to Response models 
-    |\
-    | \
-    |  \
-    |   (optional versioned services)     }
-    |   /   |                 |           }
-    |  /    |                 |           } Implement logic, schedule tasks, optionally translate 
-    | /     |                 |           } from internal models to public models.
-    |/      |                 |           }
-services    |                 |           }
-    |\      |                 |
-    | \     |                 |
-    |  \    |                 |
-    |   Tasks                 |           - only when for deferred logic execution
-    |   /                     |
-    |  /                      |
-    | /                       |
-    |/                        |
+HTTP handlers                             - translate between public models and request / response models 
+    |
+    v
+services                                  - implement logic, schedule tasks, translate from contact internal models to versioned public models
+    |\                                      
+    | \                        
+    |  \                       
+    |   tasks                             - only when needed for deferred logic execution
+    |  /                       
+    | /                        
+    |/                         
 wallet-bound BittensorContactRouter       - chooses between lite and archive contacts
     |
     v
-contacts                                  - maintains a connection, reconnects and facilitates other necessary mechanisms
-    |
+contacts                                  - maintain a connection, reconnect and facilitate other necessary mechanisms,
+    |                                       translate between turbobt / Bittensor / Subtensor models and contact internal models
     v
 turbobt / Bittensor / Subtensor
 ```
 
-And the model flow is:
+Model layers:
+
+- versioned response / request models
+- versioned public models
+- contact internal models (`pylon_commons._ustable` models, or custom models when needed to preserve older behavior)
+- turbobt / Bittensor / Subtensor models
+
+## Package structure
 
 ```text
-contact internal models
-    -> canonical internal service data
-    -> versioned API DTO models
+pylon_service/
+    api/
+        _unstable/
+            api.py          - defines versioned handlers only
+            services.py     - defines versioned service entry points
+            routers.py
+        v1/
+            api.py          - defines versioned handlers only
+            services.py     - defines versioned service entry points
+            routers.py
+    bittensor/
+        contact.py          - defines the turbobt boundary
+        models.py           - defines optional contact internal models
+        contact_router.py   - defines wallet-bound main/archive routing
+        pool.py             - manages `BittensorContactPool` reuse
+        recent/
+            ...
 ```
 
 ## Responsibilities
@@ -80,15 +92,15 @@ They:
 - read request data
 - obtain the wallet-bound `BittensorContactRouter` from the `BittensorContactPool` through dependencies
 - obtain cache-facing collaborators such as recent-object providers through dependencies when the endpoint uses cache
-- call the appropriate versioned service
+- call the appropriate service
 - translate domain exceptions into HTTP exceptions and status codes
-- return versioned DTO models or explicit endpoint-specific responses
+- return versioned response models
 
 Handlers do not:
 
 - contain business logic
 - perform routing decisions between lite and archive
-- call turbobt directly
+- call turbobt / Bittensor / Subtensor directly
 
 
 ### Services
@@ -99,47 +111,23 @@ They:
 
 - implement endpoint behavior
 - compose multiple `BittensorContactRouter` calls
+- optionally use tasks for deferred logic execution
 - access cache collaborators when the endpoint semantics require cached data
 - apply filtering, sorting, reshaping, and compatibility logic
-- convert between contact-internal models and versioned DTO models
-- are used by both HTTP handlers and background tasks
+- convert between contact internal models and versioned public models
 
 Domain grouping should stay meaningful. For example, validator reads are part of neuron-related behavior and belong in
 the neuron service layer rather than in a separate `validators` service module.
 
-Services may inherit across versions because they are internal and not directly exposed to clients.
-
-The intended versioning pattern is:
-
-```text
-pylon_service/api/_unstable/services.py
-    canonical latest service implementations
-
-pylon_service/api/v1/services.py
-    pass-through imports when behavior is unchanged
-    subclasses when v1 behavior must remain different
-```
-
-Example:
-
-```python
-from pylon_service.api._unstable.services import NeuronService as UnstableNeuronService
-
-
-class NeuronService(UnstableNeuronService):
-    pass
-```
-
-If a stable version must preserve older behavior, subclass and override only what differs.
-
-Services are not HTTP-aware.
-
-That means:
+Services are not HTTP-aware. That means:
 
 - service exceptions must describe domain failure, not HTTP status
 - services do not raise `NotFoundException`, `BadGatewayException`, `ServiceUnavailableException`, or other HTTP-layer
   exceptions
-- handlers map domain exceptions into HTTP responses
+
+### Tasks
+
+Tasks contain application deferred logic. Like services, they use `BittensorContactRouter` calls.
 
 ### BittensorContactRouter
 
@@ -167,7 +155,7 @@ It:
 - shields turbobt calls (asyncio.shield, an internal quirk fix)
 - recreates connections when needed
 - logs expected reconnects at `INFO` and raises a typed contact transport exception if retry still fails
-- translates turbobt objects into Pylon contact-internal models
+- translates turbobt objects into contact internal models
 - translates write inputs from Pylon models into turbobt calls
 
 The contact does not:
@@ -176,7 +164,60 @@ The contact does not:
 - do any sort of postprocessing or filtering of turbobt outputs
 - own cache or retry policy that belongs to services or jobs
 
-## Contact models
+## API versioning rules
+
+Rules:
+
+- contacts are not versioned
+- `BittensorContactRouter` is not versioned
+- handlers are versioned
+- services are versioned
+- DTO models are versioned
+
+Versioned APIs and services can use their counterparts from newer versions, but **only the newest stable version can depend on unstable**. 
+This ensures that introducing a change in unstable requires touching only the newest stable version to preserve compatibility.
+
+
+### Handlers versioning
+
+Versioned stable API:
+
+- should reuse handlers from a newer API if the behavior and models are unchanged,
+- should implement its own handlers using versioned services if there are behavior or model changes.
+
+Example of a controller using its own versioned handler and re-using an unstable handler:
+
+```python
+class OpenAccessController(Controller):
+    # configuration omitted
+    get_commitment_endpoint = BaseController.get_commitment_endpoint
+    get_neurons = UnstableBaseController.get_neurons
+```
+
+### Services versioning
+
+Versioned services should be implemented only when there is a need to preserve different older behavior or models.
+
+Versioned services:
+
+- can use newer services (composition) and map results, OR
+- can implement its functionality directly using `BittensorContactRouter`.
+
+Example newer version service usage:
+
+```python
+class CommitmentService:
+    @staticmethod
+    async def get_commitment(
+        contact_router: BittensorPort, netuid: NetUid, hotkey: Hotkey
+    ) -> tuple[Block, V1Commitment]:
+        block, commitment = await UnstableCommitmentService.get_commitment(contact_router, netuid, hotkey)
+        if commitment.kind != CommitmentKind.HEX_DATA:
+            raise CommitmentNotFoundError()
+        return block, V1Commitment.model_validate(commitment, from_attributes=True)
+```
+
+### Model versioning
 
 Contacts use their own internal model package.
 
@@ -209,23 +250,6 @@ Then:
 - v1 service maps contact `Duck` -> v1 `Duck` and preserves `wings`
 
 The contact must not return unstable DTOs directly if doing so would destroy information needed by an older stable API.
-
-## API versioning rules
-
-Stable APIs must not use unstable DTOs as their source of truth. They depend on the lower-layer contact data and map
-it into their own DTOs.
-
-Rules:
-
-- contacts are not versioned
-- `BittensorContactRouter` is not versioned
-- handlers are versioned
-- services are versioned
-- DTO models are versioned
-- endpoint response wrapper classes should exist only when they add shape or endpoint-specific meaning
-
-If a payload is exactly a DTO model, return that DTO model directly. Do not add empty wrapper classes just to repeat the
-same shape under a second name.
 
 ### APIVer examples
 
@@ -440,40 +464,6 @@ That means:
 
 This keeps one execution path for public behavior.
 
-## Package sketch
-
-Target structure:
-
-```text
-pylon_service/
-    api/
-        _unstable/
-            api.py
-            services.py
-            routers.py
-        v1/
-            api.py
-            services.py
-            routers.py
-    bittensor/
-        contact.py
-        models.py
-        contact_router.py
-        pool.py
-        recent/
-            ...
-    services/
-        ...
-```
-
-Meaning:
-
-- `api/*/api.py` defines handlers only
-- `api/*/services.py` defines versioned service entry points
-- `bittensor/contact.py` defines the turbobt boundary
-- `bittensor/models.py` defines contact-internal models
-- `bittensor/contact_router.py` defines wallet-bound main/archive routing
-- `bittensor/pool.py` manages `BittensorContactPool` reuse
 
 ## Change checklist
 

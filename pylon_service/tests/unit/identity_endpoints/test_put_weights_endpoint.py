@@ -142,8 +142,6 @@ async def test_put_weights_retries_when_prepare_fails(
                 Block(number=BlockNumber(1000), hash=BlockHash("0xabc123")),
                 Block(number=BlockNumber(1000), hash=BlockHash("0xabc123")),
                 Block(number=BlockNumber(1000), hash=BlockHash("0xabc123")),
-                Block(number=BlockNumber(1000), hash=BlockHash("0xabc123")),
-                Block(number=BlockNumber(1000), hash=BlockHash("0xabc123")),
             ],
             get_hyperparams=[
                 SubnetHyperparams(commit_reveal_weights_enabled=CommitReveal.DISABLED),
@@ -162,7 +160,7 @@ async def test_put_weights_retries_when_prepare_fails(
 
                 await wait_for_background_tasks(ApplyWeights.tasks_running)
 
-        assert len(mock_client.calls["get_latest_block"]) == 9
+        assert len(mock_client.calls["get_latest_block"]) == 7
         assert mock_client.calls["set_weights"] == [
             (
                 1,
