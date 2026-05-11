@@ -33,7 +33,7 @@ This runs `prepare_e2e_chain.py` or `prepare_contact_chain.py` respectively, whi
 
 1. Starts a fresh `ghcr.io/opentensor/subtensor-localnet:main` container
 2. Seeds it with test data (see [Seeded Data](#seeded-data) below)
-3. Commits the container state as Docker image `prepared-e2elocalnet:latest` or `prepared-contact-localnet:latest`
+3. Commits the container state as Docker image `prepared-e2e-localnet:latest` or `prepared-contact-localnet:latest`
 
 The resulting snapshot preserves the full chain state and can be started repeatedly without
 re-running the seeding process.
@@ -70,18 +70,20 @@ Alice also transfers **500 TAO** to each filler wallet.
 
 #### Subnets
 
-Two subnets are registered (owned by Alice):
+Four subnets are registered (owned by Alice):
 
-| Subnet   | Netuid | Tempo | Purpose                                                      |
-|----------|--------|-------|--------------------------------------------------------------|
-| Subnet 1 | 1      | 100 (default) | Read testing                                                 |
-| Subnet 2 | 2      | 50 (low) | Fast commit-reveal weight. Write tests.                      |
-| Subnet 3 | 3      | 50 (low) | Fast commit-reveal weight tests and mechanisms. Write tests. |
-Subtokens are enabled on all subnets.
+| Subnet | Netuid | Tempo | Purpose |
+|--------|--------|-------|---------|
+| Subnet 1 | 1 | 100 (default) | Read testing |
+| Subnet 2 | 2 | 50 (low) | Fast commit-reveal weight and write tests |
+| Subnet 3 | 3 | 50 (low) | Mechanism weight tests |
+| Subnet 4 | 4 | 50 (low) | Dedicated to `test_set_weights_succeeds_after_registration` — only Alice registered, `WeightsRateLimit=0`. **This test permanently mutates subnet 4 state** (registers Charlie, adds stake), so the subnet must remain single-tenant. |
 
-#### Neurons
+Subtokens are enabled on all four subnets.
 
-Each prepared subnet contains **256 neurons**:
+### Neurons
+
+**Subnets 1 and 2** each contain **256 neurons**:
 
 | UID Range | Account(s) | Role |
 |-----------|------------|------|
@@ -92,9 +94,17 @@ Each prepared subnet contains **256 neurons**:
 | 4 | Dave | Non-validator |
 | 5-255 | Filler wallets | Non-validator |
 
-#### Stake
+**Subnet 3** contains the built-in localnet neuron plus Alice, Bob, Charlie, and Dave. Filler wallets
+are intentionally absent.
+
+**Subnet 4** contains only the built-in localnet neuron and Alice. Bob, Charlie, Dave, and the
+filler wallets are intentionally absent.
+
+### Stake
 
 Validators (Alice and Bob) each stake **10 TAO** on subnets 1-3 (6 stake operations total).
+Subnet 4 has no initial validator stake; `test_set_weights_succeeds_after_registration` registers
+Charlie and adds stake during the test.
 
 #### Commitments
 
@@ -157,12 +167,23 @@ Set on **subnet 1** only:
 - **Admin freeze window**: Disabled (set to 0). The default of 10 blocks can cause silent sudo
   call failures.
 - **Bulk registration tuning**: `MaxRegistrationsPerBlock` and `TargetRegistrationsPerInterval`
-  are raised to 256, and `TxRateLimit` is set to 0 on both prepared subnets before filler
+  are raised to 256, and `TxRateLimit` is set to 0 on e2e subnets 1 and 2 before filler
   registration.
 - **Drand.NextUnsignedAt**: Set to `current_block + 80` — see [Drand Workaround](#drand-workaround)
   below.
 
 ## Particularities
+
+### Dedicated Subnets for State-Modifying Tests
+
+Tests that **permanently modify subnet state** (registering neurons, adding stake,
+changing hyperparameters that other tests rely on) MUST NOT share a subnet with
+other tests — otherwise test execution order would affect results.
+
+When writing such a test, prefer creating a **dedicated subnet** for it in
+`prepare_e2e_chain.py` (as was done for subnet 4, used exclusively by
+`test_set_weights_succeeds_after_registration`). Document the ownership in the
+*Subnets* table above so it stays a single-tenant subnet.
 
 ### Drand Workaround
 
@@ -241,4 +262,5 @@ is being updated.
 |------|-------------|
 | `dev_accounts.py` | `DevAccount` enum with pre-seeded accounts (Alice, Bob, Charlie, Dave) |
 | `manager.py` | `LocalChainManager` — Docker container lifecycle and chain operations via turbobt |
-| `prepare_chain.py` | Snapshot preparation script — seeds data and creates `prepared-localnet:latest` |
+| `prepare_e2e_chain.py` | E2E snapshot preparation script — seeds data and creates `prepared-e2e-localnet:latest` |
+| `prepare_contact_chain.py` | Contact snapshot preparation script — seeds data and creates `prepared-contact-localnet:latest` |

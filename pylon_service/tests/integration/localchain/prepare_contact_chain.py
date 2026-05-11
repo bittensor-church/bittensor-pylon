@@ -8,7 +8,7 @@ import asyncio
 import logging
 from dataclasses import dataclass
 
-from tests.integration.containers import LocalChainImage
+from tests.integration.containers import LocalChainContainer, LocalChainImage
 from tests.integration.localchain.common import LOW_TEMPO, log_step
 from tests.integration.localchain.dev_accounts import SUDO_WALLET, DevAccount
 from tests.integration.localchain.manager import LocalChainManager
@@ -86,6 +86,9 @@ async def _prepare_subnet(manager: LocalChainManager, subnet_config: SubnetConfi
 
 
 async def main() -> None:
+    log_step("Pulling base localchain image")
+    LocalChainContainer(image=LocalChainImage.DEFAULT).pull_image()
+
     async with LocalChainManager() as manager:
         log_step("Starting fresh local chain")
 

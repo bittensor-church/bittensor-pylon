@@ -12,6 +12,7 @@ _EXPECTED_RESPONSE = {
         "sn1c": 1,
         "sn2": 2,
         "sn3": 3,
+        "sn4": 4,
         "sn11": 11,
         "sn21": 21,
         "sn22": 22,

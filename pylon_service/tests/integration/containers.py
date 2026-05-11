@@ -17,8 +17,28 @@ logger = logging.getLogger(__name__)
 
 _CHAIN_RPC_PORT = 9944
 _PYLON_SERVICE_PORT = 8000
+_MITMPROXY_LISTEN_PORT = 9944
+_MITMPROXY_RECORDER_PORT = 8474
 _REPO_ROOT = Path(__file__).resolve().parents[3]
 _TEST_ENV_PATH = Path(__file__).resolve().parents[1] / ".test-env"
+_MITMPROXY_ADDON_PATH = Path(__file__).resolve().parent / "mitmproxy" / "addon" / "ws_recorder.py"
+_MITMPROXY_IMAGE = "mitmproxy/mitmproxy:11.1.3"
+
+
+class BaseDockerContainer(DockerContainer):
+    """
+    Common base for our project's Docker containers.
+
+    Provides shared helpers on top of `testcontainers.DockerContainer`,
+    e.g. typed access to the network alias attached via `with_network_aliases`.
+    """
+
+    @property
+    def first_network_alias(self) -> str:
+        aliases = self._network_aliases
+        if not aliases:
+            raise RuntimeError(f"{type(self).__name__} has no network alias set; call with_network_aliases(...) first.")
+        return aliases[0]
 
 
 class LocalChainImage(enum.StrEnum):
@@ -29,7 +49,7 @@ class LocalChainImage(enum.StrEnum):
     PREPARED_CONTACT = "prepared-contact-localnet:latest"
 
 
-class LocalChainContainer(DockerContainer):
+class LocalChainContainer(BaseDockerContainer):
     """
     Subtensor localnet container with JSON-RPC health check.
 
@@ -62,6 +82,17 @@ class LocalChainContainer(DockerContainer):
         docker_client = self.get_docker_client()
         images = docker_client.client.images.list(name=self.image)
         return len(images) > 0
+
+    def pull_image(self) -> None:
+        """
+        Pull the configured Docker image to refresh the local cache.
+
+        Used before building snapshots to avoid stale base images.
+        """
+        docker_client = self.get_docker_client()
+        logger.info("Pulling Docker image '%s'", self.image)
+        docker_client.client.images.pull(self.image)
+        logger.info("Pulled Docker image '%s'", self.image)
 
     async def ensure_prepared_image(self) -> None:
         """
@@ -109,8 +140,16 @@ class LocalChainContainer(DockerContainer):
     def http_url(self) -> str:
         return f"http://{self.rpc_host}:{self.rpc_port}"
 
+    @property
+    def internal_ws_url(self) -> str:
+        return f"ws://{self.first_network_alias}:{_CHAIN_RPC_PORT}"
 
-class PylonServiceContainer(DockerContainer):
+    @property
+    def internal_http_url(self) -> str:
+        return f"http://{self.first_network_alias}:{_CHAIN_RPC_PORT}"
+
+
+class PylonServiceContainer(BaseDockerContainer):
     """
     Pylon service container built from Dockerfile.
 
@@ -180,3 +219,53 @@ class PylonServiceContainer(DockerContainer):
         image.build()
         logger.info("Pylon service image built: %s", image.tag)
         return image
+
+
+class MitmproxyContainer(BaseDockerContainer):
+    """
+    Reverse-proxy mitmdump container that forwards WebSocket traffic from
+    pylon_service to the localchain container and forwards every WebSocket
+    frame to an HTTP recorder via the bundled addon.
+    """
+
+    def __init__(
+        self,
+        upstream_ws_url: str,
+        startup_timeout: int = 30,
+        *,
+        host_recorder_port: int | None = None,
+        **kwargs: Any,
+    ) -> None:
+        super().__init__(_MITMPROXY_IMAGE, **kwargs)
+        self._host_recorder_port = host_recorder_port if host_recorder_port is not None else find_free_port()
+        self.with_bind_ports(_MITMPROXY_RECORDER_PORT, self._host_recorder_port)
+        self.with_volume_mapping(str(_MITMPROXY_ADDON_PATH), "/addon.py", "ro")
+        self.with_env("PYLON_WS_RECORDER_PORT", str(_MITMPROXY_RECORDER_PORT))
+        self.with_command(
+            [
+                "mitmdump",
+                "-s",
+                "/addon.py",
+                "--mode",
+                f"reverse:{upstream_ws_url}",
+                "--listen-host",
+                "0.0.0.0",
+                "--listen-port",
+                str(_MITMPROXY_LISTEN_PORT),
+                "--set",
+                "websocket_message_size_limit=10485760",
+            ]
+        )
+        self.waiting_for(
+            HttpWaitStrategy(_MITMPROXY_RECORDER_PORT, "/frames")
+            .with_startup_timeout(startup_timeout)
+            .with_poll_interval(0.5)
+        )
+
+    @property
+    def recorder_url(self) -> str:
+        return f"http://{self.get_container_host_ip()}:{self._host_recorder_port}/frames"
+
+    @property
+    def internal_ws_url(self) -> str:
+        return f"ws://{self.first_network_alias}:{_MITMPROXY_LISTEN_PORT}"
