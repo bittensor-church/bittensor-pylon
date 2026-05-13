@@ -134,7 +134,7 @@ from pylon_client.artanis.v1 import Block, Neuron
 
 ```bash
 # Install dependencies for a specific package
-cd pylon_client && uv sync --extra dev
+cd pylon_client && uv sync --group dev
 
 # Create test environment
 cp pylon_service/envs/test_env.template .env
@@ -192,30 +192,73 @@ PYLON_DEBUG=true uv run python -m pylon_service.uvicorn_entrypoint
 
 
 # Production-like server
+```
 uv run python -m pylon_service.uvicorn_entrypoint
 ```
 
 ### Release
 
-Version is determined from git tags using `hatch-vcs` - there are no version files in the code.
+Releases are managed with [`release-toolkit`](https://github.com/reef-technologies/release-toolkit)
+(a [commitizen](https://commitizen-tools.github.io/commitizen/) plugin with `impacts_cz` rule).
+The two products — `pylon_client` and `pylon_service` — release independently, each with its own
+git tag prefix, `CHANGELOG.md`, and CI workflow. Versions are derived from git tags using `hatch-vcs`,
+so there are no version files in the code.
 
-Release commands create and push git tags on `origin/master` to trigger deployment:
+#### Conventional commits with impacts
 
-```bash
-# Release client to PyPI (creates client-v1.7.0 tag)
-nox -s release-client -- 1.7.0
+Every commit on `master` must follow the [Conventional Commits](https://www.conventionalcommits.org/)
+specification, with an `impacts:` trailer declaring which products it affects:
 
-# Release service to Docker Hub (creates service-v1.2.0 tag)
-nox -s release-service -- 1.2.0
+```
+feat: add neuron caching
 
-# Or omit version to be prompted:
-nox -s release-client
-nox -s release-service
+impacts: client, service
 ```
 
-You can also run from the package directory:
+Allowed impacts are `client`, `service`, and `commons`. The trailer drives which `CHANGELOG.md`
+(under `pylon_client/` or `pylon_service/`) the entry lands in when bumping. Commits without an
+`impacts:` trailer are ignored by the changelog generator.
+
+The `commons` impact is special: since `pylon_commons` is shared between client and service
+(vendored into the client, used as an editable dependency by the service), commits with
+`impacts: commons` land in **both** changelogs and contribute to the version increment of both
+products. This is implemented by listing `commons` alongside the package's own tag in each
+package's `[tool.commitizen] impacts` setting (`["client", "commons"]` for the client and
+`["service", "commons"]` for the service). A commit can mix tags freely, e.g.
+`impacts: client, commons` or `impacts: service, commons, client`.
+
+#### Cutting a release
+
+Run `rt release` from the package directory you want to release. The command:
+
+1. Syncs the environment with `uv sync`.
+2. Runs the project's checks.
+3. Computes the changelog-filtered version increment from commits whose `impacts:` trailer
+   matches the package, then invokes `cz bump` to update `CHANGELOG.md`, create a `bump:`
+   commit and an annotated tag (`client-v<version>` or `service-v<version>`).
+4. Pushes the bump commit and the new tag to `origin/master`.
+
+It aborts if the working tree is dirty or there are no releasable commits, and prompts for
+confirmation when run from a branch other than `master`.
 
 ```bash
-cd pylon_client && nox -s release -- 1.7.0
-cd pylon_service && nox -s release -- 1.2.0
+# Release the client
+cd pylon_client && rt release
+
+# Release the service
+cd pylon_service && rt release
+
+# Dry-run (forwards --dry-run to cz bump):
+rt release -- --dry-run
 ```
+
+Pushing the tag triggers the matching GitHub Actions workflow:
+
+| Tag pattern    | Workflow                              | Publishes to                                            |
+|----------------|---------------------------------------|---------------------------------------------------------|
+| `client-v*`    | `.github/workflows/release-client.yml`  | PyPI (`bittensor-pylon-client`)                          |
+| `service-v*`   | `.github/workflows/release-service.yml` | Docker Hub (`backenddevelopersltd/bittensor-pylon`)      |
+
+After publishing, both workflows call `release-toolkit`'s `release-notify` reusable workflow, which
+creates a GitHub Release with the changelog section for the new version and posts a notification to
+Slack.

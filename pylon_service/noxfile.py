@@ -10,13 +10,13 @@ nox.options.reuse_existing_virtualenvs = True
 
 @nox.session(name="test", python=PYTHON_VERSION)
 def test(session):
-    session.run("uv", "sync", "--active", "--extra", "dev")
+    session.run("uv", "sync", "--active", "--group", "dev")
     session.run("pytest", "-s", "-vv", "tests/unit/", *session.posargs, env={"PYLON_ENV_FILE": "tests/.test-env"})
 
 
 @nox.session(name="test-unit-public-coverage", python=PYTHON_VERSION)
 def test_unit_public_coverage(session):
-    session.run("uv", "sync", "--active", "--extra", "dev")
+    session.run("uv", "sync", "--active", "--group", "dev")
     session.run(
         "pytest",
         "-s",
@@ -33,7 +33,7 @@ def test_unit_public_coverage(session):
 
 @nox.session(name="test-pact", python=PYTHON_VERSION)
 def test_pact(session):
-    session.run("uv", "sync", "--active", "--extra", "dev")
+    session.run("uv", "sync", "--active", "--group", "dev")
     session.run("pytest", "-s", "-vv", "tests/pact/", *session.posargs, env={"PYLON_ENV_FILE": "tests/.test-env"})
 
 
@@ -54,7 +54,7 @@ def test_integration_e2e(session):
 
 @nox.session(name="test-integration", python=PYTHON_VERSION)
 def test_integration(session, suite_sufix: str = ""):
-    session.run("uv", "sync", "--active", "--extra", "dev")
+    session.run("uv", "sync", "--active", "--group", "dev")
     session.run(
         "pytest",
         "-s",
@@ -70,7 +70,7 @@ def test_integration(session, suite_sufix: str = ""):
 
 @nox.session(name="format", python=PYTHON_VERSION)
 def format(session):
-    session.run("uv", "sync", "--active", "--extra", "dev")
+    session.run("uv", "sync", "--active", "--group", "dev")
     session.run("ruff", "format", ".")
     session.run("ruff", "check", "--fix", ".")
     session.run("pyright")
@@ -78,30 +78,10 @@ def format(session):
 
 @nox.session(name="lint", python=PYTHON_VERSION)
 def lint(session):
-    session.run("uv", "sync", "--active", "--extra", "dev")
+    session.run("uv", "sync", "--active", "--group", "dev")
     session.run("ruff", "format", "--check", "--diff", ".")
     session.run("ruff", "check", ".")
     session.run("pyright")
-
-
-@nox.session(name="release", python=False, default=False)
-def release(session):
-    if session.posargs:
-        version = session.posargs[0]
-    else:
-        version = input("Enter version to release: ")
-        if not version:
-            session.error("Version required")
-    tag_name = f"service-v{version}"
-    tag_message = f"Pylon service {version} release"
-    session.run("git", "fetch", "origin", external=True)
-    session.log(f"Tag: {tag_name}")
-    session.log(f"Message: {tag_message}")
-    answer = input("Create and push this tag? [y/N] ")
-    if answer.lower() != "y":
-        session.error("Aborted by user")
-    session.run("git", "tag", "-a", tag_name, "-m", tag_message, "origin/master", external=True)
-    session.run("git", "push", "origin", tag_name, external=True)
 
 
 @nox.session(name="prepare-e2e-localchain", python=PYTHON_VERSION, default=False)
@@ -115,7 +95,7 @@ def prepare_e2e_localchain(session):
     Usage:
       nox -s prepare-localchain
     """
-    session.run("uv", "sync", "--active", "--extra", "dev")
+    session.run("uv", "sync", "--active", "--group", "dev")
     session.run(
         "uv",
         "run",
@@ -139,7 +119,7 @@ def prepare_contact_localchain(session):
     Usage:
       nox -s prepare-contact-localchain
     """
-    session.run("uv", "sync", "--active", "--extra", "dev")
+    session.run("uv", "sync", "--active", "--group", "dev")
     session.run(
         "uv",
         "run",
