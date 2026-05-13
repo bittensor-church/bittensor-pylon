@@ -7,6 +7,7 @@ from typing import Any, TypeVar
 from pylon_client._internal.client.sync.communicators import AbstractCommunicator
 from pylon_client._internal.pylon_commons._unstable.requests import (
     GetAllRevealedCommitmentsRequest,
+    GetCertificateRequest,
     GetCommitmentRequest,
     GetCommitmentsRequest,
     GetDrandLastStoredRoundRequest,
@@ -34,6 +35,7 @@ from pylon_client._internal.pylon_commons._unstable.requests import (
 )
 from pylon_client._internal.pylon_commons._unstable.responses import (
     GetAllRevealedCommitmentsResponse,
+    GetCertificateResponse,
     GetCommitmentResponse,
     GetCommitmentsResponse,
     GetDrandLastStoredRoundResponse,
@@ -52,6 +54,7 @@ from pylon_client._internal.pylon_commons._unstable.responses import (
     SetRevealedCommitmentResponse,
     SetWeightsResponse,
 )
+from pylon_client._internal.static_neurons import load_static_neurons
 from pylon_client._internal.pylon_commons.apiver import ApiVersion
 from pylon_client._internal.pylon_commons.exceptions import (
     PylonClosed,
@@ -247,6 +250,22 @@ class AbstractOpenAccessApi(AbstractApi, ABC):
         """
         return self._send_request(self._get_latest_validators_request(netuid))
 
+    def get_certificate(self, netuid: NetUid, hotkey: Hotkey) -> GetCertificateResponse:
+        """
+        Retrieves the certificate for a specific hotkey in a subnet at the latest available block.
+
+        Args:
+            netuid: The unique identifier of the subnet.
+            hotkey: The hotkey to retrieve the certificate for.
+
+        Returns:
+            GetCertificateResponse: containing the certificate's algorithm and public key.
+
+        Raises:
+            PylonNotFound: If a certificate could not be found.
+        """
+        return self._send_request(self._get_certificate_request(netuid, hotkey))
+
     def get_latest_block_info(self) -> GetLatestBlockInfoResponse:
         """
         Retrieves the latest block information from the chain.
@@ -402,6 +421,9 @@ class AbstractOpenAccessApi(AbstractApi, ABC):
         abi: list[dict[str, Any]],
     ) -> GetEvmLogsRequest: ...
 
+    @abstractmethod
+    def _get_certificate_request(self, netuid: NetUid, hotkey: Hotkey) -> GetCertificateRequest: ...
+
 
 class AbstractIdentityApi(AbstractApi, ABC):
     """
@@ -487,6 +509,9 @@ class AbstractIdentityApi(AbstractApi, ABC):
             GetNeuronsResponse containing the latest block information and a dictionary mapping hotkeys to
             Neuron objects.
         """
+        neurons_file = self._communicator.config.neurons_file
+        if neurons_file:
+            return load_static_neurons(neurons_file)
         return self._send_identity_request(self._get_latest_neurons_request)
 
     def get_recent_neurons(self) -> GetNeuronsResponse:
@@ -664,6 +689,21 @@ class AbstractIdentityApi(AbstractApi, ABC):
         """
         return self._send_identity_request(self._get_latest_validators_request)
 
+    def get_certificate(self, hotkey: Hotkey) -> GetCertificateResponse:
+        """
+        Retrieves the certificate for a specific hotkey in the authenticated identity's subnet.
+
+        Args:
+            hotkey: The hotkey to retrieve the certificate for.
+
+        Returns:
+            GetCertificateResponse: containing the certificate's algorithm and public key.
+
+        Raises:
+            PylonNotFound: If a certificate could not be found.
+        """
+        return self._send_identity_request(partial(self._get_certificate_request, hotkey))
+
     def get_latest_block_info(self) -> GetLatestBlockInfoResponse:
         """
         Retrieves the latest block information from the chain.
@@ -810,3 +850,6 @@ class AbstractIdentityApi(AbstractApi, ABC):
 
     @abstractmethod
     def _get_latest_evm_associations_request(self) -> GetLatestEvmAssociationsRequest: ...
+
+    @abstractmethod
+    def _get_certificate_request(self, hotkey: Hotkey) -> GetCertificateRequest: ...

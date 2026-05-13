@@ -1,7 +1,7 @@
 from pydantic import BaseModel
 
-from ..models import SubnetEvmAssociations
-from ..types import IdentityName, NetUid
+from ..models import NeuronCertificate, NeuronCertificateKeypair, SubnetEvmAssociations
+from ..types import Hotkey, IdentityName, NetUid
 from ..types import evm as evm_types
 from .models import (
     Block,
@@ -198,3 +198,12 @@ class GetEvmLogsResponse(PylonResponse):
     logs: list[EvmLog]
     from_block: evm_types.BlockNumber
     to_block: evm_types.BlockNumber
+
+
+class GetCertificateResponse(PylonResponse, NeuronCertificate):
+    """
+    Response class that is returned for the GetCertificateRequest.
+    """
+
+    pass
+
