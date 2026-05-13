@@ -190,8 +190,8 @@ Example of a controller using its own versioned handler and re-using an unstable
 ```python
 class OpenAccessController(Controller):
     # configuration omitted
-    get_commitment_endpoint = BaseController.get_commitment_endpoint
-    get_neurons = UnstableBaseController.get_neurons
+    get_commitment_endpoint = Handlers.get_commitment_endpoint
+    get_neurons = UnstableHandlers.get_neurons
 ```
 
 ### Services versioning
@@ -207,11 +207,8 @@ Example newer version service usage:
 
 ```python
 class CommitmentService:
-    @staticmethod
-    async def get_commitment(
-        contact_router: BittensorPort, netuid: NetUid, hotkey: Hotkey
-    ) -> tuple[Block, V1Commitment]:
-        block, commitment = await UnstableCommitmentService.get_commitment(contact_router, netuid, hotkey)
+    async def get_commitment(self, netuid: NetUid, hotkey: Hotkey) -> tuple[Block, V1Commitment]:
+        block, commitment = await self.unstable_commitment_service.get_commitment(netuid, hotkey)
         if commitment.kind != CommitmentKind.HEX_DATA:
             raise CommitmentNotFoundError()
         return block, V1Commitment.model_validate(commitment, from_attributes=True)
