@@ -47,12 +47,12 @@ jobs:
 
   release:
     needs: docker-push
-    uses: reef-technologies/release-toolkit/.github/workflows/release-notify.yml@v0.2.0
+    uses: reef-technologies/release-toolkit/.github/workflows/make-github-release.yml@v0.4.0
     with:
       package_dir: pylon_service
       tag_prefix: service-v
       python_version: '3.13'
     secrets:
-      SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+      SLACK_NOTIFICATION_WEBHOOK_URL: ${{ secrets.SLACK_NOTIFICATION_WEBHOOK_URL }}
     permissions:
       contents: write

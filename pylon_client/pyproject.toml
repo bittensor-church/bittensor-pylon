@@ -15,7 +15,7 @@ dependencies = [
 
 [dependency-groups]
 dev = [
-    "release-toolkit>=0.2.1,<1",
+    "release-toolkit>=0.4.0,<1",
     "pytest",
     "pytest-asyncio>=1.0.0",
     "respx>=0.22.0",

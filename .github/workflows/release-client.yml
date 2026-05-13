@@ -44,12 +44,12 @@ jobs:
 
   release:
     needs: pypi-publish
-    uses: reef-technologies/release-toolkit/.github/workflows/release-notify.yml@v0.2.0
+    uses: reef-technologies/release-toolkit/.github/workflows/make-github-release.yml@v0.4.0
     with:
       package_dir: pylon_client
       tag_prefix: client-v
       python_version: '3.11'
     secrets:
-      SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+      SLACK_NOTIFICATION_WEBHOOK_URL: ${{ secrets.SLACK_NOTIFICATION_WEBHOOK_URL }}
     permissions:
       contents: write

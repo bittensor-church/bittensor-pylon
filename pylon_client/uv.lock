@@ -86,7 +86,7 @@ dev = [
     { name = "pyright" },
     { name = "pytest" },
     { name = "pytest-asyncio", specifier = ">=1.0.0" },
-    { name = "release-toolkit", specifier = ">=0.2.1,<1" },
+    { name = "release-toolkit", specifier = ">=0.4.0,<1" },
     { name = "respx", specifier = ">=0.22.0" },
     { name = "ruff" },
 ]
@@ -1047,15 +1047,15 @@ wheels = [
 
 [[package]]
 name = "release-toolkit"
-version = "0.2.1"
+version = "0.4.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "commitizen" },
     { name = "tomlkit" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/74/15/b4cdaac884337f9486fb1f0107a1b70c43272f9bcd542872805c3f4b427d/release_toolkit-0.2.1.tar.gz", hash = "sha256:6b67fb057b65fae0cbd3e0b1b4c3145c054dd07a394ebf10066a6db829594394", size = 79481, upload-time = "2026-05-07T08:17:19.31Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/f3/a7/50f66ccd6afb77cf9422b12ab3bee613eb31354ff377daa6492cda13da7a/release_toolkit-0.4.0.tar.gz", hash = "sha256:4e17a9a32b0b4e2442c1b42856868f81e5d9c50d9075af7ef99d52dca20abc27", size = 80092, upload-time = "2026-05-13T12:24:33.99Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/6b/c8/8a8a009b1e2da41f1679a8344e7ce628d6360fbd5d6c5026c70309db04b6/release_toolkit-0.2.1-py3-none-any.whl", hash = "sha256:6c493179193b53fb3c710553105f19092e48a3a55f798b0e877ecda5c56fa109", size = 23156, upload-time = "2026-05-07T08:17:17.495Z" },
+    { url = "https://files.pythonhosted.org/packages/8a/fc/e44badc4a1b82f718aca23e9e04f24ddeed7d792f781eefe4dd11f78f458/release_toolkit-0.4.0-py3-none-any.whl", hash = "sha256:4ec10715e0aa51e66ade01a92e8813d5430c8371df896e102b99d77732c2ff66", size = 23659, upload-time = "2026-05-13T12:24:32.249Z" },
 ]
 
 [[package]]
