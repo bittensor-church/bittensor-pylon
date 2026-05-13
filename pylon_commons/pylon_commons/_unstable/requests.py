@@ -18,6 +18,7 @@ from .responses import (
     GetNeuronsResponse,
     GetRevealedCommitmentsResponse,
     GetValidatorsResponse,
+    GetWeightsStatusResponse,
     PylonResponse,
     SetCommitmentResponse,
     SetRevealedCommitmentResponse,
@@ -209,6 +210,17 @@ class SetWeightsRequest(SetWeightsBody, IdentityPylonRequest[SetWeightsResponse]
     mechanism_id: MechanismId
 
     response_cls = SetWeightsResponse
+
+
+class GetWeightsStatusRequest(IdentityPylonRequest[GetWeightsStatusResponse]):
+    """
+    Class used to fetch the weight status for the identity by the Pylon client.
+    """
+
+    mechanism_id: MechanismId
+    block_number: BlockNumber
+
+    response_cls = GetWeightsStatusResponse
 
 
 class SetCommitmentRequest(SetCommitmentBody, IdentityPylonRequest[SetCommitmentResponse]):

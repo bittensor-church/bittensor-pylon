@@ -11,7 +11,8 @@ nox.options.reuse_existing_virtualenvs = True
 @nox.session(name="test", python=PYTHON_VERSION)
 def test(session):
     session.run("uv", "sync", "--active", "--group", "dev")
-    session.run("pytest", "-s", "-vv", "tests/unit/", *session.posargs, env={"PYLON_ENV_FILE": "tests/.test-env"})
+    pytest_args = session.posargs or ["tests/unit/"]
+    session.run("pytest", "-s", "-vv", *pytest_args, env={"PYLON_ENV_FILE": "tests/.test-env"})
 
 
 @nox.session(name="test-unit-public-coverage", python=PYTHON_VERSION)

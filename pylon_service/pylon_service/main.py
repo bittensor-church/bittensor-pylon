@@ -39,7 +39,12 @@ def create_app() -> Litestar:
             description="REST API for the bittensor-pylon service",
         ),
         middleware=[RequestIdMiddleware, prometheus_config.middleware, RequestTimeoutMiddleware],
-        lifespan=[lifespans.bittensor_contact_pool, lifespans.scheduler_lifespan],
+        lifespan=[
+            lifespans.database_lifespan,
+            lifespans.bittensor_contact_pool,
+            lifespans.scheduler_lifespan,
+            lifespans.reschedule_weight_tasks_lifespan,
+        ],
         dependencies={"bt_contact_pool": Provide(dependencies.bt_contact_pool_dep, use_cache=True)},
         plugins=[PylonSchemaPlugin()],
         exception_handlers={ArchiveFallbackException: archive_fallback_handler},

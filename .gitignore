@@ -2,6 +2,8 @@
 *.__pycache__/
 *.pyc
 *.db
+*.db-shm
+*.db-wal
 .DS_Store
 .env*
 .vscode
@@ -17,3 +19,4 @@ pylon_client/tests/pact/pacts/*
 .worktrees/
 .claude
 .codex
+pylon_service/tests/.tmp/*

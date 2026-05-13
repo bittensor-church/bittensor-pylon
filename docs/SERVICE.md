@@ -85,6 +85,35 @@ PYLON_ID_SN2_NETUID=2
 PYLON_ID_SN2_TOKEN=IEYAWl9rPQAMTV0hqAKAaQtEYqqKws5z
 ```
 
+### Background tasks persistence
+
+Some operations, such as weight submission, are executed as background tasks and persisted in a local SQLite database. 
+This allows unsuccessful weight submissions to be resumed and continued after a service restart.
+
+After the service restarts, Pylon resumes weight submission tasks only when the submitting identity 
+still exists in the configuration and uses the same hotkey and netuid.
+
+By default, the database is created inside a docker container of the service. 
+You can configure the database path to a local directory or a docker volume:
+
+```bash
+# .env
+PYLON_DATABASE_PATH=/data/pylon.db
+```
+Using a docker volume:
+```bash
+bash docker run -d
+  -v bittensor-pylon-data:/data \
+  ...
+```
+Using a host directory:
+```bash
+bash docker run -d
+  -v "$HOME/bitensor-pylon-data:/data" \
+  ...
+```
+
+
 ### Request Timeouts
 
 Pylon enforces per-request timeouts via the `X-Pylon-Timeout` header. This header tells the

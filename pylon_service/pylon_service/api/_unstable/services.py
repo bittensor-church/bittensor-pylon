@@ -7,6 +7,7 @@ from pylon_commons.models import (
     SubnetNeurons,
     SubnetRevealedCommitments,
     SubnetValidators,
+    WeightsStatus,
 )
 from pylon_commons.types import (
     BlockNumber,
@@ -19,7 +20,8 @@ from pylon_commons.types import (
     Weight,
 )
 
-from pylon_service.api._unstable.tasks import ApplyWeights, SetCommitment, SetRevealedCommitment
+from pylon_service.api._unstable.tasks import ApplyWeights, ApplyWeightsPayload, SetCommitment, SetRevealedCommitment
+from pylon_service.api.epoch import get_epoch_containing_block, get_tempo_from_hyperparams
 from pylon_service.api.services import (
     BaseService,
     BlockNotFoundError,
@@ -30,6 +32,7 @@ from pylon_service.api.services import (
     RecentObjectMissingError,
     RecentObjectStaleError,
 )
+from pylon_service.bittensor.contact import BittensorPort
 from pylon_service.bittensor.models import (
     Block,
     CertificateAlgorithm,
@@ -37,6 +40,8 @@ from pylon_service.bittensor.models import (
     NeuronCertificateKeypair,
 )
 from pylon_service.bittensor.recent import RecentObjectMissing, RecentObjectProvider, RecentObjectStale
+from pylon_service.db.weight_task import weight_task_submitted
+from pylon_service.identities import Identity
 
 
 class BlockService(BaseService):
@@ -186,8 +191,25 @@ class CommitmentService(BaseService):
 
 
 class WeightService(BaseService):
+    def __init__(self, identity: Identity, contact_router: BittensorPort) -> None:
+        super().__init__(contact_router)
+        self.identity = identity
+
     async def set_weights(self, netuid: NetUid, mechanism_id: MechanismId, weights: dict[Hotkey, Weight]):
-        ApplyWeights(self.contact_router, weights, netuid, mechanism_id).schedule()
+        payload = ApplyWeightsPayload(weights, netuid, mechanism_id)
+        await ApplyWeights(self.identity, self.contact_router, payload=payload).schedule()
+
+    async def get_weight_status(
+        self, netuid: NetUid, mechanism_id: MechanismId, block_number: BlockNumber
+    ) -> WeightsStatus:
+        block = await self.contact_router.get_block(block_number)
+        if block is None:
+            raise BlockNotFoundError(f"Block {block_number} not found.")
+        hyperparams = await self.contact_router.get_hyperparams(netuid, block)
+        tempo = get_tempo_from_hyperparams(hyperparams)
+        epoch = get_epoch_containing_block(block_number, netuid, tempo)
+        task_submitted = await weight_task_submitted(self.identity, mechanism_id, epoch)
+        return WeightsStatus(weights_submitted=task_submitted)
 
 
 class DrandService(BaseService):

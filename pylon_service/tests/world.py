@@ -6,11 +6,13 @@ from pylon_commons.currency import Currency, CurrencyRao, Token
 from pylon_commons.models import (
     Block,
     CommitmentVariant,
+    CommitReveal,
     HexDataCommitment,
     Neuron,
     RevealedCommitment,
     Stakes,
     SubnetCommitments,
+    SubnetHyperparams,
     SubnetNeurons,
     SubnetRevealedCommitments,
     SubnetState,
@@ -37,6 +39,7 @@ from pylon_commons.types import (
     SubnetActive,
     TaoStake,
     TaoStakeRao,
+    Tempo,
     Timestamp,
     TotalStake,
     TotalStakeRao,
@@ -146,6 +149,14 @@ class SharedWorld:
                     commitments=revealed_commitments.get(netuid, {}),
                 ),
             )
+            contact.set_default(
+                "get_hyperparams",
+                lambda netuid, block: SubnetHyperparams(
+                    commit_reveal_weights_enabled=CommitReveal.DISABLED,
+                    tempo=Tempo(50),
+                ),
+            )
+            contact.set_default("set_weights", lambda netuid, mechanism_id, weights: None)
 
 
 def default_latest_block() -> Block:

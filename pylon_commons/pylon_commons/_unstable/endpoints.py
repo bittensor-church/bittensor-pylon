@@ -50,4 +50,9 @@ class Endpoint(BaseEndpoint):
     RECENT_NEURONS = (HTTPMethod.GET, "/block/recent/neurons", "recent_neurons")
     SUBNET_WEIGHTS = (HTTPMethod.PUT, "/weights", "subnet_weights")
     SUBNET_MECHANISM_WEIGHTS = (HTTPMethod.PUT, "/mechanism/{mechanism_id:int}/weights", "subnet_mechanism_weights")
+    SUBNET_MECHANISM_WEIGHTS_STATUS = (
+        HTTPMethod.GET,
+        "/mechanism/{mechanism_id:int}/block/{block_number:int}/weights/status",
+        "subnet_mechanism_weight_status",
+    )
     VALIDATORS = (HTTPMethod.GET, "/block/{block_number:int}/validators", "validators")

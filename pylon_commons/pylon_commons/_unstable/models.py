@@ -25,4 +25,5 @@ from ..models import (
     SubnetValidators,
     TimelockEncryptedCommitment,
     UnknownIntEnum,
+    WeightsStatus,
 )

@@ -4,6 +4,8 @@ Shared fixtures for all service tests (unit and pact).
 
 from collections.abc import AsyncGenerator
 from contextlib import AsyncExitStack, asynccontextmanager
+from datetime import datetime, timedelta
+from pathlib import Path
 from unittest.mock import patch
 
 import pytest
@@ -11,6 +13,7 @@ import pytest_asyncio
 from bittensor_wallet import Wallet
 from polyfactory.pytest_plugin import register_fixture
 from pylon_commons.types import ArchiveBlocksCutoff, IdentityName
+from sqlalchemy import delete
 from syrupy.extensions.json import JSONSnapshotExtension
 
 from pylon_service import identities as identities_module
@@ -19,8 +22,10 @@ from pylon_service.bittensor.contact import ContactFactory
 from pylon_service.bittensor.contact_router import BittensorContactRouter
 from pylon_service.bittensor.mock_contact import MockBittensorContact
 from pylon_service.bittensor.pool import BittensorContactPool
+from pylon_service.db.database import session_factory
+from pylon_service.db.models import WeightTask
 from pylon_service.main import create_app
-from pylon_service.settings import settings
+from pylon_service.settings import database_settings, settings
 from pylon_service.stores import StoreName
 from tests.factories import BlockFactory, NeuronFactory
 from tests.fixture_contract import EXPECTED_IDENTITIES, assert_test_fixture_contract
@@ -83,7 +88,73 @@ def reset_mock_stores(mock_stores):
 
 
 @pytest.fixture(scope="session")
-def test_app(mock_bt_contact_pool, mock_stores):
+def setup_test_database():
+    """
+    Create a test DB directory if not exists. Clean up any existing database files.
+
+    The database is intentionally left on disk after the test run, so it can be inspected for debugging reasons.
+
+    Raises:
+        pytest.UsageError: If ``PYLON_DATABASE_PATH`` is not set for tests.
+    """
+    if database_settings.path is None:
+        raise pytest.UsageError("PYLON_DATABASE_PATH must be set for tests.")
+
+    db_path = Path(database_settings.path)
+
+    if not db_path.is_absolute():
+        db_path = Path.cwd() / db_path
+
+    db_path.parent.mkdir(parents=True, exist_ok=True)
+
+    for path in (
+        db_path,
+        db_path.with_name(f"{db_path.name}-wal"),
+        db_path.with_name(f"{db_path.name}-shm"),
+    ):
+        path.unlink(missing_ok=True)
+
+    yield
+
+
+@pytest_asyncio.fixture
+async def clean_weight_tasks_db_table():
+    async def _clean_weight_tasks_db_table() -> None:
+        async with session_factory() as session:
+            async with session.begin():
+                await session.execute(delete(WeightTask))
+
+    return _clean_weight_tasks_db_table
+
+
+@pytest.fixture
+def seed_running_weight_task_before_reschedule(monkeypatch):
+    task_to_seed: list[WeightTask] = []
+    real_reschedule_weight_tasks = lifespans.reschedule_weight_tasks
+
+    async def seed_then_reschedule(app):
+        async with session_factory() as session:
+            async with session.begin():
+                await session.execute(delete(WeightTask))
+                session.add_all(task_to_seed)
+                await session.flush()
+
+                base_created_at = datetime.now() - timedelta(seconds=len(task_to_seed))
+                for index, task in enumerate(task_to_seed):
+                    task.created_at = base_created_at + timedelta(seconds=index)
+
+            for task in task_to_seed:
+                await session.refresh(task)
+
+        await real_reschedule_weight_tasks(app)
+
+    monkeypatch.setattr(lifespans, "reschedule_weight_tasks", seed_then_reschedule)
+
+    return task_to_seed
+
+
+@pytest.fixture(scope="session")
+def test_app(mock_bt_contact_pool, mock_stores, setup_test_database):
     """
     Create a test Litestar app with the mock contact pool.
     """
