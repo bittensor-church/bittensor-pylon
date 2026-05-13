@@ -4,6 +4,7 @@ import pytest
 
 from tests.pact.constants import HOTKEY_1, HOTKEY_2
 from tests.pact.matchers import (
+    certificate_response_matcher,
     commitment_response_matcher,
     commitments_response_matcher,
     evm_associations_response_matcher,
@@ -91,6 +92,11 @@ def get_own_revealed_commitments_response_matcher() -> dict:
 @pytest.fixture
 def get_latest_block_info_response_matcher() -> dict:
     return latest_block_info_response_matcher()
+
+
+@pytest.fixture
+def get_certificate_response_matcher() -> dict:
+    return certificate_response_matcher()
 
 
 @pytest.fixture

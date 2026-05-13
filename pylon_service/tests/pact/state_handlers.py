@@ -7,9 +7,11 @@ from unittest.mock import AsyncMock
 
 from pylon_commons.currency import CurrencyRao, Token
 from pylon_commons.models import (
+    CertificateAlgorithm,
     CommitmentVariant,
     EvmLog,
     HexDataCommitment,
+    NeuronCertificate,
     RevealedCommitment,
     SubnetCommitments,
     SubnetHyperparams,
@@ -26,6 +28,7 @@ from pylon_commons.types import (
     Hotkey,
     NetUid,
     NeuronUid,
+    PublicKey,
     RevealedCommitmentData,
     Tempo,
     Timestamp,
@@ -412,6 +415,19 @@ class EvmAssociationsExistHandler(StateHandler):
         self._set_default_latest_block(client, block)
         client.add_behavior("get_evm_key_associations", associations)
         client.add_behavior("get_subnet_state", SimpleNamespace(hotkeys=hotkeys))
+class CertificateExistsHandler(StateHandler):
+    name = "certificate exists"
+
+    def setup(self, parameters: dict[str, Any]) -> None:
+        block = BlockFactory.build()
+        certificate = NeuronCertificate(
+            algorithm=CertificateAlgorithm.ED25519,
+            public_key=PublicKey("ab" * 32),
+        )
+
+        client = self._get_client(parameters)
+        self._set_default_latest_block(client, block)
+        client.add_behavior("get_certificate", certificate)
 
 
 class BittensorHangs(StateHandler):

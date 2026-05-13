@@ -8,6 +8,7 @@ from pylon_client._internal.pylon_commons._unstable.endpoints import Endpoint as
 from pylon_client._internal.pylon_commons._unstable.requests import (
     AuthenticatedPylonRequest,
     GetAllRevealedCommitmentsRequest,
+    GetCertificateRequest,
     GetCommitmentRequest,
     GetCommitmentsRequest,
     GetDrandLastStoredRoundRequest,
@@ -277,3 +278,11 @@ class HttpTranslator(AbstractRequestTranslator[Request, HttpCommunicatorT]):
             params={"from_block": request.from_block, "to_block": request.to_block},
             json=request.model_dump(include={"abi"}),
         )
+
+    def _translate_get_certificate(self, request: GetCertificateRequest, communicator: HttpCommunicatorT) -> Request:
+        url = self._build_url(self._endpoint_cls.CERTIFICATES_HOTKEY, request)
+        headers = self._get_auth_headers(request, communicator)
+        return communicator.raw_client.build_request(
+            method=self._endpoint_cls.CERTIFICATES_HOTKEY.method, url=url, headers=headers
+        )
+

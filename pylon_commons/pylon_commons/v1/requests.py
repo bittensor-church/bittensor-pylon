@@ -1,6 +1,7 @@
 from .._unstable.requests import (  # noqa: F401
     AuthenticatedPylonRequest,
     GenerateCertificateKeypairRequest,
+    GetCertificateRequest,
     GetExtrinsicRequest,
     GetIdentitiesRequest,
     GetLatestBlockInfoRequest,
@@ -20,6 +21,7 @@ from .responses import GetCommitmentResponse, GetCommitmentsResponse, SetWeights
 __all__ = [
     "AuthenticatedPylonRequest",
     "GenerateCertificateKeypairRequest",
+    "GetCertificateRequest",
     "GetCommitmentRequest",
     "GetCommitmentsRequest",
     "GetExtrinsicRequest",

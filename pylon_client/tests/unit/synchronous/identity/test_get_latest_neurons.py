@@ -1,10 +1,12 @@
 from http import HTTPMethod
 
 import pytest
+from tenacity import wait_none
 
 from pylon_client._internal.pylon_commons._unstable.endpoints import Endpoint as EndpointUnstable
-from pylon_client.artanis import BlockHash, BlockNumber
+from pylon_client.artanis import BlockHash, BlockNumber, Config, DEFAULT_RETRIES, IdentityName, PylonAuthToken, PylonClient
 from pylon_client.artanis.unstable import Block, GetNeuronsResponse
+from pylon_client._internal.pylon_commons.types import Hotkey
 from tests.factories import NeuronFactory
 from tests.unit.synchronous.base_test import IdentityEndpointTest
 
@@ -25,3 +27,26 @@ class TestSyncIdentityGetLatestNeurons(IdentityEndpointTest):
     def success_response(self, block: Block, neuron_factory: NeuronFactory) -> GetNeuronsResponse:
         neurons = neuron_factory.batch(2)
         return GetNeuronsResponse(block=block, neurons={neuron.hotkey: neuron for neuron in neurons})
+
+
+def test_neurons_file_returns_static_neurons(tmp_path, test_url):
+    """
+    Test that get_latest_neurons reads from file when neurons_file is configured.
+    """
+    neurons_file = tmp_path / "neurons.json"
+    neurons_file.write_text('[{"hotkey": "5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY", "ip": "127.0.0.1", "port": 9090}]')
+    client = PylonClient(
+        Config(
+            address=test_url,
+            identity_name=IdentityName("sn1"),
+            identity_token=PylonAuthToken("sn1_token"),
+            neurons_file=str(neurons_file),
+            retry=DEFAULT_RETRIES.copy(wait=wait_none()),
+        )
+    )
+    with client:
+        response = client.unstable.identity.get_latest_neurons()
+    assert "5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY" in response.neurons
+    neuron = response.neurons[Hotkey("5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY")]
+    assert str(neuron.axon_info.ip) == "127.0.0.1"
+    assert neuron.axon_info.port == 9090

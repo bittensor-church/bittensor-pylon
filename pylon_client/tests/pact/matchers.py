@@ -16,6 +16,7 @@ from tests.pact.constants import (
     NETUID_2,
     PRICE_VALUE_RAO,
     PRICE_VALUE_RAO_2,
+    PUBLIC_KEY,
 )
 
 
@@ -214,6 +215,13 @@ def latest_block_info_response_matcher() -> dict:
     return {
         **block_matcher(),
         "timestamp": match.int(BLOCK_TIMESTAMP),
+    }
+
+
+def certificate_response_matcher() -> dict:
+    return {
+        "algorithm": match.int(1),
+        "public_key": match.str(PUBLIC_KEY),
     }
 
 

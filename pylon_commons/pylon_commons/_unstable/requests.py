@@ -10,6 +10,7 @@ from .bodies import EvmLogsBody, SetCommitmentBody, SetRevealedCommitmentBody, S
 from .models import CertificateAlgorithm
 from .responses import (
     GetAllRevealedCommitmentsResponse,
+    GetCertificateResponse,
     GetCommitmentResponse,
     GetCommitmentsResponse,
     GetDrandLastStoredRoundResponse,
@@ -300,7 +301,18 @@ class GetOwnRevealedCommitmentsRequest(IdentityPylonRequest[GetRevealedCommitmen
     response_cls = GetRevealedCommitmentsResponse
 
 
+class GetCertificateRequest(AuthenticatedPylonRequest[GetCertificateResponse]):
+    """
+    Class used to fetch the certificate for a specific hotkey by the Pylon client.
+    """
+
+    response_cls = GetCertificateResponse
+
+    hotkey: Hotkey
+
+
 class GenerateCertificateKeypairRequest(PylonRequest):
+
     algorithm: CertificateAlgorithm = CertificateAlgorithm.ED25519
 
     @field_validator("algorithm", mode="before")

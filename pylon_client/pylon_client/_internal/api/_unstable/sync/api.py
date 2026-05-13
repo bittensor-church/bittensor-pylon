@@ -6,6 +6,7 @@ from pylon_client._internal.api.abstract_sync import (
 )
 from pylon_client._internal.pylon_commons._unstable.requests import (
     GetAllRevealedCommitmentsRequest,
+    GetCertificateRequest,
     GetCommitmentRequest,
     GetCommitmentsRequest,
     GetDrandLastStoredRoundRequest,
@@ -117,6 +118,9 @@ class OpenAccessApi(AbstractOpenAccessApi):
             to_block=to_block,
             abi=abi,
         )
+
+    def _get_certificate_request(self, netuid: NetUid, hotkey: Hotkey) -> GetCertificateRequest:
+        return GetCertificateRequest(netuid=netuid, hotkey=hotkey)
 
 
 class IdentityApi(AbstractIdentityApi):
@@ -258,3 +262,11 @@ class IdentityApi(AbstractIdentityApi):
 
     def _get_latest_evm_associations_request(self) -> GetLatestEvmAssociationsRequest:
         return GetLatestEvmAssociationsRequest(netuid=self.netuid, identity_name=self.identity_name)
+
+    def _get_certificate_request(self, hotkey: Hotkey) -> GetCertificateRequest:
+        return GetCertificateRequest(
+            netuid=self.netuid,
+            identity_name=self.identity_name,
+            hotkey=hotkey,
+        )
+

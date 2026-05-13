@@ -1,5 +1,6 @@
 from .._unstable.responses import (  # noqa: F401
     GetAllRevealedCommitmentsResponse,
+    GetCertificateResponse,
     GetExtrinsicResponse,
     GetIdentitiesResponse,
     GetLatestBlockInfoResponse,
@@ -19,6 +20,7 @@ from .models import Block, Commitment
 
 __all__ = [
     "GetAllRevealedCommitmentsResponse",
+    "GetCertificateResponse",
     "GetCommitmentResponse",
     "GetCommitmentsResponse",
     "GetExtrinsicResponse",
