@@ -11,7 +11,7 @@ from tests.unit.asynchronous.base_test import IdentityEndpointTest
 
 
 class TestIdentitySetWeights(IdentityEndpointTest):
-    endpoint = EndpointUnstable.SUBNET_MECHANISMS_WEIGHTS
+    endpoint = EndpointUnstable.SUBNET_MECHANISM_WEIGHTS
     route_params = {"identity_name": "sn1", "netuid": 1, "mechanism_id": 1}
     http_method = HTTPMethod.PUT
 

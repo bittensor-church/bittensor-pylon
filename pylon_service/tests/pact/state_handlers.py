@@ -265,7 +265,7 @@ class WeightsCanBeSetHandler(StateHandler):
     name = "weights can be set"
 
     def setup(self, parameters: dict[str, Any]) -> None:
-        self.monkeypatch.setattr("pylon_service.api._unstable.api.ApplyWeights.schedule", Mock())
+        self.monkeypatch.setattr("pylon_service.api._unstable.tasks.ApplyWeights.schedule", Mock())
 
 
 class BlockDataUnavailableHandler(StateHandler):

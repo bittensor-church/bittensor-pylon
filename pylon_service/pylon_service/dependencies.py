@@ -2,9 +2,24 @@ from collections.abc import AsyncGenerator
 
 from litestar import Request
 from litestar.datastructures import State
+from litestar.di import Provide
 from litestar.exceptions import NotFoundException
 from pylon_commons.types import IdentityName, NetUid
 
+from pylon_service.api._unstable.services import (
+    BlockService,
+    CertificateService,
+    CommitmentService,
+    DrandService,
+    NeuronService,
+    WeightService,
+)
+from pylon_service.api.v1.services import (
+    CommitmentService as V1CommitmentService,
+)
+from pylon_service.api.v1.services import (
+    WeightService as V1WeightService,
+)
 from pylon_service.bittensor.contact_router import BittensorContactRouter
 from pylon_service.bittensor.pool import BittensorContactPool
 from pylon_service.bittensor.recent import (
@@ -65,3 +80,82 @@ async def recent_object_provider_identity_dep(
 ) -> RecentObjectProvider:
     context = IdentitySubnetContext(netuid, identity.wallet)
     return _create_recent_object_provider(request, context)
+
+
+async def unstable_block_service_dep(
+    bt_contact_router: BittensorContactRouter,
+) -> BlockService:
+    return BlockService(bt_contact_router)
+
+
+async def unstable_neuron_service_dep(
+    bt_contact_router: BittensorContactRouter,
+) -> NeuronService:
+    return NeuronService(bt_contact_router)
+
+
+async def unstable_certificate_service_dep(
+    bt_contact_router: BittensorContactRouter,
+) -> CertificateService:
+    return CertificateService(bt_contact_router)
+
+
+async def unstable_commitment_service_dep(
+    bt_contact_router: BittensorContactRouter,
+) -> CommitmentService:
+    return CommitmentService(bt_contact_router)
+
+
+async def unstable_weight_service_dep(
+    bt_contact_router: BittensorContactRouter,
+) -> WeightService:
+    return WeightService(bt_contact_router)
+
+
+async def unstable_drand_service_dep(
+    bt_contact_router: BittensorContactRouter,
+) -> DrandService:
+    return DrandService(bt_contact_router)
+
+
+async def v1_commitment_service_dep(
+    bt_contact_router: BittensorContactRouter,
+    unstable_commitment_service: CommitmentService,
+) -> V1CommitmentService:
+    return V1CommitmentService(bt_contact_router, unstable_commitment_service)
+
+
+async def v1_weight_service_dep(
+    bt_contact_router: BittensorContactRouter,
+) -> V1WeightService:
+    return V1WeightService(bt_contact_router)
+
+
+SERVICE_PROVIDERS = {
+    "unstable_block_service": Provide(unstable_block_service_dep),
+    "unstable_neuron_service": Provide(unstable_neuron_service_dep),
+    "unstable_certificate_service": Provide(unstable_certificate_service_dep),
+    "unstable_commitment_service": Provide(unstable_commitment_service_dep),
+    "unstable_weight_service": Provide(unstable_weight_service_dep),
+    "unstable_drand_service": Provide(unstable_drand_service_dep),
+    "v1_commitment_service": Provide(v1_commitment_service_dep),
+    "v1_weight_service": Provide(v1_weight_service_dep),
+}
+
+PUBLIC_PROVIDERS = {
+    "bt_contact_router": Provide(bt_contact_router_open_access_dep),
+    **SERVICE_PROVIDERS,
+}
+
+OPEN_ACCESS_PROVIDERS = {
+    "bt_contact_router": Provide(bt_contact_router_open_access_dep),
+    "recent_object_provider": Provide(recent_object_provider_open_access_dep),
+    **SERVICE_PROVIDERS,
+}
+
+IDENTITY_PROVIDERS = {
+    "identity": Provide(identity_dep),
+    "bt_contact_router": Provide(bt_contact_router_identity_dep),
+    "recent_object_provider": Provide(recent_object_provider_identity_dep),
+    **SERVICE_PROVIDERS,
+}

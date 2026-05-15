@@ -154,10 +154,10 @@ class HttpTranslator(AbstractRequestTranslator[Request, HttpCommunicatorT]):
         )
 
     def _translate_set_weights(self, request: SetWeightsRequest, communicator: HttpCommunicatorT) -> Request:
-        url = self._build_url(self._endpoint_cls.SUBNET_MECHANISMS_WEIGHTS, request)
+        url = self._build_url(self._endpoint_cls.SUBNET_MECHANISM_WEIGHTS, request)
         headers = self._get_auth_headers(request, communicator)
         return communicator.raw_client.build_request(
-            method=self._endpoint_cls.SUBNET_MECHANISMS_WEIGHTS.method,
+            method=self._endpoint_cls.SUBNET_MECHANISM_WEIGHTS.method,
             url=url,
             headers=headers,
             json=request.model_dump(include={"weights"}),

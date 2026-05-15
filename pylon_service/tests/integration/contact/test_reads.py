@@ -203,3 +203,10 @@ async def test_get_extrinsic_returns_expected_snapshot_extrinsics(open_contact):
     assert timestamp_extrinsic.model_dump() == EXPECTED_TIMESTAMP_EXTRINSIC
     assert mev_shield_extrinsic.model_dump() == EXPECTED_MEV_SHIELD_EXTRINSIC
     assert missing_extrinsic is None
+
+
+@pytest.mark.asyncio
+async def test_get_drand_last_stored_round_returns_round(open_contact):
+    latest_block = await open_contact.get_latest_block()
+    drand_last_stored_round = await open_contact.get_drand_last_stored_round(latest_block)
+    assert drand_last_stored_round == IsInt(ge=0)
