@@ -8,9 +8,7 @@ from litestar.handlers.http_handlers import decorators as http_decorators
 from litestar.response import Redirect
 from pylon_commons.endpoints import Endpoint
 
-from pylon_service.bittensor.exceptions import BittensorTransportError
-from pylon_service.identities import identities
-from pylon_service.service_errors import (
+from pylon_service.api.services import (
     BlockNotFoundError,
     CertificateGenerationFailedError,
     CertificateNotFoundError,
@@ -19,6 +17,8 @@ from pylon_service.service_errors import (
     RecentObjectMissingError,
     RecentObjectStaleError,
 )
+from pylon_service.bittensor.exceptions import BittensorTransportError
+from pylon_service.identities import identities
 
 
 def _response_for_exception(exc: Exception) -> Response | None:

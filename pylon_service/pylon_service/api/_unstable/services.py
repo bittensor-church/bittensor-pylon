@@ -20,15 +20,8 @@ from pylon_commons.types import (
 )
 
 from pylon_service.api._unstable.tasks import ApplyWeights, SetCommitment, SetRevealedCommitment
-from pylon_service.bittensor.contact import BittensorPort
-from pylon_service.bittensor.models import (
-    Block,
-    CertificateAlgorithm,
-    NeuronCertificate,
-    NeuronCertificateKeypair,
-)
-from pylon_service.bittensor.recent import RecentObjectMissing, RecentObjectProvider, RecentObjectStale
-from pylon_service.service_errors import (
+from pylon_service.api.services import (
+    BaseService,
     BlockNotFoundError,
     CertificateGenerationFailedError,
     CertificateNotFoundError,
@@ -37,12 +30,16 @@ from pylon_service.service_errors import (
     RecentObjectMissingError,
     RecentObjectStaleError,
 )
+from pylon_service.bittensor.models import (
+    Block,
+    CertificateAlgorithm,
+    NeuronCertificate,
+    NeuronCertificateKeypair,
+)
+from pylon_service.bittensor.recent import RecentObjectMissing, RecentObjectProvider, RecentObjectStale
 
 
-class BlockService:
-    def __init__(self, contact_router: BittensorPort) -> None:
-        self.contact_router = contact_router
-
+class BlockService(BaseService):
     async def get_latest_block_info(self) -> BlockInfoBag:
         block = await self.contact_router.get_latest_block()
         timestamp = await self.contact_router.get_block_timestamp(block)
@@ -60,10 +57,7 @@ class BlockService:
         return extrinsic
 
 
-class NeuronService:
-    def __init__(self, contact_router: BittensorPort) -> None:
-        self.contact_router = contact_router
-
+class NeuronService(BaseService):
     async def get_neurons(self, netuid: NetUid, block_number: BlockNumber) -> SubnetNeurons:
         block = await self.contact_router.get_block(block_number)
         if block is None:
@@ -104,10 +98,7 @@ class NeuronService:
         return SubnetValidators(block=block, validators=validators)
 
 
-class CertificateService:
-    def __init__(self, contact_router: BittensorPort) -> None:
-        self.contact_router = contact_router
-
+class CertificateService(BaseService):
     async def get_certificates(self, netuid: NetUid) -> dict[Hotkey, NeuronCertificate]:
         block = await self.contact_router.get_latest_block()
         return await self.contact_router.get_certificates(netuid, block)
@@ -135,10 +126,7 @@ class CertificateService:
         return certificate_keypair
 
 
-class CommitmentService:
-    def __init__(self, contact_router: BittensorPort) -> None:
-        self.contact_router = contact_router
-
+class CommitmentService(BaseService):
     async def set_commitment(self, netuid: NetUid, data: CommitmentDataBytes) -> None:
         await SetCommitment(self.contact_router, netuid, data)()
 
@@ -197,17 +185,11 @@ class CommitmentService:
         return block, commitments
 
 
-class WeightService:
-    def __init__(self, contact_router: BittensorPort) -> None:
-        self.contact_router = contact_router
-
+class WeightService(BaseService):
     async def set_weights(self, netuid: NetUid, mechanism_id: MechanismId, weights: dict[Hotkey, Weight]):
         ApplyWeights(self.contact_router, weights, netuid, mechanism_id).schedule()
 
 
-class DrandService:
-    def __init__(self, contact_router: BittensorPort) -> None:
-        self.contact_router = contact_router
-
+class DrandService(BaseService):
     async def get_drand_last_stored_round(self) -> int:
         return await self.contact_router.get_drand_last_stored_round()

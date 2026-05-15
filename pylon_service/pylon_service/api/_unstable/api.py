@@ -187,12 +187,9 @@ class Handlers:
     async def set_revealed_commitment_endpoint(
         self, unstable_commitment_service: CommitmentService, data: SetRevealedCommitmentBody, netuid: NetUid
     ) -> SetRevealedCommitmentResponse:
-        try:
-            reveal_round = await unstable_commitment_service.set_revealed_commitment(
-                netuid, data.commitment, data.blocks_until_reveal
-            )
-        except Exception as exc:
-            raise BadGatewayException(detail=str(exc)) from exc
+        reveal_round = await unstable_commitment_service.set_revealed_commitment(
+            netuid, data.commitment, data.blocks_until_reveal
+        )
         return SetRevealedCommitmentResponse(reveal_round=reveal_round)
 
     @handler(Endpoint.LATEST_COMMITMENTS_REVEALED_SELF)
@@ -202,7 +199,7 @@ class Handlers:
         block, commitments = await unstable_commitment_service.get_own_revealed_commitments(netuid)
         return GetRevealedCommitmentsResponse(block=block, commitments=commitments)
 
-    @handler(Endpoint.SUBNET_MECHANISMS_WEIGHTS)
+    @handler(Endpoint.SUBNET_MECHANISM_WEIGHTS)
     async def put_mechanism_weights_endpoint(
         self, data: SetWeightsBody, unstable_weight_service: WeightService, netuid: NetUid, mechanism_id: MechanismId
     ) -> Response:
