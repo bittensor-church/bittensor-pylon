@@ -187,9 +187,12 @@ class Handlers:
     async def set_revealed_commitment_endpoint(
         self, unstable_commitment_service: CommitmentService, data: SetRevealedCommitmentBody, netuid: NetUid
     ) -> SetRevealedCommitmentResponse:
-        reveal_round = await unstable_commitment_service.set_revealed_commitment(
-            netuid, data.commitment, data.blocks_until_reveal
-        )
+        try:
+            reveal_round = await unstable_commitment_service.set_revealed_commitment(
+                netuid, data.commitment, data.blocks_until_reveal
+            )
+        except Exception as exc:
+            raise BadGatewayException(detail=str(exc)) from exc
         return SetRevealedCommitmentResponse(reveal_round=reveal_round)
 
     @handler(Endpoint.LATEST_COMMITMENTS_REVEALED_SELF)
