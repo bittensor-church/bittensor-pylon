@@ -82,64 +82,64 @@ async def recent_object_provider_identity_dep(
     return _create_recent_object_provider(request, context)
 
 
-async def unstable_block_service_provider(
+async def unstable_block_service_dep(
     bt_contact_router: BittensorContactRouter,
 ) -> BlockService:
     return BlockService(bt_contact_router)
 
 
-async def unstable_neuron_service_provider(
+async def unstable_neuron_service_dep(
     bt_contact_router: BittensorContactRouter,
 ) -> NeuronService:
     return NeuronService(bt_contact_router)
 
 
-async def unstable_certificate_service_provider(
+async def unstable_certificate_service_dep(
     bt_contact_router: BittensorContactRouter,
 ) -> CertificateService:
     return CertificateService(bt_contact_router)
 
 
-async def unstable_commitment_service_provider(
+async def unstable_commitment_service_dep(
     bt_contact_router: BittensorContactRouter,
 ) -> CommitmentService:
     return CommitmentService(bt_contact_router)
 
 
-async def unstable_weight_service_provider(
+async def unstable_weight_service_dep(
     bt_contact_router: BittensorContactRouter,
 ) -> WeightService:
     return WeightService(bt_contact_router)
 
 
-async def unstable_drand_service_provider(
+async def unstable_drand_service_dep(
     bt_contact_router: BittensorContactRouter,
 ) -> DrandService:
     return DrandService(bt_contact_router)
 
 
-async def v1_commitment_service_provider(
+async def v1_commitment_service_dep(
     bt_contact_router: BittensorContactRouter,
     unstable_commitment_service: CommitmentService,
 ) -> V1CommitmentService:
     return V1CommitmentService(bt_contact_router, unstable_commitment_service)
 
 
-async def v1_weight_service_provider(
+async def v1_weight_service_dep(
     bt_contact_router: BittensorContactRouter,
 ) -> V1WeightService:
     return V1WeightService(bt_contact_router)
 
 
 SERVICE_PROVIDERS = {
-    "unstable_block_service": Provide(unstable_block_service_provider),
-    "unstable_neuron_service": Provide(unstable_neuron_service_provider),
-    "unstable_certificate_service": Provide(unstable_certificate_service_provider),
-    "unstable_commitment_service": Provide(unstable_commitment_service_provider),
-    "unstable_weight_service": Provide(unstable_weight_service_provider),
-    "unstable_drand_service": Provide(unstable_drand_service_provider),
-    "v1_commitment_service": Provide(v1_commitment_service_provider),
-    "v1_weight_service": Provide(v1_weight_service_provider),
+    "unstable_block_service": Provide(unstable_block_service_dep),
+    "unstable_neuron_service": Provide(unstable_neuron_service_dep),
+    "unstable_certificate_service": Provide(unstable_certificate_service_dep),
+    "unstable_commitment_service": Provide(unstable_commitment_service_dep),
+    "unstable_weight_service": Provide(unstable_weight_service_dep),
+    "unstable_drand_service": Provide(unstable_drand_service_dep),
+    "v1_commitment_service": Provide(v1_commitment_service_dep),
+    "v1_weight_service": Provide(v1_weight_service_dep),
 }
 
 PUBLIC_PROVIDERS = {

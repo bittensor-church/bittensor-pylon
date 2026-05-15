@@ -4,14 +4,14 @@ from pylon_commons.v1.models import Commitment as V1Commitment
 
 from pylon_service.api._unstable.services import CommitmentService as UnstableCommitmentService
 from pylon_service.api._unstable.tasks import ApplyWeights as UnstableApplyWeights
+from pylon_service.api.services import BaseService, CommitmentNotFoundError
 from pylon_service.bittensor.contact import BittensorPort
 from pylon_service.bittensor.models import Block
-from pylon_service.service_errors import CommitmentNotFoundError
 
 
-class CommitmentService:
+class CommitmentService(BaseService):
     def __init__(self, contact_router: BittensorPort, unstable_commitment_service: UnstableCommitmentService) -> None:
-        self.contact_router = contact_router
+        super().__init__(contact_router)
         self.unstable_commitment_service = unstable_commitment_service
 
     async def get_commitments(self, netuid: NetUid) -> tuple[Block, dict[Hotkey, CommitmentDataHex]]:
@@ -38,9 +38,6 @@ class CommitmentService:
         return block, V1Commitment.model_validate(commitment, from_attributes=True)
 
 
-class WeightService:
-    def __init__(self, contact_router: BittensorPort) -> None:
-        self.contact_router = contact_router
-
+class WeightService(BaseService):
     async def set_weights(self, netuid: NetUid, weights: dict[Hotkey, Weight]):
         UnstableApplyWeights(self.contact_router, weights, netuid, MechanismId(0)).schedule()

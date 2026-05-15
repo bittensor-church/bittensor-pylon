@@ -24,6 +24,7 @@ from tenacity import (
 )
 
 from pylon_service.api._unstable.utils import Epoch, get_epoch_containing_block
+from pylon_service.api.services import HyperparamsNotFoundError
 from pylon_service.bittensor.contact import BittensorPort
 from pylon_service.metrics import (
     Attr,
@@ -34,7 +35,6 @@ from pylon_service.metrics import (
     set_revealed_commitment_job_duration,
     track_operation,
 )
-from pylon_service.service_errors import HyperparamsNotFoundError
 from pylon_service.settings import settings
 
 logger = logging.getLogger(__name__)

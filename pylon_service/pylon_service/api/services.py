@@ -1,3 +1,11 @@
+from pylon_service.bittensor.contact import BittensorPort
+
+
+class BaseService:
+    def __init__(self, contact_router: BittensorPort) -> None:
+        self.contact_router = contact_router
+
+
 class ServiceError(Exception):
     pass
 
