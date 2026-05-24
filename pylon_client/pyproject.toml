@@ -12,6 +12,7 @@ dependencies = [
     "docker",
     "apscheduler",
     "cryptography",
+    "pyyaml>=6",
 ]
 
 [dependency-groups]
@@ -24,6 +25,7 @@ dev = [
     "pact-python>=2.0.0",
     "ruff",
     "pyright",
+    "types-pyyaml",
 ]
 
 [project.urls]

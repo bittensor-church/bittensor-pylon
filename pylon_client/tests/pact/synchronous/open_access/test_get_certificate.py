@@ -1,9 +1,9 @@
 from httpx import codes
 from pact import Pact
 
+from pylon_client._internal.pylon_commons.types import PublicKey
 from pylon_client.artanis import Hotkey, NetUid
 from pylon_client.artanis.unstable import CertificateAlgorithm, GetCertificateResponse
-from pylon_client._internal.pylon_commons.types import PublicKey
 from tests.pact.constants import HOTKEY_1, NETUID, OPEN_ACCESS_TOKEN, PUBLIC_KEY
 
 

@@ -312,7 +312,6 @@ class GetCertificateRequest(AuthenticatedPylonRequest[GetCertificateResponse]):
 
 
 class GenerateCertificateKeypairRequest(PylonRequest):
-
     algorithm: CertificateAlgorithm = CertificateAlgorithm.ED25519
 
     @field_validator("algorithm", mode="before")

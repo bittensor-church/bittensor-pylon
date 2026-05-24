@@ -275,4 +275,3 @@ class AsyncIdentityApi(AbstractAsyncIdentityApi):
             identity_name=self.identity_name,
             hotkey=hotkey,
         )
-

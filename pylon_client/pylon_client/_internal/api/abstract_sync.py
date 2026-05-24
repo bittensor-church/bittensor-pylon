@@ -54,7 +54,6 @@ from pylon_client._internal.pylon_commons._unstable.responses import (
     SetRevealedCommitmentResponse,
     SetWeightsResponse,
 )
-from pylon_client._internal.static_neurons import load_static_neurons
 from pylon_client._internal.pylon_commons.apiver import ApiVersion
 from pylon_client._internal.pylon_commons.exceptions import (
     PylonClosed,
@@ -71,7 +70,7 @@ from pylon_client._internal.pylon_commons.types import (
     NetUid,
     Weight,
 )
-from pylon_client._internal.pylon_commons.types import evm as evm_types
+from pylon_client._internal.file_backed_neurons import load_file_backed_neurons
 
 ResponseT = TypeVar("ResponseT", bound=PylonResponse)
 
@@ -98,6 +97,16 @@ class AbstractApi(ABC):
             raise PylonClosed("The communicator is closed.")
         request.api_version = self.api_version
         return self._communicator.request(request)
+
+    def _file_backed_neurons(self) -> GetNeuronsResponse | None:
+        """
+        Returns neurons loaded from the configured local `neurons_file` for local development,
+        or None when no `neurons_file` is set (i.e. the call should hit the live service).
+        """
+        neurons_file = self._communicator.config.neurons_file
+        if neurons_file:
+            return load_file_backed_neurons(neurons_file)
+        return None
 
 
 class AbstractOpenAccessApi(AbstractApi, ABC):
@@ -141,6 +150,8 @@ class AbstractOpenAccessApi(AbstractApi, ABC):
             GetNeuronsResponse: containing the latest block information and a dictionary mapping hotkeys to
             Neuron objects.
         """
+        if (file_backed := self._file_backed_neurons()) is not None:
+            return file_backed
         return self._send_request(self._get_latest_neurons_request(netuid))
 
     def get_recent_neurons(self, netuid: NetUid) -> GetNeuronsResponse:
@@ -164,6 +175,8 @@ class AbstractOpenAccessApi(AbstractApi, ABC):
                 - The requested subnet is not of one of the configured identities or is not configured
                   for caching recent data via `PYLON_RECENT_OBJECTS_NETUIDS` config variable.
         """
+        if (file_backed := self._file_backed_neurons()) is not None:
+            return file_backed
         return self._send_request(self._get_recent_neurons_request(netuid))
 
     def get_commitments(self, netuid: NetUid) -> GetCommitmentsResponse:
@@ -509,9 +522,8 @@ class AbstractIdentityApi(AbstractApi, ABC):
             GetNeuronsResponse containing the latest block information and a dictionary mapping hotkeys to
             Neuron objects.
         """
-        neurons_file = self._communicator.config.neurons_file
-        if neurons_file:
-            return load_static_neurons(neurons_file)
+        if (file_backed := self._file_backed_neurons()) is not None:
+            return file_backed
         return self._send_identity_request(self._get_latest_neurons_request)
 
     def get_recent_neurons(self) -> GetNeuronsResponse:
@@ -529,6 +541,8 @@ class AbstractIdentityApi(AbstractApi, ABC):
         Raises:
             PylonResponseException: When the Pylon service cache doesn't have fresh enough data.
         """
+        if (file_backed := self._file_backed_neurons()) is not None:
+            return file_backed
         return self._send_identity_request(self._get_recent_neurons_request)
 
     def put_weights(

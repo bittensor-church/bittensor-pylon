@@ -29,6 +29,9 @@ class BaseConfig(BaseSettings, Generic[RetryT]):
             Must be provided together with mtls_key_path.
         mtls_key_path: Path to the client TLS private key file used for mTLS when calling get_neuron_client.
             Must be provided together with mtls_cert_path.
+        neurons_file: Path to a local JSON file of neurons used for local development and testing.
+            When set, get_neuron_client skips mTLS and uses plain HTTP, and neuron discovery reads
+            from this file instead of querying the Pylon service.
     """
 
     model_config = SettingsConfigDict(
@@ -43,9 +46,16 @@ class BaseConfig(BaseSettings, Generic[RetryT]):
     timeout: PylonTimeout = PylonTimeout()
     mtls_cert_path: str | None = None
     mtls_key_path: str | None = None
+    neurons_file: str | None = None
 
     def model_post_init(self, context) -> None:
         self.retry.reraise = True
+
+    @model_validator(mode="after")
+    def validate_neurons_file(self):
+        if self.neurons_file and not Path(self.neurons_file).exists():
+            raise ValueError(f"neurons_file not found: {self.neurons_file!r}")
+        return self
 
     @model_validator(mode="after")
     def validate_identity(self):
