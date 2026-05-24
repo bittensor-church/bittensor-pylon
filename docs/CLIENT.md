@@ -32,6 +32,23 @@ and authentication credentials.
 
 *`identity_name` and `identity_token` must both be provided together or not at all.
 
+Most parameters can also be set via a `PYLON_CLIENT_<FIELD>` environment variable (read from the
+process environment), e.g. `PYLON_CLIENT_NEURONS_FILE` or `PYLON_CLIENT_OPEN_ACCESS_TOKEN`. Values
+passed explicitly to the config take precedence over the environment.
+
+Nested fields inside `timeout` use `__` as a delimiter:
+
+```bash
+PYLON_CLIENT_TIMEOUT__READ=120.0
+PYLON_CLIENT_TIMEOUT__CONNECT=10.0
+PYLON_CLIENT_TIMEOUT__WRITE=10.0
+PYLON_CLIENT_TIMEOUT__POOL=10.0
+```
+
+> **Note:** `retry` cannot be set via environment variable — it is a tenacity object that must be
+> configured in code. See the [Retries](#retries) section.
+
+
 **Open access configuration:**
 ```python
 from pylon_client.artanis import AsyncConfig

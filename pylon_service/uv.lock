@@ -318,20 +318,24 @@ name = "bittensor-pylon-client"
 source = { editable = "../pylon_client" }
 dependencies = [
     { name = "apscheduler" },
+    { name = "cryptography" },
     { name = "docker" },
     { name = "httpx" },
     { name = "pydantic" },
     { name = "pydantic-settings" },
+    { name = "pyyaml" },
     { name = "tenacity" },
 ]
 
 [package.metadata]
 requires-dist = [
     { name = "apscheduler" },
+    { name = "cryptography" },
     { name = "docker" },
     { name = "httpx" },
     { name = "pydantic", specifier = ">=2.0" },
     { name = "pydantic-settings", specifier = ">=2.0" },
+    { name = "pyyaml", specifier = ">=6" },
     { name = "tenacity" },
 ]
 
@@ -345,6 +349,7 @@ dev = [
     { name = "release-toolkit", specifier = ">=0.4.0,<1" },
     { name = "respx", specifier = ">=0.22.0" },
     { name = "ruff" },
+    { name = "types-pyyaml" },
 ]
 
 [[package]]

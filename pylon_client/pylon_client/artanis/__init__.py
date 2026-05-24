@@ -17,6 +17,7 @@ from pylon_client._internal.pylon_commons.exceptions import (
     PylonUnauthorized,
     TimeoutReason,
 )
+from pylon_client.exceptions import MtlsVerificationError
 from pylon_client._internal.pylon_commons.timeout import PylonTimeout
 from pylon_client._internal.pylon_commons.types import (
     AlphaStake,
