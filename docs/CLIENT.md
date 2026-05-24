@@ -29,25 +29,15 @@ and authentication credentials.
 | `identity_token` | Token for the specified identity | No* |
 | `retry` | Retry configuration (see [Retries](#retries) section) | No |
 | `timeout` | Timeout configuration (see [Timeouts](#timeouts) section) | No |
+| `mtls_cert_path` | Path to the client TLS certificate file for mTLS miner connections. Must be provided together with `mtls_key_path`. | No |
+| `mtls_key_path` | Path to the client TLS private key file for mTLS miner connections. Must be provided together with `mtls_cert_path`. | No |
+| `neurons_file` | Path to a local JSON file of neurons for local development/testing. See [Local Development](#local-development). | No |
 
 *`identity_name` and `identity_token` must both be provided together or not at all.
 
-Most parameters can also be set via a `PYLON_CLIENT_<FIELD>` environment variable (read from the
+Any parameter can also be set via a `PYLON_CLIENT_<FIELD>` environment variable (read from the
 process environment), e.g. `PYLON_CLIENT_NEURONS_FILE` or `PYLON_CLIENT_OPEN_ACCESS_TOKEN`. Values
 passed explicitly to the config take precedence over the environment.
-
-Nested fields inside `timeout` use `__` as a delimiter:
-
-```bash
-PYLON_CLIENT_TIMEOUT__READ=120.0
-PYLON_CLIENT_TIMEOUT__CONNECT=10.0
-PYLON_CLIENT_TIMEOUT__WRITE=10.0
-PYLON_CLIENT_TIMEOUT__POOL=10.0
-```
-
-> **Note:** `retry` cannot be set via environment variable — it is a tenacity object that must be
-> configured in code. See the [Retries](#retries) section.
-
 
 **Open access configuration:**
 ```python
@@ -79,6 +69,19 @@ config = AsyncConfig(
     open_access_token="my_open_token",
     identity_name="sn1",
     identity_token="my_identity_token",
+)
+```
+
+**mTLS configuration** (for direct miner connections via `get_neuron_client`):
+```python
+from pylon_client.artanis import AsyncConfig
+
+config = AsyncConfig(
+    address="http://localhost:8000",
+    identity_name="sn1",
+    identity_token="my_secret_token",
+    mtls_cert_path="/path/to/validator.crt",
+    mtls_key_path="/path/to/validator.key",
 )
 ```
 
@@ -196,6 +199,163 @@ with PylonClient(config) as client:
     print(f"Found {len(response.neurons)} neurons")
 ```
 
+## Querying Miners Directly
+
+`get_neuron_client` is a context manager that yields a configured HTTP client for communicating
+directly with a miner's axon, with optional mTLS authentication.
+
+When `mtls_cert_path` and `mtls_key_path` are set in the config, the client:
+1. Fetches the miner's expected public key from the Pylon registry.
+2. Opens a raw TLS connection to the miner and verifies its certificate matches the registry.
+3. Yields an `httpx.AsyncClient` (or `httpx.Client` for the sync client) configured for mTLS,
+   trusting only that specific certificate.
+
+When `mtls_cert_path`/`mtls_key_path` are absent, or when `neurons_file` is set, the client falls back to
+plain HTTP — useful for local development.
+
+The yielded client has `base_url` pre-set to the miner's address, so you can use relative paths
+in requests. Check `http_client.base_url.scheme` to determine whether mTLS is active (`"https"`)
+or plain HTTP (`"http"`).
+
+**Async example:**
+```python
+import asyncio
+from pylon_client.artanis import AsyncPylonClient, AsyncConfig, MtlsVerificationError
+
+config = AsyncConfig(
+    address="http://localhost:8000",
+    identity_name="sn1",
+    identity_token="my_secret_token",
+    mtls_cert_path="/path/to/validator.crt",
+    mtls_key_path="/path/to/validator.key",
+)
+
+async def main():
+    async with AsyncPylonClient(config) as client:
+        response = await client.v1.identity.get_latest_neurons()
+        neuron = next(iter(response.neurons.values()))
+
+        try:
+            async with client.get_neuron_client(neuron, timeout=30.0) as http_client:
+                print(http_client.base_url.scheme)  # "https" for mTLS, "http" for plain HTTP
+                resp = await http_client.post("/forward", json={"data": "..."})
+        except MtlsVerificationError as e:
+            print(f"mTLS verification failed: {e}")
+
+asyncio.run(main())
+```
+
+**Sync example:**
+```python
+from pylon_client.artanis import PylonClient, Config, MtlsVerificationError
+
+config = Config(
+    address="http://localhost:8000",
+    identity_name="sn1",
+    identity_token="my_secret_token",
+    mtls_cert_path="/path/to/validator.crt",
+    mtls_key_path="/path/to/validator.key",
+)
+
+with PylonClient(config) as client:
+    response = client.v1.identity.get_latest_neurons()
+    neuron = next(iter(response.neurons.values()))
+
+    try:
+        with client.get_neuron_client(neuron, timeout=30.0) as http_client:
+            print(http_client.base_url.scheme)  # "https" for mTLS, "http" for plain HTTP
+            resp = http_client.post("/forward", json={"data": "..."})
+    except MtlsVerificationError as e:
+        print(f"mTLS verification failed: {e}")
+```
+
+## Local Development
+
+For local testing without a live Pylon service, point the client at a local YAML (or JSON) file of
+neurons via `neurons_file`.
+
+This can be done  either by setting the `neurons_file` option in the Pylon clients `Config`/`AsyncConfig`
+or through the environment. Prefer setting it through the environment for easier switching between local
+testing and production without code changes.
+> **Tip — switch between local and production without a code change.** Prefer setting `neurons_file`
+> through the environment rather than hardcoding it in your config. Leave `neurons_file` out of the
+> `Config`/`AsyncConfig` and export it only in your local environment:
+>
+> ```bash
+> export PYLON_CLIENT_NEURONS_FILE=/path/to/neurons.yaml
+> ```
+>
+> With the variable set, the client serves neurons from the file; unset, the exact same code talks to
+> the live Pylon service. (Every config field has a `PYLON_CLIENT_<FIELD>` environment fallback.)
+
+The file is a validated `GetNeuronsResponse`. Each neuron is keyed by its hotkey; everything else —
+`coldkey` (defaults to the hotkey), `block`, stakes, and the rest — is optional, so the only required
+values are the hotkey and each neuron's `axon_info.ip`/`port`. A minimal file:
+
+```yaml
+neurons:
+  "5C4hrfjw9DjXZTzV3MwzrrAr9P1MJhSrvWGWqi1eSuyUpnhM":
+    axon_info: { ip: 127.0.0.1, port: 8091 }
+  "5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY":
+    axon_info: { ip: 127.0.0.1, port: 8092 }
+```
+
+Override any field by adding it — a fully specified entry looks like:
+
+```yaml
+block:
+  number: 5000000
+  hash: "0x0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+neurons:
+  "5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY":
+    uid: 0
+    coldkey: "5DAAnrj7VHTznn2AWBemMuyBwZWs6FNFjdyVXUeYum3PTXFy"
+    active: true
+    axon_info:
+      ip: 127.0.0.1
+      port: 8091
+      protocol: 4          # AxonProtocol.HTTP
+    stake: 1000.0
+    rank: 0.5
+    emission: 12.34
+    incentive: 0.42
+    consensus: 0.61
+    trust: 0.73
+    validator_trust: 0.88
+    dividends: 0.05
+    last_update: 4999990
+    validator_permit: true
+    pruning_score: 1000
+    stakes:
+      alpha: 250.0
+      tao: 750.0
+      total: 1000.0
+```
+
+**Behavior when `neurons_file` is set:**
+- `get_latest_neurons()` and `get_recent_neurons()` (open access and identity APIs) return the file's
+  neurons instead of querying Pylon. The file is re-read and re-validated on **every** such call, so
+  edits take effect on the next call with no restart — and an invalid value (bad `ip`/`port`/`hotkey`)
+  raises a `ValidationError` at that point.
+- `get_neuron_client` uses plain HTTP, ignoring `mtls_cert_path`/`mtls_key_path`.
+- Everything else still hits the live service. The block-specific `get_neurons(block_number)` and the
+  validator reads (`get_latest_validators()` / `get_validators(block_number)`) are intentionally **not**
+  served from the file — it is blockless and carries no validator data.
+
+If you do prefer to set it explicitly in code (rather than via the environment variable above), pass
+it on the config:
+
+```python
+from pylon_client.artanis import AsyncConfig
+
+config = AsyncConfig(
+    address="http://localhost:8000",
+    identity_name="sn1",
+    identity_token="my_secret_token",
+    neurons_file="/path/to/neurons.yaml",
+)
+```
+
 ## Versioning
 
 See the [Versioning documentation](VERSIONS.md) for details on package versioning,
@@ -242,6 +402,7 @@ Target subnet is chosen based on the netuid passed to the method via the argumen
 | `get_commitment(netuid, hotkey)`           | Get commitment for specific hotkey                       |
 | `get_all_revealed_commitments(netuid)`     | Get all revealed commitments for the subnet              |
 | `get_revealed_commitments(netuid, hotkey)` | Get revealed commitments for specific hotkey             |
+| `get_certificate(netuid, hotkey)`          | Get mTLS certificate for a specific hotkey               |
 
 ### Identity API (`client.v1.identity`)
 
@@ -266,6 +427,7 @@ for which the client is configured.
 | `get_revealed_commitments(hotkey)`                         | Get revealed commitments for specific hotkey                         |
 | `get_own_revealed_commitments()`                           | Get revealed commitments for identity's own wallet                   |
 | `set_revealed_commitment(commitment, blocks_until_reveal)` | Set revealed commitment on-chain                                     |
+| `get_certificate(hotkey)`                                  | Get mTLS certificate for a specific hotkey                           |
 
 ## Retries
 
@@ -380,6 +542,13 @@ certificate, its public key does not match the Pylon registry, or TLS verificati
 When this happens the cached client for that miner is evicted, so the next call re-probes
 the certificate from scratch. Other exceptions (network errors, timeouts) leave the cache
 intact — the same client is reused on the next call.
+
+├── PylonMisconfigured         # Invalid client configuration
+└── MtlsVerificationError      # mTLS verification failed when connecting to a miner
+```
+
+`MtlsVerificationError` is raised by `get_neuron_client` when the miner does not present a
+certificate, its public key does not match the Pylon registry, or TLS verification fails.
 
 ```python
 from pylon_client.artanis import MtlsVerificationError
