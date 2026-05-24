@@ -15,7 +15,6 @@ from pylon_client.artanis import (
     PylonAuthToken,
 )
 from tests.factories import NeuronFactory
-
 from tests.mtls_helpers import generate_ed25519_cert, mtls_server, plain_http_server
 from tests.neurons_file_helpers import write_neurons_file
 
@@ -120,8 +119,8 @@ async def test_neurons_file_yields_plain_client(tmp_path, test_url, neuron_facto
     Test that get_neuron_client yields a plain httpx client when neurons_file is set,
     even when mtls_cert_path and mtls_key_path are also configured.
     """
-    neurons_file = tmp_path / "neurons.json"
-    neurons_file.write_text("[]")
+    neurons_file = tmp_path / "neurons.yaml"
+    write_neurons_file(neurons_file, {})
     cert_file = tmp_path / "cert.pem"
     key_file = tmp_path / "key.pem"
     cert_file.write_text("cert")

@@ -1,7 +1,6 @@
 from ipaddress import ip_address
 
 import httpx
-import pytest
 from tenacity import wait_none
 
 from pylon_client._internal.client.neuron_client import NEURON_CLIENT_CACHE_SIZE, SyncNeuronClientManager
@@ -110,8 +109,8 @@ def test_neurons_file_yields_plain_client(tmp_path, test_url, neuron_factory: Ne
     Test that get_neuron_client yields a plain httpx client when neurons_file is set,
     even when mtls_cert_path and mtls_key_path are also configured.
     """
-    neurons_file = tmp_path / "neurons.json"
-    neurons_file.write_text("[]")
+    neurons_file = tmp_path / "neurons.yaml"
+    write_neurons_file(neurons_file, {})
     cert_file = tmp_path / "cert.pem"
     key_file = tmp_path / "key.pem"
     cert_file.write_text("cert")

@@ -285,4 +285,3 @@ class HttpTranslator(AbstractRequestTranslator[Request, HttpCommunicatorT]):
         return communicator.raw_client.build_request(
             method=self._endpoint_cls.CERTIFICATES_HOTKEY.method, url=url, headers=headers
         )
-

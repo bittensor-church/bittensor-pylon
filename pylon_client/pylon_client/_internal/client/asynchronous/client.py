@@ -1,19 +1,17 @@
 import asyncio
 import logging
-import os
 import ssl
 import warnings
-from ipaddress import IPv6Address
 from abc import ABC
-from typing import Generic, TypeVar
-from cryptography.hazmat.primitives.serialization import Encoding, PublicFormat
-from cryptography.x509 import load_der_x509_certificate
-import httpx
-from httpx import AsyncClient
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
+from ipaddress import IPv6Address
+from typing import Generic, TypeVar
 
-from pylon_client.exceptions import MtlsVerificationError
+import httpx
+from cryptography.hazmat.primitives.serialization import Encoding, PublicFormat
+from cryptography.x509 import load_der_x509_certificate
+from httpx import AsyncClient
 
 from pylon_client._internal.api._unstable.asynchronous.api import AsyncIdentityApi as UnstableAsyncIdentityApi
 from pylon_client._internal.api._unstable.asynchronous.api import AsyncOpenAccessApi as UnstableAsyncOpenAccessApi
@@ -26,6 +24,7 @@ from pylon_client._internal.client.asynchronous.communicators import AbstractAsy
 from pylon_client._internal.client.asynchronous.config import AsyncConfig
 from pylon_client._internal.client.namespace import ClientNamespace
 from pylon_client._internal.pylon_commons.v1.models import Neuron
+from pylon_client.exceptions import MtlsVerificationError
 
 CommunicatorT = TypeVar("CommunicatorT", bound=AbstractAsyncCommunicator)
 
@@ -38,11 +37,10 @@ class _MtlsTransport(httpx.AsyncHTTPTransport):
             cause = exc.__cause__
             while cause is not None:
                 if isinstance(cause, ssl.SSLError):
-                    raise MtlsVerificationError(
-                        f"mTLS verification failed connecting to {request.url}"
-                    ) from exc
+                    raise MtlsVerificationError(f"mTLS verification failed connecting to {request.url}") from exc
                 cause = cause.__cause__
             raise
+
 
 logger = logging.getLogger(__name__)
 
@@ -158,8 +156,8 @@ class AbstractAsyncPylonClient(Generic[CommunicatorT], ABC):
         # _fetch_verified_cert_pem. verify_ctx trusts only that pinned cert.
         cert_pem = await self._fetch_verified_cert_pem(str(ip), port, expected_pubkey_hex, timeout)
         verify_ctx = self._build_pinned_ssl_context(cert_pem)
-        scheme="https"
-        base_url=f"{scheme}://{host}:{port}"
+        scheme = "https"
+        base_url = f"{scheme}://{host}:{port}"
 
         # The actual authenticated request: mutual TLS. The cert must be set on the transport (httpx
         # ignores Client(cert=...) when an explicit transport is given), so the miner can verify us,
@@ -190,7 +188,7 @@ class AbstractAsyncPylonClient(Generic[CommunicatorT], ABC):
         this pinned cert) is made afterwards by ``get_neuron_client``.
 
         Raises:
-            ValueError: If no certificate is presented or the public key does not match.
+            MtlsVerificationError: If no certificate is presented or the public key does not match.
         """
 
         ctx = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)

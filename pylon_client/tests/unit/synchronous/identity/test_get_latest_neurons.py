@@ -4,10 +4,18 @@ import pytest
 from tenacity import wait_none
 
 from pylon_client._internal.pylon_commons._unstable.endpoints import Endpoint as EndpointUnstable
-from pylon_client.artanis import BlockHash, BlockNumber, Config, DEFAULT_RETRIES, IdentityName, PylonAuthToken, PylonClient
+from pylon_client.artanis import (
+    BlockHash,
+    BlockNumber,
+    Config,
+    DEFAULT_RETRIES,
+    IdentityName,
+    PylonAuthToken,
+    PylonClient,
+)
 from pylon_client.artanis.unstable import Block, GetNeuronsResponse
-from pylon_client._internal.pylon_commons.types import Hotkey
 from tests.factories import NeuronFactory
+from tests.neurons_file_helpers import write_neurons_file
 from tests.unit.synchronous.base_test import IdentityEndpointTest
 
 
@@ -29,12 +37,14 @@ class TestSyncIdentityGetLatestNeurons(IdentityEndpointTest):
         return GetNeuronsResponse(block=block, neurons={neuron.hotkey: neuron for neuron in neurons})
 
 
-def test_neurons_file_returns_static_neurons(tmp_path, test_url):
+def test_neurons_file_returns_file_backed_neurons(tmp_path, test_url):
     """
     Test that get_latest_neurons reads from file when neurons_file is configured.
     """
-    neurons_file = tmp_path / "neurons.json"
-    neurons_file.write_text('[{"hotkey": "5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY", "ip": "127.0.0.1", "port": 9090}]')
+    neurons_file = tmp_path / "neurons.yaml"
+    expected = write_neurons_file(
+        neurons_file, {"5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY": ("127.0.0.1", 9090)}
+    )
     client = PylonClient(
         Config(
             address=test_url,
@@ -46,7 +56,4 @@ def test_neurons_file_returns_static_neurons(tmp_path, test_url):
     )
     with client:
         response = client.unstable.identity.get_latest_neurons()
-    assert "5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY" in response.neurons
-    neuron = response.neurons[Hotkey("5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY")]
-    assert str(neuron.axon_info.ip) == "127.0.0.1"
-    assert neuron.axon_info.port == 9090
+    assert response == expected

@@ -1,20 +1,16 @@
 import logging
-import os
 import socket
 import ssl
 import warnings
-from ipaddress import IPv6Address
-from pathlib import Path
 from abc import ABC
 from collections.abc import Iterator
 from contextlib import contextmanager
+from ipaddress import IPv6Address
 from typing import Generic, TypeVar
 
-from pylon_client.exceptions import MtlsVerificationError
-
+import httpx
 from cryptography.hazmat.primitives.serialization import Encoding, PublicFormat
 from cryptography.x509 import load_der_x509_certificate
-import httpx
 
 from pylon_client._internal.api._unstable.sync.api import IdentityApi as UnstableIdentityApi
 from pylon_client._internal.api._unstable.sync.api import OpenAccessApi as UnstableOpenAccessApi
@@ -27,6 +23,7 @@ from pylon_client._internal.client.namespace import ClientNamespace
 from pylon_client._internal.client.sync.communicators import AbstractCommunicator, HttpCommunicator
 from pylon_client._internal.client.sync.config import Config
 from pylon_client._internal.pylon_commons.v1.models import Neuron
+from pylon_client.exceptions import MtlsVerificationError
 
 CommunicatorT = TypeVar("CommunicatorT", bound=AbstractCommunicator)
 
@@ -130,8 +127,8 @@ class AbstractPylonClient(Generic[CommunicatorT], ABC):
         cert_pem = self._fetch_verified_cert_pem(str(ip), port, expected_pubkey_hex, timeout)
         verify_ctx = self._build_pinned_ssl_context(cert_pem)
 
-        scheme="https"
-        base_url=f"{scheme}://{host}:{port}"
+        scheme = "https"
+        base_url = f"{scheme}://{host}:{port}"
 
         # The actual authenticated request: mutual TLS. The cert must be set on the transport (httpx
         # ignores Client(cert=...) when an explicit transport is given), so the miner can verify us,
@@ -161,7 +158,7 @@ class AbstractPylonClient(Generic[CommunicatorT], ABC):
         this pinned cert) is made afterwards by ``get_neuron_client``.
 
         Raises:
-            ValueError: If no certificate is presented or the public key does not match.
+            MtlsVerificationError: If no certificate is presented or the public key does not match.
         """
         ctx = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
         ctx.check_hostname = False

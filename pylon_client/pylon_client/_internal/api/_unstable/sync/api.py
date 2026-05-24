@@ -269,4 +269,3 @@ class IdentityApi(AbstractIdentityApi):
             identity_name=self.identity_name,
             hotkey=hotkey,
         )
-
