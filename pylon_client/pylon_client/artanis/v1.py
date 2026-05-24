@@ -18,6 +18,7 @@ from pylon_client._internal.pylon_commons.v1.models import (
     SubnetValidators,
 )
 from pylon_client._internal.pylon_commons.v1.responses import (
+    GetCertificateResponse,
     GetCommitmentResponse,
     GetCommitmentsResponse,
     GetExtrinsicResponse,

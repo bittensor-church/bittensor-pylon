@@ -29,6 +29,7 @@ from pylon_client._internal.pylon_commons._unstable.models import (
 )
 from pylon_client._internal.pylon_commons._unstable.responses import (
     GetAllRevealedCommitmentsResponse,
+    GetCertificateResponse,
     GetCommitmentResponse,
     GetCommitmentsResponse,
     GetDrandLastStoredRoundResponse,
