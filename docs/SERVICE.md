@@ -94,7 +94,7 @@ After the service restarts, Pylon resumes weight submission tasks only when the 
 still exists in the configuration and uses the same hotkey and netuid.
 
 By default, the database is created inside a docker container of the service. 
-You can configure the database path to a local directory or a docker volume:
+Optionally, set PYLON_DATABASE_PATH to configure the database path to a local directory or a docker volume:
 
 ```bash
 # .env

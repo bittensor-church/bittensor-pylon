@@ -68,23 +68,26 @@ async def test_get_mechanism_weight_status_finds_matching_task(
 
 
 @pytest.mark.asyncio
+@pytest.mark.parametrize(
+    "task",
+    [
+        pytest.param(_create_weight_task(identity_name=IdentityName("sn2")), id="different_identity"),
+        pytest.param(_create_weight_task(netuid=NetUid(2)), id="different_netuid"),
+        pytest.param(_create_weight_task(hotkey=Hotkey("wrong_hotkey")), id="different_hotkey"),
+        pytest.param(_create_weight_task(mechanism_id=MechanismId(2)), id="different_mechanism_id"),
+        pytest.param(_create_weight_task(start_block_number=BlockNumber(100)), id="different_block_number"),
+        pytest.param(_create_weight_task(status=TaskStatus.FAILED), id="failed_status"),
+        pytest.param(_create_weight_task(status=TaskStatus.CANCELLED), id="cancelled_status"),
+        pytest.param(_create_weight_task(status=TaskStatus.EXPIRED), id="expired_status"),
+    ],
+)
 async def test_get_mechanism_weight_status_ignores_not_matching_tasks(
     identity_test_client_factory,
     mock_bt_client_factory,
     seed_running_weight_task_before_reschedule,
+    task: WeightTask,
 ):
-    seed_running_weight_task_before_reschedule.extend(
-        [
-            _create_weight_task(identity_name=IdentityName("sn2")),
-            _create_weight_task(netuid=NetUid(2)),
-            _create_weight_task(hotkey=Hotkey("wrong_hotkey")),
-            _create_weight_task(mechanism_id=MechanismId(2)),
-            _create_weight_task(start_block_number=BlockNumber(100)),
-            _create_weight_task(status=TaskStatus.FAILED),
-            _create_weight_task(status=TaskStatus.CANCELLED),
-            _create_weight_task(status=TaskStatus.EXPIRED),
-        ]
-    )
+    seed_running_weight_task_before_reschedule.append(task)
     async with mock_bt_client_factory() as mock_client:
         async with mock_client.mock_behavior():
             async with identity_test_client_factory("sn1") as client:

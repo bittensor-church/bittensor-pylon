@@ -7,7 +7,7 @@ from litestar.status_codes import HTTP_200_OK, HTTP_400_BAD_REQUEST, HTTP_404_NO
 from pylon_commons.models import Block, CommitReveal, SubnetHyperparams
 from pylon_commons.types import BlockHash, BlockNumber, MechanismId, NeuronUid, RevealRound
 
-from tests.helpers import wait_for_background_tasks
+from tests.helpers import wait_for_apply_weights_tasks
 
 
 @pytest.mark.asyncio
@@ -50,7 +50,7 @@ async def test_put_weights_commit_reveal_enabled(identity_test_client_factory, m
                 assert response.json() == snapshot_json
 
                 # Wait for the background task to complete
-                await wait_for_background_tasks()
+                await wait_for_apply_weights_tasks()
 
         # Verify the commit_weights was called with correct arguments
         assert mock_client.calls["commit_weights"] == [
@@ -104,7 +104,7 @@ async def test_put_weights_commit_reveal_disabled(identity_test_client_factory, 
                 assert response.json() == snapshot_json
 
                 # Wait for the background task to complete
-                await wait_for_background_tasks()
+                await wait_for_apply_weights_tasks()
 
         # Verify set_weights was called with correct arguments
         assert mock_client.calls["set_weights"] == [
@@ -157,7 +157,7 @@ async def test_put_weights_retries_when_prepare_fails(
                 assert response.status_code == HTTP_200_OK, response.content
                 assert response.json() == snapshot_json
 
-                await wait_for_background_tasks()
+                await wait_for_apply_weights_tasks()
 
         assert len(mock_client.calls["get_latest_block"]) == 7
         assert mock_client.calls["set_weights"] == [

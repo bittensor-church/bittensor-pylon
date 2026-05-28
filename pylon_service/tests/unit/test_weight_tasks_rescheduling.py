@@ -7,7 +7,7 @@ from sqlalchemy import select
 
 from pylon_service.db.database import session_factory
 from pylon_service.db.models import TaskStatus, WeightTask
-from tests.helpers import db_row_model_dump, wait_for_background_tasks
+from tests.helpers import db_row_model_dump, wait_for_apply_weights_tasks
 from tests.integration.localchain.dev_accounts import DevAccount
 
 
@@ -36,9 +36,10 @@ def _create_sn2_weight_task(mechanism_id: MechanismId, weights: dict[Hotkey, Wei
 
 
 @pytest.fixture
-def test_client_factory(test_app):
+def started_test_app_factory(test_app):
     @asynccontextmanager
     async def _factory():
+        # using AsyncTestClient to start litestar app, although we test only lifespan, not requests
         async with AsyncTestClient(app=test_app) as client:
             yield client
 
@@ -47,15 +48,15 @@ def test_client_factory(test_app):
 
 @pytest.mark.asyncio
 async def test_service_reschedules_single_weight_tasks(
-    seed_running_weight_task_before_reschedule, test_client_factory, mock_bt_client_factory
+    seed_running_weight_task_before_reschedule, started_test_app_factory, mock_bt_client_factory
 ):
     weight_task = _create_sn1_weight_task(MechanismId(0), {Hotkey("hotkey1"): Weight(0.5)}, TaskStatus.RUNNING)
     seed_running_weight_task_before_reschedule.append(weight_task)
 
     async with mock_bt_client_factory("sn1") as mock_client:
         async with mock_client.mock_behavior():
-            async with test_client_factory():
-                await wait_for_background_tasks()
+            async with started_test_app_factory():
+                await wait_for_apply_weights_tasks()
 
                 assert mock_client.calls["set_weights"] == [
                     (
@@ -82,7 +83,7 @@ async def test_service_reschedules_single_weight_tasks(
 
 @pytest.mark.asyncio
 async def test_service_does_not_reschedule_tasks_not_running(
-    seed_running_weight_task_before_reschedule, test_client_factory, mock_bt_client_factory
+    seed_running_weight_task_before_reschedule, started_test_app_factory, mock_bt_client_factory
 ):
     tasks = [
         _create_sn1_weight_task(MechanismId(0), {Hotkey("hotkey1"): Weight(0.5)}, TaskStatus.SUCCEEDED),
@@ -95,8 +96,8 @@ async def test_service_does_not_reschedule_tasks_not_running(
 
     async with mock_bt_client_factory("sn1") as mock_client:
         async with mock_client.mock_behavior():
-            async with test_client_factory():
-                await wait_for_background_tasks()
+            async with started_test_app_factory():
+                await wait_for_apply_weights_tasks()
 
                 assert mock_client.calls["set_weights"] == []
 
@@ -111,7 +112,7 @@ async def test_service_does_not_reschedule_tasks_not_running(
 
 @pytest.mark.asyncio
 async def test_service_deduplicates_tasks_while_rescheduling(
-    seed_running_weight_task_before_reschedule, test_client_factory, mock_bt_client_factory
+    seed_running_weight_task_before_reschedule, started_test_app_factory, mock_bt_client_factory
 ):
     task1 = _create_sn1_weight_task(MechanismId(0), {Hotkey("hotkey1"): Weight(0.5)}, TaskStatus.RUNNING)
     task2 = _create_sn1_weight_task(MechanismId(0), {Hotkey("hotkey1"): Weight(0.7)}, TaskStatus.RUNNING)
@@ -121,8 +122,8 @@ async def test_service_deduplicates_tasks_while_rescheduling(
 
     async with mock_bt_client_factory("sn1") as mock_client:
         async with mock_client.mock_behavior():
-            async with test_client_factory():
-                await wait_for_background_tasks()
+            async with started_test_app_factory():
+                await wait_for_apply_weights_tasks()
 
                 # Only task2 should be executed
                 assert mock_client.calls["set_weights"] == [
@@ -148,7 +149,7 @@ async def test_service_deduplicates_tasks_while_rescheduling(
 
 @pytest.mark.asyncio
 async def test_service_reschedules_multiple_weight_tasks(
-    seed_running_weight_task_before_reschedule, test_client_factory, mock_bt_client_factory
+    seed_running_weight_task_before_reschedule, started_test_app_factory, mock_bt_client_factory
 ):
     tasks = [
         _create_sn1_weight_task(MechanismId(0), {Hotkey("hotkey1"): Weight(0.5)}, TaskStatus.RUNNING),
@@ -160,8 +161,8 @@ async def test_service_reschedules_multiple_weight_tasks(
 
     async with mock_bt_client_factory("sn1") as mock_client_sn1, mock_bt_client_factory("sn2") as mock_client_sn2:
         async with mock_client_sn1.mock_behavior(), mock_client_sn2.mock_behavior():
-            async with test_client_factory():
-                await wait_for_background_tasks()
+            async with started_test_app_factory():
+                await wait_for_apply_weights_tasks()
 
                 assert len(mock_client_sn1.calls["set_weights"]) == 2
                 assert len(mock_client_sn2.calls["set_weights"]) == 1
@@ -177,7 +178,7 @@ async def test_service_reschedules_multiple_weight_tasks(
 
 @pytest.mark.asyncio
 async def test_service_cancels_unknown_identity_task_while_rescheduling(
-    seed_running_weight_task_before_reschedule, test_client_factory, mock_bt_client_factory
+    seed_running_weight_task_before_reschedule, started_test_app_factory, mock_bt_client_factory
 ):
     weight_task = WeightTask(
         identity_name=IdentityName("unknown"),
@@ -190,8 +191,8 @@ async def test_service_cancels_unknown_identity_task_while_rescheduling(
     )
     seed_running_weight_task_before_reschedule.append(weight_task)
 
-    async with test_client_factory():
-        await wait_for_background_tasks()
+    async with started_test_app_factory():
+        await wait_for_apply_weights_tasks()
 
         async with session_factory() as session:
             result = await session.scalars(select(WeightTask))
@@ -203,7 +204,7 @@ async def test_service_cancels_unknown_identity_task_while_rescheduling(
 
 @pytest.mark.asyncio
 async def test_service_cancel_task_with_mismatched_netuid_while_rescheduling(
-    seed_running_weight_task_before_reschedule, test_client_factory, mock_bt_client_factory
+    seed_running_weight_task_before_reschedule, started_test_app_factory, mock_bt_client_factory
 ):
     weight_task = _create_sn1_weight_task(MechanismId(0), {Hotkey("hotkey1"): Weight(0.5)}, TaskStatus.RUNNING)
     weight_task.netuid = NetUid(99)
@@ -211,8 +212,8 @@ async def test_service_cancel_task_with_mismatched_netuid_while_rescheduling(
 
     async with mock_bt_client_factory("sn1") as mock_client:
         async with mock_client.mock_behavior():
-            async with test_client_factory():
-                await wait_for_background_tasks()
+            async with started_test_app_factory():
+                await wait_for_apply_weights_tasks()
 
                 assert mock_client.calls["set_weights"] == []
 
@@ -226,7 +227,7 @@ async def test_service_cancel_task_with_mismatched_netuid_while_rescheduling(
 
 @pytest.mark.asyncio
 async def test_service_cancel_task_with_mismatched_hotkey_while_rescheduling(
-    seed_running_weight_task_before_reschedule, test_client_factory, mock_bt_client_factory
+    seed_running_weight_task_before_reschedule, started_test_app_factory, mock_bt_client_factory
 ):
     weight_task = _create_sn1_weight_task(MechanismId(0), {Hotkey("hotkey1"): Weight(0.5)}, TaskStatus.RUNNING)
     weight_task.hotkey = Hotkey("wrong_hotkey")
@@ -234,8 +235,8 @@ async def test_service_cancel_task_with_mismatched_hotkey_while_rescheduling(
 
     async with mock_bt_client_factory("sn1") as mock_client:
         async with mock_client.mock_behavior():
-            async with test_client_factory():
-                await wait_for_background_tasks()
+            async with started_test_app_factory():
+                await wait_for_apply_weights_tasks()
 
                 assert mock_client.calls["set_weights"] == []
 

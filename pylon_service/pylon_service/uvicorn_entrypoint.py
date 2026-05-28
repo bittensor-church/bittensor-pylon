@@ -13,6 +13,7 @@ def main() -> None:
     #   - moving DB migration from a worker lifespan to a server lifespan
     #   - ensuring that only one worker performs tasks rescheduling in its lifespan
     #     and the other wait for it to finish
+    #   - prometheus instrumentation
     if any(arg == "--workers" or arg.startswith("--workers=") for arg in sys.argv[1:]):
         raise RuntimeError("Passing --workers is not supported for pylon-service.")
 

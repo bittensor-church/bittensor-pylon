@@ -20,7 +20,7 @@ from pylon_commons.types import (
     Weight,
 )
 
-from pylon_service.api._unstable.tasks import ApplyWeights, ApplyWeightsPayload, SetCommitment, SetRevealedCommitment
+from pylon_service.api._unstable.tasks import ApplyWeights, SetCommitment, SetRevealedCommitment
 from pylon_service.api.epoch import get_epoch_containing_block, get_tempo_from_hyperparams
 from pylon_service.api.services import (
     BaseService,
@@ -196,8 +196,7 @@ class WeightService(BaseService):
         self.identity = identity
 
     async def set_weights(self, netuid: NetUid, mechanism_id: MechanismId, weights: dict[Hotkey, Weight]):
-        payload = ApplyWeightsPayload(weights, netuid, mechanism_id)
-        await ApplyWeights(self.identity, self.contact_router, payload=payload).schedule()
+        await ApplyWeights(self.identity, self.contact_router, weights, netuid, mechanism_id).schedule()
 
     async def get_weight_status(
         self, netuid: NetUid, mechanism_id: MechanismId, block_number: BlockNumber

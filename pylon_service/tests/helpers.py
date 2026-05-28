@@ -18,9 +18,9 @@ def find_free_port() -> int:
         return int(sock.getsockname()[1])
 
 
-async def wait_for_background_tasks(timeout: float = 2.0) -> None:
+async def wait_for_apply_weights_tasks(timeout: float = 2.0) -> None:
     """
-    Wait for background tasks to complete.
+    Wait for apply weights tasks to complete.
 
     Args:
         tasks_to_wait: Iterable of tasks to wait for.

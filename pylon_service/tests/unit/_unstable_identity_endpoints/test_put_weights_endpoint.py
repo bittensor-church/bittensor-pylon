@@ -14,7 +14,7 @@ from sqlalchemy import select
 
 from pylon_service.db.database import session_factory
 from pylon_service.db.models import TaskStatus, WeightTask
-from tests.helpers import db_row_model_dump, wait_for_background_tasks
+from tests.helpers import db_row_model_dump, wait_for_apply_weights_tasks
 from tests.integration.localchain.dev_accounts import DevAccount
 
 _EXPECTED_WEIGHTS_TASK = {
@@ -74,7 +74,7 @@ async def test_put_weights_commit_reveal_enabled(
                 assert response.json() == snapshot_json
 
                 # Wait for the background task to complete
-                await wait_for_background_tasks()
+                await wait_for_apply_weights_tasks()
 
         # Verify the commit_weights was called with correct arguments
         assert mock_client.calls["commit_weights"] == [
@@ -132,7 +132,7 @@ async def test_put_weights_commit_reveal_disabled(
                 assert response.json() == snapshot_json
 
                 # Wait for the background task to complete
-                await wait_for_background_tasks()
+                await wait_for_apply_weights_tasks()
 
         # Verify set_weights was called with correct arguments
         assert mock_client.calls["set_weights"] == [
@@ -185,7 +185,7 @@ async def test_put_weights_retries_when_prepare_fails(
                 assert response.status_code == HTTP_200_OK, response.content
                 assert response.json() == snapshot_json
 
-                await wait_for_background_tasks()
+                await wait_for_apply_weights_tasks()
 
         assert len(mock_client.calls["get_latest_block"]) == 7
         assert mock_client.calls["set_weights"] == [
@@ -290,7 +290,7 @@ async def test_put_weights_stores_running_weight_task(
                 }
 
                 unblock_weight_submission.set()
-                await wait_for_background_tasks()
+                await wait_for_apply_weights_tasks()
 
 
 @pytest.mark.asyncio
@@ -310,7 +310,7 @@ async def test_put_weights_stores_succeeded_weight_task(
 
                 assert response.status_code == 200
 
-                await wait_for_background_tasks()
+                await wait_for_apply_weights_tasks()
 
                 async with session_factory() as session:
                     result = await session.scalars(select(WeightTask))
@@ -345,7 +345,7 @@ async def test_put_weights_stores_failed_weight_task(
 
                 assert response.status_code == 200
 
-                await wait_for_background_tasks()
+                await wait_for_apply_weights_tasks()
 
                 async with session_factory() as session:
                     result = await session.scalars(select(WeightTask))
@@ -389,7 +389,7 @@ async def test_put_weights_stores_expired_weight_task(
 
                 assert response.status_code == 200
 
-                await wait_for_background_tasks()
+                await wait_for_apply_weights_tasks()
 
                 async with session_factory() as session:
                     result = await session.scalars(select(WeightTask))
@@ -438,7 +438,7 @@ async def test_put_weights_stores_cancelled_weight_task(
                 assert response.status_code == 200
 
                 unblock_weight_submission.set()
-                await wait_for_background_tasks()
+                await wait_for_apply_weights_tasks()
 
                 async with session_factory() as session:
                     result = await session.scalars(select(WeightTask))

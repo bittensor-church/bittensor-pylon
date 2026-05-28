@@ -1,7 +1,6 @@
 import asyncio
 import logging
 from abc import ABC, abstractmethod
-from dataclasses import dataclass
 from typing import Any, ClassVar, TypeVar
 
 from prometheus_client import Histogram
@@ -170,13 +169,6 @@ class BackgroundTask[ReturnT](ABC):
     async def _single_attempt(self) -> ReturnT: ...
 
 
-@dataclass(frozen=True, slots=True)
-class ApplyWeightsPayload:
-    weights: dict[Hotkey, Weight]
-    netuid: NetUid
-    mechanism_id: MechanismId
-
-
 class ApplyWeights(
     BackgroundTask[None],
     duration_metric=apply_weights_job_duration,
@@ -188,32 +180,29 @@ class ApplyWeights(
         self,
         identity: Identity,
         client: BittensorPort,
-        *,
-        payload: ApplyWeightsPayload | None = None,
-        rescheduled_task: WeightTask | None = None,
+        weights: dict[Hotkey, Weight],
+        netuid: NetUid,
+        mechanism_id: MechanismId,
     ):
         super().__init__()
-        assert (payload is not None) == (rescheduled_task is None), (
-            "exactly one of payload or rescheduled_task must be provided"
-        )
         self._client = client
         self._hotkey = client.hotkey
+        self._weights = weights
+        self._netuid = netuid
+        self._mechanism_id = mechanism_id
         self._identity = identity
+        self._is_rescheduled: bool = False
         self._initial_tempo: Epoch | None = None
         self._start_block_number: BlockNumber | None = None
         self._task_id: int | None = None
-        if payload is not None:
-            self._is_rescheduled = False
-            self._weights = payload.weights
-            self._netuid = payload.netuid
-            self._mechanism_id = payload.mechanism_id
-        elif rescheduled_task is not None:
-            self._is_rescheduled = True
-            self._weights = rescheduled_task.weights
-            self._netuid = rescheduled_task.netuid
-            self._mechanism_id = rescheduled_task.mechanism_id
-            self._start_block_number = rescheduled_task.start_block_number
-            self._task_id = rescheduled_task.id
+
+    @classmethod
+    def from_persisted_task(cls, identity: Identity, client: BittensorPort, weight_task: WeightTask) -> "ApplyWeights":
+        task = cls(identity, client, weight_task.weights, weight_task.netuid, weight_task.mechanism_id)
+        task._is_rescheduled = True
+        task._start_block_number = weight_task.start_block_number
+        task._task_id = weight_task.id
+        return task
 
     @property
     def _retry_attempts(self) -> int:

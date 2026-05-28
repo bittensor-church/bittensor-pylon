@@ -42,7 +42,7 @@ async def _reschedule_weight_tasks_for_identity(app: Litestar, identity: Identit
                     task.mechanism_id,
                 )
             else:
-                await ApplyWeights(identity, contact_router, rescheduled_task=task).schedule()
+                await ApplyWeights.from_persisted_task(identity, contact_router, task).schedule()
                 rescheduled_mechanism_ids.add(task.mechanism_id)
                 logger.info(
                     "Weight set task rescheduled (identity=%s, mechanism_id=%s)", task.identity_name, task.mechanism_id
