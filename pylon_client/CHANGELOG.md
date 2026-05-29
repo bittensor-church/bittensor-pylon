@@ -1,3 +1,9 @@
+## client-v2.1.0 (2026-05-29)
+
+### Feat
+
+- robust weight setting
+
 ## client-v2.0.0 (2026-05-13)
 
 ### BREAKING CHANGE
