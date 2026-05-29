@@ -11,4 +11,4 @@ def test_weights_can_be_set_handler_patches_schedule_with_sync_mock(monkeypatch)
     handler.setup({})
 
     assert isinstance(ApplyWeights.schedule, Mock)
-    assert not inspect.iscoroutinefunction(ApplyWeights.schedule)
+    assert inspect.iscoroutinefunction(ApplyWeights.schedule)

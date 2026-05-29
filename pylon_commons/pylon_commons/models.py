@@ -284,3 +284,9 @@ class Extrinsic(BittensorModel):
 
     # Call information
     call: ExtrinsicCall
+
+
+class WeightsStatus(BittensorModel):
+    model_config = ConfigDict(extra="allow")
+
+    weights_submitted: bool

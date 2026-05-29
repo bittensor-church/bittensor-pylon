@@ -1,11 +1,14 @@
 import logging
 import os
+import sys
+import threading
 from contextlib import contextmanager
 from pathlib import Path
 
 import pytest
 import pytest_asyncio
 from pylon_client.artanis import Config, IdentityName, PylonAuthToken, PylonClient, PylonTimeout
+from testcontainers.core.container import DockerContainer
 from testcontainers.core.network import Network
 
 from tests.integration.containers import LocalChainContainer, LocalChainImage, MitmproxyContainer, PylonServiceContainer
@@ -67,6 +70,31 @@ def ws_recorder(mitmproxy):
         client.clear()
 
 
+def _stream_container_logs_to_console(container: DockerContainer, name: str) -> threading.Thread:
+    def stream_logs() -> None:
+        try:
+            docker_container = container.get_wrapped_container()
+
+            for raw_line in docker_container.logs(
+                stream=True,
+                follow=True,
+                stdout=True,
+                stderr=True,
+            ):
+                line = raw_line.decode("utf-8", errors="replace").rstrip()
+                print(f"[{name}] {line}", file=sys.stderr, flush=True)
+        except Exception as exc:  # noqa: BLE001
+            print(
+                f"[{name}] log stream stopped: {type(exc).__name__}: {exc}",
+                file=sys.stderr,
+                flush=True,
+            )
+
+    thread = threading.Thread(target=stream_logs, daemon=True)
+    thread.start()
+    return thread
+
+
 @pytest.fixture(scope="package")
 def pylon_service(docker_network, localchain, mitmproxy, pylon_service_image):
     docker_host = os.environ.get("DOCKER_HOST")
@@ -81,6 +109,7 @@ def pylon_service(docker_network, localchain, mitmproxy, pylon_service_image):
         chain_url=mitmproxy.internal_ws_url,
         wallets_path=str(_WALLETS_PATH),
     ).with_network(docker_network) as container:
+        _stream_container_logs_to_console(container, "pylon_service")
         yield container
 
 

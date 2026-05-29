@@ -2,10 +2,14 @@ import asyncio
 import socket
 import threading
 import time
-from collections.abc import Callable, Iterable
+from collections.abc import Callable
 from typing import Any
 
 import uvicorn
+from sqlalchemy import inspect
+
+from pylon_service.api._unstable.tasks import ApplyWeights
+from pylon_service.db.database import Base
 
 
 def find_free_port() -> int:
@@ -14,9 +18,9 @@ def find_free_port() -> int:
         return int(sock.getsockname()[1])
 
 
-async def wait_for_background_tasks(tasks_to_wait: Iterable[asyncio.Task], timeout: float = 2.0) -> None:
+async def wait_for_apply_weights_tasks(timeout: float = 2.0) -> None:
     """
-    Wait for background tasks to complete.
+    Wait for apply weights tasks to complete.
 
     Args:
         tasks_to_wait: Iterable of tasks to wait for.
@@ -25,15 +29,45 @@ async def wait_for_background_tasks(tasks_to_wait: Iterable[asyncio.Task], timeo
     Raises:
         TimeoutError: If tasks don't complete within the timeout period
     """
+    tasks_to_wait = [task._running_task for task in ApplyWeights.tasks_running if task._running_task is not None]
     if not tasks_to_wait:
         return
 
-    # Wait for all filtered tasks to complete
-    done, pending = await asyncio.wait(tasks_to_wait, timeout=timeout)
+    current_loop = asyncio.get_running_loop()
 
-    if pending:
-        pending_names = [task.get_name() for task in pending]
-        raise TimeoutError(f"Background tasks did not complete within {timeout}s: {pending_names}")
+    def completion_future_for(task: asyncio.Task) -> asyncio.Future[None]:
+        completion_future = current_loop.create_future()
+
+        def mark_completed() -> None:
+            if not completion_future.done():
+                completion_future.set_result(None)
+
+        if task.done():
+            mark_completed()
+            return completion_future
+
+        def on_task_done(_task: asyncio.Task) -> None:
+            current_loop.call_soon_threadsafe(mark_completed)
+
+        task.add_done_callback(on_task_done)
+
+        if task.done():
+            mark_completed()
+
+        return completion_future
+
+    completion_futures = [completion_future_for(task) for task in tasks_to_wait]
+
+    try:
+        await asyncio.wait_for(
+            asyncio.gather(*completion_futures),
+            timeout=timeout,
+        )
+    except TimeoutError as exc:
+        for future in completion_futures:
+            future.cancel()
+        pending_names = [task.get_name() for task in tasks_to_wait if not task.done()]
+        raise TimeoutError(f"Background tasks did not complete within {timeout}s: {pending_names}") from exc
 
 
 async def wait_until(func: Callable[[], Any], timeout: float = 2.0, sleep_interval: float = 0.1) -> None:
@@ -49,6 +83,13 @@ def sync_wait_until(func: Callable[[], Any], timeout: float = 2.0, sleep_interva
             return
         time.sleep(sleep_interval)
     raise TimeoutError(f"Condition not met within {timeout}s")
+
+
+def db_row_model_dump(model: Base, *, exclude: set[str] | None = None):
+    exclude = exclude or set()
+    return {
+        column.key: getattr(model, column.key) for column in inspect(type(model)).columns if column.key not in exclude
+    }
 
 
 class UvicornServer:

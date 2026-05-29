@@ -81,7 +81,7 @@ Four subnets are registered (owned by Alice):
 
 Subtokens are enabled on all four subnets.
 
-### Neurons
+#### Neurons
 
 **Subnets 1 and 2** each contain **256 neurons**:
 
@@ -100,7 +100,7 @@ are intentionally absent.
 **Subnet 4** contains only the built-in localnet neuron and Alice. Bob, Charlie, Dave, and the
 filler wallets are intentionally absent.
 
-### Stake
+#### Stake
 
 Validators (Alice and Bob) each stake **10 TAO** on subnets 1-3 (6 stake operations total).
 Subnet 4 has no initial validator stake; `test_set_weights_succeeds_after_registration` registers

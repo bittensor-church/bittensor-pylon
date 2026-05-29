@@ -20,6 +20,7 @@ from pylon_client._internal.pylon_commons._unstable.requests import (
     GetRecentNeuronsRequest,
     GetRevealedCommitmentsRequest,
     GetValidatorsRequest,
+    GetWeightsStatusRequest,
     PylonRequest,
     SetCommitmentRequest,
     SetRevealedCommitmentRequest,
@@ -35,6 +36,7 @@ from pylon_client._internal.pylon_commons._unstable.responses import (
     GetNeuronsResponse,
     GetRevealedCommitmentsResponse,
     GetValidatorsResponse,
+    GetWeightsStatusResponse,
     PylonResponse,
     SetCommitmentResponse,
     SetRevealedCommitmentResponse,
@@ -435,6 +437,14 @@ class AbstractIdentityApi(AbstractApi, ABC):
         """
         return self._send_identity_request(partial(self._put_weights_request, weights, mechanism_id))
 
+    def get_weights_status(
+        self, block_number: BlockNumber, mechanism_id: MechanismId = MechanismId(0)
+    ) -> GetWeightsStatusResponse:
+        """
+        response: { weights_set: boolean }
+        """
+        return self._send_identity_request(partial(self._get_weights_status_request, mechanism_id, block_number))
+
     def get_commitments(self) -> GetCommitmentsResponse:
         """
         Retrieves all commitments for the authenticated identity's subnet at the latest available block.
@@ -615,6 +625,11 @@ class AbstractIdentityApi(AbstractApi, ABC):
 
     @abstractmethod
     def _put_weights_request(self, weights: dict[Hotkey, Weight], mechanism_id: MechanismId) -> SetWeightsRequest: ...
+
+    @abstractmethod
+    def _get_weights_status_request(
+        self, mechanism_id: MechanismId, block_number: BlockNumber
+    ) -> GetWeightsStatusRequest: ...
 
     @abstractmethod
     def _get_commitments_request(self) -> GetCommitmentsRequest: ...

@@ -31,6 +31,7 @@ from pylon_client._internal.pylon_commons._unstable.responses import (
     GetNeuronsResponse,
     GetRevealedCommitmentsResponse,
     GetValidatorsResponse,
+    GetWeightsStatusResponse,
     PylonResponse,
     SetCommitmentResponse,
     SetRevealedCommitmentResponse,

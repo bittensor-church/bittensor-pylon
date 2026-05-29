@@ -15,6 +15,7 @@ from pylon_commons._unstable.responses import (
     GetNeuronsResponse,
     GetRevealedCommitmentsResponse,
     GetValidatorsResponse,
+    GetWeightsStatusResponse,
     SetRevealedCommitmentResponse,
 )
 from pylon_commons.models import Hotkey, NeuronCertificate
@@ -211,6 +212,17 @@ class Handlers:
             {"detail": "weights update scheduled", "count": len(data.weights)}, status_code=status_codes.HTTP_200_OK
         )
 
+    @handler(Endpoint.SUBNET_MECHANISM_WEIGHTS_STATUS)
+    async def get_mechanism_weight_status_endpoint(
+        self,
+        unstable_weight_service: WeightService,
+        netuid: NetUid,
+        mechanism_id: MechanismId,
+        block_number: BlockNumber,
+    ) -> GetWeightsStatusResponse:
+        status = await unstable_weight_service.get_weight_status(netuid, mechanism_id, block_number)
+        return GetWeightsStatusResponse.model_validate(status, from_attributes=True)
+
 
 class PublicController(Controller):
     dependencies = PUBLIC_PROVIDERS
@@ -257,6 +269,7 @@ class IdentityController(Controller):
     get_all_revealed_commitments_endpoint = Handlers.get_all_revealed_commitments_endpoint
     get_revealed_commitments_endpoint = Handlers.get_revealed_commitments_endpoint
     put_mechanism_weights_endpoint = Handlers.put_mechanism_weights_endpoint
+    get_mechanism_weight_status_endpoint = Handlers.get_mechanism_weight_status_endpoint
     set_commitment_endpoint = Handlers.set_commitment_endpoint
     get_own_certificate_endpoint = Handlers.get_own_certificate_endpoint
     get_own_commitment_endpoint = Handlers.get_own_commitment_endpoint

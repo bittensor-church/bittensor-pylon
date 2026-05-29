@@ -207,3 +207,9 @@ def latest_block_info_response_matcher() -> dict:
         **block_matcher(),
         "timestamp": match.int(BLOCK_TIMESTAMP),
     }
+
+
+def get_weights_status_response_matcher() -> dict:
+    return {
+        "weights_submitted": match.bool(False),
+    }

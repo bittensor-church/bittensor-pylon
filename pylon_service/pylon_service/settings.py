@@ -11,6 +11,29 @@ from pylon_service.bittensor.recent import HardLimit, SoftLimit
 settings = Settings()  # type: ignore
 
 
+class DatabaseSettings(BaseSettings):
+    """
+    Settings for the database.
+    """
+
+    path: str | None = None
+
+    def get_url(self, async_db: bool = True) -> str:
+        db_path = self.path if self.path else "./pylon.db"
+
+        return f"sqlite{'+aiosqlite' if async_db else ''}:///{db_path}"
+
+    model_config = SettingsConfigDict(
+        env_file=ENV_FILE,
+        env_file_encoding="utf-8",
+        env_prefix="PYLON_DATABASE_",
+        extra="ignore",
+    )
+
+
+database_settings = DatabaseSettings()
+
+
 class RecentObjectsSettings(BaseSettings):
     """
     Settings for the recent object caching system.

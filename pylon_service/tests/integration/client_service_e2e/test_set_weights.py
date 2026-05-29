@@ -8,7 +8,7 @@ from pylon_client.artanis.v1 import SetWeightsResponse
 from pylon_commons.types import BlockNumber, MechanismId, NetUid, Tempo
 from turbobt.client import Bittensor
 
-from pylon_service.api._unstable.utils import get_epoch_containing_block
+from pylon_service.api.epoch import get_epoch_containing_block
 from tests.helpers import wait_until
 from tests.integration.localchain.dev_accounts import DevAccount
 from tests.integration.localchain.manager import LocalChainManager

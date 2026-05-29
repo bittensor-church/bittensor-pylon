@@ -1,16 +1,17 @@
 from pydantic import BaseModel
 
-from ..models import CommitmentVariant
 from ..types import IdentityName, NetUid
 from .models import (
     Block,
     BlockInfoBag,
+    CommitmentVariant,
     Extrinsic,
     RevealedCommitment,
     SubnetCommitments,
     SubnetNeurons,
     SubnetRevealedCommitments,
     SubnetValidators,
+    WeightsStatus,
 )
 
 
@@ -59,7 +60,13 @@ class SetWeightsResponse(PylonResponse):
     Response class that is returned for the SetWeightsRequest.
     """
 
-    # TODO: Modify this model after set weights endpoint is made clean.
+    pass
+
+
+class GetWeightsStatusResponse(PylonResponse, WeightsStatus):
+    """
+    Response class that is returned for the GetWeightStatusRequest.
+    """
 
     pass
 

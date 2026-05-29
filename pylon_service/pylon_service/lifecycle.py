@@ -6,8 +6,10 @@ from litestar import Litestar
 
 from pylon_service.bittensor.contact import ContactFactory
 from pylon_service.bittensor.pool import BittensorContactPool
+from pylon_service.db.database import run_migrations
 from pylon_service.scheduler import create_scheduler
 from pylon_service.settings import settings
+from pylon_service.tasks import reschedule_weight_tasks
 
 logger = logging.getLogger(__name__)
 
@@ -15,7 +17,7 @@ contact_factory = ContactFactory()
 
 
 @asynccontextmanager
-async def bittensor_contact_pool(app: Litestar) -> AsyncGenerator[None]:
+async def bittensor_contact_pool_lifespan(app: Litestar) -> AsyncGenerator[None]:
     """
     Lifespan for Litestar app that creates a BittensorContactPool so endpoints may reuse contact routers.
     """
@@ -41,3 +43,19 @@ async def scheduler_lifespan(app: Litestar) -> AsyncGenerator[None]:
         yield
     finally:
         scheduler.shutdown()
+
+
+async def initialize_database(app: Litestar) -> None:
+    """
+    Initialize database and run migrations on startup.
+    """
+    logger.info("Running database migrations.")
+    run_migrations()
+
+
+async def reschedule_weight_tasks_on_startup(app: Litestar) -> None:
+    """
+    Reschedule weight tasks on startup.
+    """
+    logger.info("Rescheduling weight tasks.")
+    await reschedule_weight_tasks(app)

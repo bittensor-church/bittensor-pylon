@@ -179,6 +179,7 @@ class PylonServiceContainer(BaseDockerContainer):
 
         self.with_volume_mapping(str(wallets_path), "/app/wallets", "ro")
         envs = {k: v for k, v in dotenv_values(_TEST_ENV_PATH).items() if v is not None}
+        envs.pop("PYLON_DATABASE_PATH", None)  # use the default path inside the container
         envs.update(
             PYLON_BITTENSOR_NETWORK=chain_url,
             PYLON_BITTENSOR_ARCHIVE_NETWORK=chain_url,

@@ -20,6 +20,7 @@ from pylon_client._internal.pylon_commons._unstable.requests import (
     GetRecentNeuronsRequest,
     GetRevealedCommitmentsRequest,
     GetValidatorsRequest,
+    GetWeightsStatusRequest,
     SetCommitmentRequest,
     SetRevealedCommitmentRequest,
     SetWeightsRequest,
@@ -116,6 +117,18 @@ class IdentityApi(AbstractIdentityApi):
             identity_name=self.identity_name,
             weights=weights,
             mechanism_id=mechanism_id,
+        )
+
+    def _get_weights_status_request(
+        self,
+        mechanism_id: MechanismId,
+        block_number: BlockNumber,
+    ) -> GetWeightsStatusRequest:
+        return GetWeightsStatusRequest(
+            netuid=self.netuid,
+            identity_name=self.identity_name,
+            mechanism_id=mechanism_id,
+            block_number=block_number,
         )
 
     def _get_commitments_request(self) -> GetCommitmentsRequest:

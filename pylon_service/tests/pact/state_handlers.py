@@ -3,13 +3,14 @@ import time
 from abc import ABC, abstractmethod
 from types import SimpleNamespace
 from typing import TYPE_CHECKING, Any, ClassVar, Literal
-from unittest.mock import Mock
+from unittest.mock import AsyncMock
 
 from pylon_commons.models import (
     CommitmentVariant,
     HexDataCommitment,
     RevealedCommitment,
     SubnetCommitments,
+    SubnetHyperparams,
     SubnetNeurons,
     SubnetRevealedCommitments,
 )
@@ -18,6 +19,7 @@ from pylon_commons.types import (
     CommitmentDataHex,
     Hotkey,
     RevealedCommitmentData,
+    Tempo,
     Timestamp,
 )
 
@@ -265,7 +267,7 @@ class WeightsCanBeSetHandler(StateHandler):
     name = "weights can be set"
 
     def setup(self, parameters: dict[str, Any]) -> None:
-        self.monkeypatch.setattr("pylon_service.api._unstable.tasks.ApplyWeights.schedule", Mock())
+        self.monkeypatch.setattr("pylon_service.api._unstable.tasks.ApplyWeights.schedule", AsyncMock())
 
 
 class BlockDataUnavailableHandler(StateHandler):
@@ -356,6 +358,20 @@ class RevealedCommitmentCanBeSetHandler(StateHandler):
         client = self._get_client(parameters)
         self._set_default_latest_block(client, block)
         client.add_behavior("set_revealed_commitment", 123456)
+
+
+class WeightsStatusExistsHandler(StateHandler):
+    name = "weights status can be retrieved"
+
+    def setup(self, parameters: dict[str, Any]) -> None:
+        block_number = int(parameters.get("block_number", 789))
+        block = BlockFactory.build(number=block_number)
+        hyperparams = SubnetHyperparams(tempo=Tempo(360))
+
+        client = self._get_client(parameters)
+        self._set_default_latest_block(client, block)
+        client.add_behavior("get_block", block)
+        client.add_behavior("get_hyperparams", hyperparams)
 
 
 class BittensorHangs(StateHandler):

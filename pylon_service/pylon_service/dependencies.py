@@ -107,9 +107,10 @@ async def unstable_commitment_service_dep(
 
 
 async def unstable_weight_service_dep(
+    identity: Identity,
     bt_contact_router: BittensorContactRouter,
 ) -> WeightService:
-    return WeightService(bt_contact_router)
+    return WeightService(identity, bt_contact_router)
 
 
 async def unstable_drand_service_dep(
@@ -126,9 +127,10 @@ async def v1_commitment_service_dep(
 
 
 async def v1_weight_service_dep(
+    identity: Identity,
     bt_contact_router: BittensorContactRouter,
 ) -> V1WeightService:
-    return V1WeightService(bt_contact_router)
+    return V1WeightService(identity, bt_contact_router)
 
 
 SERVICE_PROVIDERS = {

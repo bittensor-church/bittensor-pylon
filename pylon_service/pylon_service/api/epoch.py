@@ -1,4 +1,5 @@
 from pydantic import BaseModel
+from pylon_commons.models import SubnetHyperparams
 from pylon_commons.types import BlockNumber, NetUid, Tempo
 
 
@@ -29,3 +30,7 @@ def get_epoch_containing_block(block: BlockNumber, netuid: NetUid, tempo: Tempo)
         prev_epoch = next_epoch - interval
 
     return Epoch(start=BlockNumber(prev_epoch), end=BlockNumber(next_epoch))
+
+
+def get_tempo_from_hyperparams(hyperparams: SubnetHyperparams | None) -> Tempo:
+    return hyperparams.tempo if hyperparams and hyperparams.tempo else Tempo(360)

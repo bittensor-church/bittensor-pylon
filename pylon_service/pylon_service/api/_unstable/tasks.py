@@ -1,18 +1,18 @@
 import asyncio
 import logging
 from abc import ABC, abstractmethod
-from typing import ClassVar, TypeVar
+from typing import Any, ClassVar, TypeVar
 
 from prometheus_client import Histogram
 from pylon_commons.models import Block, CommitReveal
 from pylon_commons.types import (
+    BlockNumber,
     CommitmentDataBytes,
     Hotkey,
     MechanismId,
     NetUid,
     NeuronUid,
     RevealedCommitmentData,
-    Tempo,
     Weight,
 )
 from tenacity import (
@@ -23,9 +23,17 @@ from tenacity import (
     wait_exponential,
 )
 
-from pylon_service.api._unstable.utils import Epoch, get_epoch_containing_block
+from pylon_service.api.epoch import Epoch, get_epoch_containing_block, get_tempo_from_hyperparams
 from pylon_service.api.services import HyperparamsNotFoundError
 from pylon_service.bittensor.contact import BittensorPort
+from pylon_service.db.models import TaskStatus, WeightTask
+from pylon_service.db.weight_task import (
+    create_weight_task_and_cancel_duplicate_tasks,
+    get_weight_task_status,
+    set_weight_task_start_block_number,
+    update_weight_task_status,
+)
+from pylon_service.identities import Identity
 from pylon_service.metrics import (
     Attr,
     LabelSource,
@@ -53,7 +61,7 @@ class BackgroundTask[ReturnT](ABC):
     """
 
     JOB_NAME: ClassVar[str]
-    tasks_running: ClassVar[set[asyncio.Task[object]]]
+    tasks_running: ClassVar[set["BackgroundTask[Any]"]]
 
     def __init_subclass__(
         cls,
@@ -69,11 +77,16 @@ class BackgroundTask[ReturnT](ABC):
             labels=metric_labels,
         )(cls.__call__)
 
-    def schedule(self) -> asyncio.Task[ReturnT]:
-        task = asyncio.create_task(self(), name=self.JOB_NAME)
-        type(self).tasks_running.add(task)
-        task.add_done_callback(self._on_task_done)
-        return task
+    def __init__(self) -> None:
+        self._running_task: asyncio.Task[ReturnT] | None = None
+
+    async def schedule(self) -> asyncio.Task[ReturnT]:
+        await self._on_task_scheduled()
+
+        self._running_task = asyncio.create_task(self(), name=self.JOB_NAME)
+        type(self).tasks_running.add(self)
+        self._running_task.add_done_callback(self._on_task_done)
+        return self._running_task
 
     async def __call__(self) -> ReturnT:
         return await self._submit_with_retries()
@@ -98,12 +111,23 @@ class BackgroundTask[ReturnT](ABC):
             before_sleep=self._log_retry,
             reraise=True,
         )
-        return await retrying(attempt)
+        try:
+            return await retrying(attempt)
+        except StopRetrying:
+            raise
+        except asyncio.CancelledError:
+            # cancelled by asyncio during server shutdown
+            raise
+        except Exception:
+            await self._on_task_failed()
+            raise
 
     @staticmethod
     def _log_retry(retry_state: RetryCallState) -> None:
-        assert retry_state.outcome is not None, "before_sleep is only called after an attempt"
-        assert retry_state.next_action is not None, "before_sleep is only called when retrying"
+        if retry_state.outcome is None:
+            raise RuntimeError("_log_retry called before an attempt")
+        if retry_state.next_action is None:
+            raise RuntimeError("_log_retry called when not retrying")
         exc = retry_state.outcome.exception()
         logger.error(
             "Retryable error (attempt %s): %s: %s",
@@ -115,16 +139,24 @@ class BackgroundTask[ReturnT](ABC):
         logger.info("Retrying in %.1f seconds...", retry_state.next_action.sleep)
 
     def _on_task_done(self, task: asyncio.Task[ReturnT]) -> None:
-        type(self).tasks_running.discard(task)
+        type(self).tasks_running.discard(self)
         try:
             task.result()
-        # This is a callback of a background task so we ignore the result.
+        # This is a callback of a background task, so we ignore the result.
+        except StopRetrying:
+            pass
         except Exception as exc:  # noqa: BLE001
             logger.exception("Task %s failed with an exception: %s: %s", type(self).JOB_NAME, type(exc).__name__, exc)
         else:
             logger.info("Task %s (%s) finished successfully.", task, self.JOB_NAME)
 
+    async def _on_task_scheduled(self) -> None:
+        pass
+
     async def _prepare(self) -> None:
+        pass
+
+    async def _on_task_failed(self) -> None:
         pass
 
     @property
@@ -148,18 +180,31 @@ class ApplyWeights(
 
     def __init__(
         self,
+        identity: Identity,
         client: BittensorPort,
         weights: dict[Hotkey, Weight],
         netuid: NetUid,
         mechanism_id: MechanismId,
     ):
+        super().__init__()
         self._client = client
+        self._hotkey = client.hotkey
         self._weights = weights
         self._netuid = netuid
         self._mechanism_id = mechanism_id
-        self._hotkey = client.hotkey
-        self._start_block: Block | None = None
+        self._identity = identity
+        self._is_rescheduled: bool = False
         self._initial_tempo: Epoch | None = None
+        self._start_block_number: BlockNumber | None = None
+        self._task_id: int | None = None
+
+    @classmethod
+    def from_persisted_task(cls, identity: Identity, client: BittensorPort, weight_task: WeightTask) -> "ApplyWeights":
+        task = cls(identity, client, weight_task.weights, weight_task.netuid, weight_task.mechanism_id)
+        task._is_rescheduled = True
+        task._start_block_number = weight_task.start_block_number
+        task._task_id = weight_task.id
+        return task
 
     @property
     def _retry_attempts(self) -> int:
@@ -169,17 +214,59 @@ class ApplyWeights(
     def _retry_delay_seconds(self) -> int:
         return settings.weights_retry_delay_seconds
 
+    async def _on_task_scheduled(self) -> None:
+        if self._is_rescheduled:
+            return
+
+        self._task_id = await create_weight_task_and_cancel_duplicate_tasks(
+            identity_name=self._identity.identity_name,
+            weights=self._weights,
+            netuid=self._netuid,
+            mechanism_id=self._mechanism_id,
+            hotkey=self._hotkey,
+        )
+
     async def _prepare(self) -> None:
-        self._start_block = await self._client.get_latest_block()
-        hyperparams = await self._client.get_hyperparams(self._netuid, self._start_block)
-        tempo = hyperparams.tempo if hyperparams and hyperparams.tempo else Tempo(360)
-        self._initial_tempo = get_epoch_containing_block(self._start_block.number, self._netuid, tempo)
+        if self._task_id is None:
+            raise RuntimeError("Task not persisted before _prepare")
+        if self._start_block_number is not None:
+            start_block = await self._client.get_block(self._start_block_number)
+            if start_block is None:
+                raise RuntimeError("Failed to get block %s", self._start_block_number)
+        else:
+            start_block = await self._client.get_latest_block()
+            await set_weight_task_start_block_number(self._task_id, start_block.number)
+            self._start_block_number = start_block.number
+
+        hyperparams = await self._client.get_hyperparams(self._netuid, start_block)
+        tempo = get_tempo_from_hyperparams(hyperparams)
+        self._initial_tempo = get_epoch_containing_block(self._start_block_number, self._netuid, tempo)
 
     async def _single_attempt(self) -> None:
-        assert self._initial_tempo is not None, "_prepare sets _initial_tempo before retries"
+        if self._initial_tempo is None:
+            raise RuntimeError("_initial_tempo not set before an attempt")
+        if self._task_id is None:
+            raise RuntimeError("Task not persisted before an attempt")
+        task_status = await get_weight_task_status(self._task_id)
+        if task_status != TaskStatus.RUNNING:
+            logger.warning(
+                "Weight task (%s, %s) stopped, status: %s",
+                self._identity.identity_name,
+                self._mechanism_id,
+                task_status,
+            )
+            raise StopRetrying("Task stopped")
         latest_block = await self._client.get_latest_block()
         if latest_block.number > self._initial_tempo.end:
-            raise StopRetrying(f"Tempo ended: {latest_block.number} > {self._initial_tempo.end}")
+            await update_weight_task_status(self._task_id, TaskStatus.EXPIRED)
+            logger.error(
+                "Weight task (%s, %s) expired, tempo ended: %s > %s.",
+                self._identity.identity_name,
+                self._mechanism_id,
+                latest_block.number,
+                self._initial_tempo.end,
+            )
+            raise StopRetrying("Task expired")
 
         remaining = self._initial_tempo.end - latest_block.number
         logger.info(
@@ -187,8 +274,23 @@ class ApplyWeights(
             latest_block.number,
             remaining,
         )
-
         await asyncio.wait_for(asyncio.shield(self._apply_weights(latest_block)), 120)
+        # do not set status to SUCCEEDED if the task was cancelled while running
+        await update_weight_task_status(self._task_id, TaskStatus.SUCCEEDED, only_if_running=True)
+
+    async def _on_task_failed(self) -> None:
+        try:
+            if self._task_id is not None:
+                # do not set status to FAILED if the task was cancelled while running
+                await update_weight_task_status(self._task_id, TaskStatus.FAILED, only_if_running=True)
+        except Exception as exc:  # noqa: BLE001
+            logger.exception(
+                "Updating status for failed weights task (%s, %s) failed with exception %s: %s",
+                self._identity.identity_name,
+                self._mechanism_id,
+                type(exc).__name__,
+                exc,
+            )
 
     async def _translate_weights(self, latest_block: Block) -> dict[NeuronUid, Weight]:
         translated_weights: dict[NeuronUid, Weight] = {}
@@ -246,6 +348,7 @@ class SetCommitment(
         netuid: NetUid,
         data: CommitmentDataBytes,
     ):
+        super().__init__()
         self._client = client
         self._netuid = netuid
         self._data = data
@@ -287,6 +390,7 @@ class SetRevealedCommitment(
         commitment: RevealedCommitmentData,
         blocks_until_reveal: int,
     ):
+        super().__init__()
         self._client = client
         self._netuid = netuid
         self._commitment = commitment

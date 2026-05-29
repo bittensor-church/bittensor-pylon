@@ -7,6 +7,7 @@ from pylon_service.api._unstable.tasks import ApplyWeights as UnstableApplyWeigh
 from pylon_service.api.services import BaseService, CommitmentNotFoundError
 from pylon_service.bittensor.contact import BittensorPort
 from pylon_service.bittensor.models import Block
+from pylon_service.identities import Identity
 
 
 class CommitmentService(BaseService):
@@ -39,5 +40,9 @@ class CommitmentService(BaseService):
 
 
 class WeightService(BaseService):
+    def __init__(self, identity: Identity, contact_router: BittensorPort) -> None:
+        super().__init__(contact_router)
+        self.identity = identity
+
     async def set_weights(self, netuid: NetUid, weights: dict[Hotkey, Weight]):
-        UnstableApplyWeights(self.contact_router, weights, netuid, MechanismId(0)).schedule()
+        await UnstableApplyWeights(self.identity, self.contact_router, weights, netuid, MechanismId(0)).schedule()
