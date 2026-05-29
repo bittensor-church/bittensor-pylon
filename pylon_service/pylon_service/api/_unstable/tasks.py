@@ -124,8 +124,10 @@ class BackgroundTask[ReturnT](ABC):
 
     @staticmethod
     def _log_retry(retry_state: RetryCallState) -> None:
-        assert retry_state.outcome is not None, "before_sleep is only called after an attempt"
-        assert retry_state.next_action is not None, "before_sleep is only called when retrying"
+        if retry_state.outcome is None:
+            raise RuntimeError("_log_retry called before an attempt")
+        if retry_state.next_action is None:
+            raise RuntimeError("_log_retry called when not retrying")
         exc = retry_state.outcome.exception()
         logger.error(
             "Retryable error (attempt %s): %s: %s",
@@ -225,11 +227,12 @@ class ApplyWeights(
         )
 
     async def _prepare(self) -> None:
-        assert self._task_id is not None, "_on_task_scheduled sets _task_id before _prepare"
+        if self._task_id is None:
+            raise RuntimeError("Task not persisted before _prepare")
         if self._start_block_number is not None:
             start_block = await self._client.get_block(self._start_block_number)
             if start_block is None:
-                raise ValueError("Failed to get block %s", self._start_block_number)
+                raise RuntimeError("Failed to get block %s", self._start_block_number)
         else:
             start_block = await self._client.get_latest_block()
             await set_weight_task_start_block_number(self._task_id, start_block.number)
@@ -240,8 +243,10 @@ class ApplyWeights(
         self._initial_tempo = get_epoch_containing_block(self._start_block_number, self._netuid, tempo)
 
     async def _single_attempt(self) -> None:
-        assert self._initial_tempo is not None, "_prepare sets _initial_tempo before retries"
-        assert self._task_id is not None, "_prepare sets _task_id before retries"
+        if self._initial_tempo is None:
+            raise RuntimeError("_initial_tempo not set before an attempt")
+        if self._task_id is None:
+            raise RuntimeError("Task not persisted before an attempt")
         task_status = await get_weight_task_status(self._task_id)
         if task_status != TaskStatus.RUNNING:
             logger.warning(

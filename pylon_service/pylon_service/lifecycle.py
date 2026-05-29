@@ -17,17 +17,7 @@ contact_factory = ContactFactory()
 
 
 @asynccontextmanager
-async def database_lifespan(app: Litestar) -> AsyncGenerator[None]:
-    """
-    Lifespan for database initialization and migrations.
-    """
-    logger.info("Running database migrations.")
-    run_migrations()
-    yield
-
-
-@asynccontextmanager
-async def bittensor_contact_pool(app: Litestar) -> AsyncGenerator[None]:
+async def bittensor_contact_pool_lifespan(app: Litestar) -> AsyncGenerator[None]:
     """
     Lifespan for Litestar app that creates a BittensorContactPool so endpoints may reuse contact routers.
     """
@@ -55,11 +45,17 @@ async def scheduler_lifespan(app: Litestar) -> AsyncGenerator[None]:
         scheduler.shutdown()
 
 
-@asynccontextmanager
-async def reschedule_weight_tasks_lifespan(app: Litestar) -> AsyncGenerator[None]:
+async def initialize_database(app: Litestar) -> None:
     """
-    Lifespan for rescheduling weight tasks.
+    Initialize database and run migrations on startup.
+    """
+    logger.info("Running database migrations.")
+    run_migrations()
+
+
+async def reschedule_weight_tasks_on_startup(app: Litestar) -> None:
+    """
+    Reschedule weight tasks on startup.
     """
     logger.info("Rescheduling weight tasks.")
     await reschedule_weight_tasks(app)
-    yield

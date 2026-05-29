@@ -4,7 +4,7 @@ PYLON_BITTENSOR_NETWORK=finney
 PYLON_BITTENSOR_WALLET_PATH=~/.bittensor/wallets
 
 # Path to the pylon database file. Must point to the existing directory. The file will be created if it does not exist.
-# Leave empty to use the default database location inside the container.
+# Leave empty to use the default database location `./pylon.db` inside the container.
 PYLON_DATABASE_PATH=
 
 # Identities configuration. Here, names of configured identities are listed (json list).

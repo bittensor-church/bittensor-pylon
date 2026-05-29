@@ -17,7 +17,7 @@ from sqlalchemy import delete
 from syrupy.extensions.json import JSONSnapshotExtension
 
 from pylon_service import identities as identities_module
-from pylon_service import lifespans, main
+from pylon_service import lifecycle, main
 from pylon_service.bittensor.contact import ContactFactory
 from pylon_service.bittensor.contact_router import BittensorContactRouter
 from pylon_service.bittensor.mock_contact import MockBittensorContact
@@ -130,7 +130,7 @@ async def clean_weight_tasks_db_table():
 @pytest.fixture
 def seed_running_weight_task_before_reschedule(monkeypatch):
     task_to_seed: list[WeightTask] = []
-    real_reschedule_weight_tasks = lifespans.reschedule_weight_tasks
+    real_reschedule_weight_tasks = lifecycle.reschedule_weight_tasks
 
     async def seed_then_reschedule(app):
         async with session_factory() as session:
@@ -148,7 +148,7 @@ def seed_running_weight_task_before_reschedule(monkeypatch):
 
         await real_reschedule_weight_tasks(app)
 
-    monkeypatch.setattr(lifespans, "reschedule_weight_tasks", seed_then_reschedule)
+    monkeypatch.setattr(lifecycle, "reschedule_weight_tasks", seed_then_reschedule)
 
     return task_to_seed
 
@@ -171,8 +171,8 @@ def test_app(mock_bt_contact_pool, mock_stores, setup_test_database):
         yield
 
     with (
-        patch.object(lifespans, "bittensor_contact_pool", mock_lifespan),
-        patch.object(lifespans, "scheduler_lifespan", mock_scheduler_lifespan),
+        patch.object(lifecycle, "bittensor_contact_pool_lifespan", mock_lifespan),
+        patch.object(lifecycle, "scheduler_lifespan", mock_scheduler_lifespan),
         # Litestar appends its own stuff to the dict we give it - so let's give it a copy, otherwise we end up
         # resetting the cache store which we don't care about here. (caching is already disabled directly for tests)
         patch.object(main, "stores", {**mock_stores}),

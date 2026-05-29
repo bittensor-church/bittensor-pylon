@@ -3,7 +3,7 @@ from litestar.di import Provide
 from litestar.openapi.config import OpenAPIConfig
 from litestar.plugins.prometheus import PrometheusConfig
 
-from pylon_service import dependencies, lifespans
+from pylon_service import dependencies, lifecycle
 from pylon_service.api._unstable.routers import unstable_router
 from pylon_service.api.v1.routers import v1_router
 from pylon_service.bittensor.exceptions import ArchiveFallbackException
@@ -40,10 +40,12 @@ def create_app() -> Litestar:
         ),
         middleware=[RequestIdMiddleware, prometheus_config.middleware, RequestTimeoutMiddleware],
         lifespan=[
-            lifespans.database_lifespan,
-            lifespans.bittensor_contact_pool,
-            lifespans.scheduler_lifespan,
-            lifespans.reschedule_weight_tasks_lifespan,
+            lifecycle.bittensor_contact_pool_lifespan,
+            lifecycle.scheduler_lifespan,
+        ],
+        on_startup=[
+            lifecycle.initialize_database,
+            lifecycle.reschedule_weight_tasks_on_startup,
         ],
         dependencies={"bt_contact_pool": Provide(dependencies.bt_contact_pool_dep, use_cache=True)},
         plugins=[PylonSchemaPlugin()],
