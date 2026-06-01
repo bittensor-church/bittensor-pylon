@@ -168,6 +168,8 @@ async def main() -> None:
             )
         await manager.wait_for_commitment_reveal(netuid=1, expected_count=2)
 
+        # FIXME create evm key associations and add some integration tests
+
         log_step("Tuning registration parameters for bulk registration")
         for netuid in FILLER_NEURONS_NETUIDS:
             await manager.set_max_registrations_per_block(netuid=netuid, max_regs=256)
