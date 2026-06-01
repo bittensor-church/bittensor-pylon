@@ -50,6 +50,7 @@ ExtrinsicIndex = NewType("ExtrinsicIndex", int)
 ExtrinsicHash = NewType("ExtrinsicHash", str)
 ExtrinsicLength = NewType("ExtrinsicLength", int)
 RevealedCommitmentData = NewType("RevealedCommitmentData", str)
+EvmAddress = NewType("EvmAddress", str)
 
 
 class CommitmentDataHex(str):

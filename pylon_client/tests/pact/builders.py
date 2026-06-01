@@ -11,6 +11,7 @@ from pylon_client.artanis import (
     Currency,
     Dividends,
     Emission,
+    EvmAddress,
     ExtrinsicHash,
     ExtrinsicIndex,
     ExtrinsicLength,
@@ -36,6 +37,7 @@ from pylon_client.artanis.unstable import (
     AxonProtocol,
     Block,
     BlockInfoBag,
+    EvmAssociation,
     Extrinsic,
     ExtrinsicCall,
     ExtrinsicCallArg,
@@ -112,6 +114,14 @@ def build_price(netuid: int = NETUID) -> GetPriceResponse:
         block=build_block(),
         netuid=NetUid(netuid),
         price=SubnetPriceEntry(value=AlphaPriceRao(CurrencyRao[Token.TAO](PRICE_VALUE_RAO))),
+    )
+
+
+def build_evm_association(hotkey: Hotkey) -> EvmAssociation:
+    return EvmAssociation(
+        hotkey=hotkey,
+        evm_address=EvmAddress("0x" + "c" * 40),
+        last_block_where_ownership_was_proven=BlockNumber(BLOCK_NUMBER),
     )
 
 

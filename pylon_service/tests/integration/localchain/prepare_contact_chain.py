@@ -11,6 +11,7 @@ from dataclasses import dataclass
 from tests.integration.containers import LocalChainContainer, LocalChainImage
 from tests.integration.localchain.common import LOW_TEMPO, log_step
 from tests.integration.localchain.dev_accounts import SUDO_WALLET, DevAccount
+from tests.integration.localchain.dev_evm_wallets import DevEvmWallet
 from tests.integration.localchain.manager import LocalChainManager
 
 logger = logging.getLogger(__name__)
@@ -29,10 +30,13 @@ class SubnetConfig:
     use_commit_reveal: bool
     use_mechanisms: bool
     save_commitments: bool = False
+    create_evm_key_associations: bool = False
 
 
 SUBNET_CONFIGS = [
-    SubnetConfig(use_commit_reveal=False, use_mechanisms=False, save_commitments=True),
+    SubnetConfig(
+        use_commit_reveal=False, use_mechanisms=False, save_commitments=True, create_evm_key_associations=True
+    ),
     SubnetConfig(use_commit_reveal=True, use_mechanisms=False),
     SubnetConfig(use_commit_reveal=False, use_mechanisms=True),
     SubnetConfig(use_commit_reveal=True, use_mechanisms=True),
@@ -83,6 +87,10 @@ async def _prepare_subnet(manager: LocalChainManager, subnet_config: SubnetConfi
         await manager.set_revealed_commitment(DevAccount.CHARLIE.wallet, netuid, "revealed-commitment-charlie", 1)
         await manager.set_commitment(DevAccount.DAVE.wallet, netuid, "commitment-dave")
         await manager.wait_for_commitment_reveal(netuid, expected_count=2)
+
+    if subnet_config.create_evm_key_associations:
+        await manager.associate_evm_key(DevAccount.ALICE.wallet, netuid, DevEvmWallet.ALICE.wallet)
+        await manager.associate_evm_key(DevAccount.CHARLIE.wallet, netuid, DevEvmWallet.CHARLIE.wallet)
 
 
 async def main() -> None:

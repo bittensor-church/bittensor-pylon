@@ -12,6 +12,7 @@ from pylon_commons._unstable.responses import (
     GetExtrinsicResponse,
     GetIdentitiesResponse,
     GetLatestBlockInfoResponse,
+    GetLatestEvmAssociationsResponse,
     GetNeuronsResponse,
     GetPriceResponse,
     GetPricesResponse,
@@ -28,6 +29,7 @@ from pylon_service.api._unstable.services import (
     CertificateService,
     CommitmentService,
     DrandService,
+    EvmAssociationService,
     NeuronService,
     PriceService,
     WeightService,
@@ -250,6 +252,15 @@ class Handlers:
         status = await unstable_weight_service.get_weight_status(netuid, mechanism_id, block_number)
         return GetWeightsStatusResponse.model_validate(status, from_attributes=True)
 
+    @handler(Endpoint.LATEST_EVM_ASSOCIATIONS)
+    async def get_latest_evm_associations_endpoint(
+        self,
+        unstable_evm_association_service: EvmAssociationService,
+        netuid: NetUid,
+    ) -> GetLatestEvmAssociationsResponse:
+        subnet_evm_associations = await unstable_evm_association_service.get_latest_associations(netuid)
+        return GetLatestEvmAssociationsResponse.model_validate(subnet_evm_associations, from_attributes=True)
+
 
 class PublicController(Controller):
     dependencies = PUBLIC_PROVIDERS
@@ -283,6 +294,7 @@ class OpenAccessController(Controller):
     get_revealed_commitments_endpoint = Handlers.get_revealed_commitments_endpoint
     get_latest_price_endpoint = Handlers.get_latest_price_endpoint
     get_price_endpoint = Handlers.get_price_endpoint
+    get_latest_evm_associations_endpoint = Handlers.get_latest_evm_associations_endpoint
 
 
 class IdentityController(Controller):
@@ -312,6 +324,7 @@ class IdentityController(Controller):
     generate_certificate_keypair_endpoint = Handlers.generate_certificate_keypair_endpoint
     get_latest_price_endpoint = Handlers.get_latest_price_endpoint
     get_price_endpoint = Handlers.get_price_endpoint
+    get_latest_evm_associations_endpoint = Handlers.get_latest_evm_associations_endpoint
 
 
 __all__ = ["Handlers", "PublicController", "OpenAccessController", "IdentityController"]

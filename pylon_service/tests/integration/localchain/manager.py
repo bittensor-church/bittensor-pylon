@@ -17,6 +17,10 @@ import bittensor_drand
 import docker
 import scalecodec
 from bittensor_wallet import Wallet
+from eth_account.messages import encode_defunct
+from eth_account.signers.local import LocalAccount
+from eth_utils.crypto import keccak
+from scalecodec.utils.ss58 import ss58_decode
 from turbobt.batch import Transaction
 from turbobt.client import Bittensor
 from turbobt.subtensor.exceptions import HotKeyAlreadyRegisteredInSubNet
@@ -814,7 +818,47 @@ class LocalChainManager:
             except HotKeyAlreadyRegisteredInSubNet:
                 logger.info("Hotkey %s already registered on subnet %d, skipping", wallet.hotkey.ss58_address, netuid)
 
-    # ---- Private helpers ----
+    async def associate_evm_key(self, wallet: Wallet, netuid: int, evm_wallet: LocalAccount) -> None:
+        """
+        Associate an EVM key with a hotkey on a subnet.
+
+        Args:
+            wallet: Wallet (hotkey) to associate the EVM key with.
+            netuid: Subnet UID.
+            evm_wallet: EVM wallet to associate.
+        """
+        logger.info(
+            "Associating EVM key %s with hotkey %s on subnet %d",
+            evm_wallet.address,
+            wallet.hotkey.ss58_address,
+            netuid,
+        )
+
+        hotkey_bytes = bytes.fromhex(ss58_decode(wallet.hotkey.ss58_address))
+
+        block_number = await self.get_current_block_number()
+        encoded_block_number = block_number.to_bytes(8, byteorder="little", signed=False)
+        block_hash = keccak(encoded_block_number)
+
+        message = hotkey_bytes + block_hash
+
+        signable_message = encode_defunct(primitive=message)
+        signed_message = evm_wallet.sign_message(signable_message)
+        signature = signed_message.signature.hex()
+
+        async with self._turbobt_client() as client:
+            result = await client.subtensor.author.submitAndWatchExtrinsic(
+                "SubtensorModule",
+                "associate_evm_key",
+                {
+                    "netuid": netuid,
+                    "evm_key": evm_wallet.address,
+                    "block_number": block_number,
+                    "signature": f"0x{signature}",
+                },
+                key=wallet.hotkey,
+            )
+            await result.wait_for_finalization()
 
     @asynccontextmanager
     async def _turbobt_client(self) -> AsyncIterator[Bittensor]:

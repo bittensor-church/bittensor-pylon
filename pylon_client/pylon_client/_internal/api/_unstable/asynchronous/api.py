@@ -12,6 +12,7 @@ from pylon_client._internal.pylon_commons._unstable.requests import (
     GetExtrinsicRequest,
     GetIdentitiesRequest,
     GetLatestBlockInfoRequest,
+    GetLatestEvmAssociationsRequest,
     GetLatestNeuronsRequest,
     GetLatestPriceRequest,
     GetLatestPricesRequest,
@@ -99,6 +100,9 @@ class AsyncOpenAccessApi(AbstractAsyncOpenAccessApi):
 
     async def _get_drand_last_stored_round_request(self) -> GetDrandLastStoredRoundRequest:
         return GetDrandLastStoredRoundRequest()
+
+    async def _get_latest_evm_associations_request(self, netuid: NetUid) -> GetLatestEvmAssociationsRequest:
+        return GetLatestEvmAssociationsRequest(netuid=netuid)
 
 
 class AsyncIdentityApi(AbstractAsyncIdentityApi):
@@ -241,3 +245,6 @@ class AsyncIdentityApi(AbstractAsyncIdentityApi):
 
     async def _get_drand_last_stored_round_request(self) -> GetDrandLastStoredRoundRequest:
         return GetDrandLastStoredRoundRequest()
+
+    async def _get_latest_evm_associations_request(self) -> GetLatestEvmAssociationsRequest:
+        return GetLatestEvmAssociationsRequest(netuid=self.netuid, identity_name=self.identity_name)

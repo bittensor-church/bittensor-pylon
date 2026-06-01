@@ -6,13 +6,8 @@ from pylon_commons.models import CommitmentKind
 from pylon_commons.types import ExtrinsicIndex
 
 from tests.integration.localchain.dev_accounts import DevAccount
-
-HASH_REGEX = r"^0x[0-9a-fA-F]{64}$"
-
-SNAPSHOT_BLOCK = {
-    "number": IsInt(ge=0),
-    "hash": IsStr(regex=HASH_REGEX),
-}
+from tests.integration.localchain.dev_evm_wallets import DevEvmWallet
+from tests.matchers import HASH_REGEX, SNAPSHOT_BLOCK, dict_model_dump
 
 EXPECTED_TIMESTAMP_EXTRINSIC = {
     "address": None,
@@ -85,6 +80,17 @@ EXPECTED_REVEALED_COMMITMENTS = {
                 "hotkey": DevAccount.CHARLIE.hotkey_ss58,
             }
         ],
+    },
+}
+
+EXPECTED_EVM_ASSOCIATIONS = {
+    0: {
+        "evm_address": DevEvmWallet.ALICE.evm_address,
+        "last_block_where_ownership_was_proven": IsInt(ge=0),
+    },
+    2: {
+        "evm_address": DevEvmWallet.CHARLIE.evm_address,
+        "last_block_where_ownership_was_proven": IsInt(ge=0),
     },
 }
 
@@ -210,3 +216,17 @@ async def test_get_drand_last_stored_round_returns_round(open_contact):
     latest_block = await open_contact.get_latest_block()
     drand_last_stored_round = await open_contact.get_drand_last_stored_round(latest_block)
     assert drand_last_stored_round == IsInt(ge=0)
+
+
+@pytest.mark.asyncio
+async def test_get_evm_key_associations_returns_data(open_contact, prepared_netuid):
+    associations = await open_contact.get_evm_key_associations(prepared_netuid)
+    assert associations is not None
+    assert dict_model_dump(associations) == EXPECTED_EVM_ASSOCIATIONS
+
+
+@pytest.mark.asyncio
+async def test_get_evm_key_associations_returns_empty_map(open_contact):
+    associations = await open_contact.get_evm_key_associations(3)
+    assert associations is not None
+    assert associations == dict()

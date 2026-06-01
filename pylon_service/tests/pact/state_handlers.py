@@ -24,15 +24,17 @@ from pylon_commons.types import (
     CommitmentDataHex,
     Hotkey,
     NetUid,
+    NeuronUid,
     RevealedCommitmentData,
     Tempo,
     Timestamp,
 )
 
 from pylon_service.bittensor.exceptions import ArchiveFallbackException
+from pylon_service.bittensor.models import RawEvmKeyAssociationInfo
 from pylon_service.bittensor.recent.adapter import _CacheEntry
 from pylon_service.stores import StoreName
-from tests.factories import BlockFactory, ExtrinsicFactory, NeuronFactory
+from tests.factories import BlockFactory, EvmAssociationFactory, ExtrinsicFactory, NeuronFactory
 from tests.mock_store import MockStore
 
 if TYPE_CHECKING:
@@ -378,6 +380,28 @@ class WeightsStatusExistsHandler(StateHandler):
         self._set_default_latest_block(client, block)
         client.add_behavior("get_block", block)
         client.add_behavior("get_hyperparams", hyperparams)
+
+
+class EvmAssociationsExistHandler(StateHandler):
+    name = "evm associations exist"
+
+    def setup(self, parameters: dict[str, Any]) -> None:
+        block = BlockFactory.build()
+        association_count = parameters.get("association_count", 1)
+        hotkeys = [Hotkey(f"h{i}") for i in range(association_count)]
+
+        associations = {
+            NeuronUid(i): RawEvmKeyAssociationInfo(
+                evm_address=EvmAssociationFactory.build().evm_address,
+                last_block_where_ownership_was_proven=BlockNumber(block.number - 10),
+            )
+            for i in range(association_count)
+        }
+
+        client = self._get_client(parameters)
+        self._set_default_latest_block(client, block)
+        client.add_behavior("get_evm_key_associations", associations)
+        client.add_behavior("get_subnet_state", SimpleNamespace(hotkeys=hotkeys))
 
 
 class BittensorHangs(StateHandler):

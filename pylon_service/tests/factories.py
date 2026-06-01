@@ -6,6 +6,7 @@ from pydantic import BaseModel
 from pylon_commons.currency import Currency, Token
 from pylon_commons.models import (
     Block,
+    EvmAssociation,
     Extrinsic,
     Neuron,
 )
@@ -31,6 +32,10 @@ class BlockFactory(PylonModelFactory[Block]):
 
 
 class NeuronFactory(PylonModelFactory[Neuron]):
+    __check_model__ = True
+
+
+class EvmAssociationFactory(PylonModelFactory[EvmAssociation]):
     __check_model__ = True
 
 

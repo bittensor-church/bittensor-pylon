@@ -32,6 +32,7 @@ from pylon_client._internal.pylon_commons.types import (
     Dividends,
     Emission,
     EmissionRao,
+    EvmAddress,
     ExtrinsicHash,
     ExtrinsicIndex,
     ExtrinsicLength,

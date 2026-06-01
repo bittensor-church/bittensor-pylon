@@ -17,6 +17,7 @@ from .types import (
     Dividends,
     Emission,
     EmissionRao,
+    EvmAddress,
     ExtrinsicHash,
     ExtrinsicIndex,
     ExtrinsicLength,
@@ -303,6 +304,15 @@ class Extrinsic(BittensorModel):
 
 
 class WeightsStatus(BittensorModel):
-    model_config = ConfigDict(extra="allow")
-
     weights_submitted: bool
+
+
+class EvmAssociation(BittensorModel):
+    hotkey: Hotkey
+    evm_address: EvmAddress
+    last_block_where_ownership_was_proven: BlockNumber
+
+
+class SubnetEvmAssociations(BittensorModel):
+    block: Block
+    evm_associations: dict[Hotkey, EvmAssociation]

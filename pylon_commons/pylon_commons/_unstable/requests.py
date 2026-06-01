@@ -15,6 +15,7 @@ from .responses import (
     GetExtrinsicResponse,
     GetIdentitiesResponse,
     GetLatestBlockInfoResponse,
+    GetLatestEvmAssociationsResponse,
     GetNeuronsResponse,
     GetPriceResponse,
     GetPricesResponse,
@@ -306,3 +307,11 @@ class GenerateCertificateKeypairRequest(PylonRequest):
         if v != CertificateAlgorithm.ED25519:
             raise ValueError("Currently, only algorithm equals 1 is supported which is EdDSA using Ed25519 curve")
         return v
+
+
+class GetLatestEvmAssociationsRequest(AuthenticatedPylonRequest[GetLatestEvmAssociationsResponse]):
+    """
+    Class used to fetch the latest EVM associations for the subnet by the Pylon client.
+    """
+
+    response_cls = GetLatestEvmAssociationsResponse

@@ -28,6 +28,7 @@ from pylon_service.bittensor.models import (
     Neuron,
     NeuronCertificate,
     NeuronCertificateKeypair,
+    RawEvmKeyAssociationInfo,
     SubnetCommitments,
     SubnetHyperparams,
     SubnetNeurons,
@@ -314,4 +315,13 @@ class BittensorContactRouter:
             main_call=lambda: self._main_contact.get_drand_last_stored_round(block),
             archive_call=lambda: self._archive_contact.get_drand_last_stored_round(block),
             block=block,
+        )
+
+    async def get_evm_key_associations(
+        self, netuid: NetUid, block: Block | None = None
+    ) -> dict[NeuronUid, RawEvmKeyAssociationInfo]:
+        return await self._delegate(
+            "get_evm_key_associations",
+            main_call=lambda: self._main_contact.get_evm_key_associations(netuid, block),
+            archive_call=lambda: self._archive_contact.get_evm_key_associations(netuid, block),
         )

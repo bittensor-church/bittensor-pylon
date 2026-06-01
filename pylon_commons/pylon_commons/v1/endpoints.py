@@ -22,9 +22,6 @@ class Endpoint(BaseEndpoint):
     CERTIFICATES_HOTKEY = (HTTPMethod.GET, "/block/latest/certificates/{hotkey:str}", "certificates_hotkey_v1")
     CERTIFICATES_SELF = (HTTPMethod.GET, "/block/latest/certificates/self", "certificates_self_v1")
     COMMITMENTS = (HTTPMethod.POST, "/commitments", "commitments_v1")
-    # TODO v1 includes revealed commitments endpoints only because v1 translator inherits from unstable
-    #      they could be removed once we change ApiVer approach from inheritance to composition in pylon_client
-    REVEALED_COMMITMENTS = (HTTPMethod.POST, "/commitments/revealed", "revealed_commitments_v1")
     EXTRINSIC = (HTTPMethod.GET, "/block/{block_number:int}/extrinsic/{extrinsic_index:int}", "extrinsic_v1")
     IDENTITIES = (HTTPMethod.GET, "/identities", "identities_v1")
     LATEST_BLOCK_INFO = (HTTPMethod.GET, "/block/latest", "latest_block_info")
@@ -56,3 +53,7 @@ class Endpoint(BaseEndpoint):
     RECENT_NEURONS = (HTTPMethod.GET, "/block/recent/neurons", "recent_neurons_v1")
     SUBNET_WEIGHTS = (HTTPMethod.PUT, "/weights", "subnet_weights_v1")
     VALIDATORS = (HTTPMethod.GET, "/block/{block_number:int}/validators", "validators_v1")
+    # TODO v1 includes the following endpoints only because v1 translator inherits from unstable
+    #      they could be removed once we change ApiVer approach from inheritance to composition in pylon_client
+    REVEALED_COMMITMENTS = (HTTPMethod.POST, "/commitments/revealed", "revealed_commitments_v1")
+    LATEST_EVM_ASSOCIATIONS = (HTTPMethod.GET, "/block/latest/evm_associations", "latest_evm_associations_v1")

@@ -34,6 +34,7 @@ from tests.world import (
     IdentityContacts,
     SharedWorld,
     default_commitments,
+    default_evm_assocations,
     default_latest_block,
     default_neurons,
     default_revealed_commitments,
@@ -233,6 +234,7 @@ async def shared_world(mock_bt_contact_pool) -> AsyncGenerator[SharedWorld]:
             default_revealed_commitments=default_revealed_commitments(
                 own_commitment_hotkey=EXPECTED_IDENTITIES[IdentityName("sn2")].hotkey_ss58,
             ),
+            default_evm_key_associations=default_evm_assocations(),
         )
 
 

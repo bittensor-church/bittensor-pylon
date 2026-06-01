@@ -117,6 +117,10 @@ Set on **subnet 1** only:
 | Charlie | commitment | `"commitment-charlie"`        |
 | Dave    | commitment | `"commitment-dave"`           |
 
+#### Evm Associations
+
+Set on **subnet 1** only. Evm key associations for Alice and Charlie.
+
 ### Seeded data for contact tests
 
 #### TAO Transfers
@@ -129,7 +133,7 @@ Four subnets are registered (owned by Alice):
 
 | Subnet   | Netuid | Tempo | Purpose                                                      |
 |----------|--------|-------|--------------------------------------------------------------|
-| Subnet 2 | 2      | 50    | No commit-reveal tests                                       |
+| Subnet 2 | 2      | 50    | No commit-reveal tests, existing evm association tests       |
 | Subnet 3 | 3      | 50    | Commit-reveal weight tests                                   |
 | Subnet 4 | 4      | 50    | No commit-reveal weight with mechanism for set weight tests  |
 | Subnet 5 | 5      | 50    | Commit-reveal weight with mechanisms for commit weight tests |
@@ -153,7 +157,7 @@ Validators (Alice and Bob) each stake **10 TAO** on all subnets.
 
 #### Commitments
 
-Set on **subnet 1** only:
+Set on **subnet 2** only:
 
 | Account | Type                | Value                           |
 |---------|---------------------|---------------------------------|
@@ -161,6 +165,10 @@ Set on **subnet 1** only:
 | Bob     | commitment          | `"commitment-bob"`              |
 | Charlie | revealed commitment | `"revealed-commitment-charlie"` |
 | Dave    | commitment          | `"commitment-dave"`             |
+
+#### Evm Associations
+
+Set on **subnet 2**only. Evm key associations for Alice and Charlie.
 
 ### Other Configuration
 
