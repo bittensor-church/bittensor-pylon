@@ -1,7 +1,7 @@
 import enum
 from datetime import datetime
 
-from pylon_commons.types import BlockNumber, Hotkey, IdentityName, MechanismId, NetUid, Weight
+from pylon_commons.types import BlockNumber, Hotkey, IdentityName, MechanismId, NetUid, Weight, EvmAddress
 from sqlalchemy import JSON, DateTime, Enum, Index, Integer, String, func
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -48,3 +48,30 @@ class WeightTask(Base):
         onupdate=func.now(),
         nullable=False,
     )
+
+class PersistedEvmKeyAssociationPeriod(Base):
+    __tablename__ = "persisted_evm_key_association_periods"
+    __table_args__ = (
+        Index(
+            "ix_persisted_evm_key_association_periods_lookup",
+            "netuid",
+        ),
+    )
+    netuid: Mapped[NetUid] = mapped_column(Integer, primary_key=True)
+    block_from: Mapped[BlockNumber] = mapped_column(Integer, primary_key=True)
+    block_to: Mapped[BlockNumber] = mapped_column(Integer)
+
+class EvmKeyAssociation(Base):
+    __tablename__ = "evm_key_associations"
+    __table_args__ = (
+        Index(
+            "ix_evm_key_associations_lookup",
+            "netuid",
+            "block_at_ownership_proof",
+        ),
+    )
+    netuid: Mapped[NetUid] = mapped_column(Integer, primary_key=True)
+    hotkey: Mapped[Hotkey] = mapped_column(String, primary_key=True)
+    evm_address: Mapped[EvmAddress] = mapped_column(String)
+    block_at_ownership_proof: Mapped[BlockNumber] = mapped_column(Integer, primary_key=True)
+    valid_to_block: Mapped[BlockNumber | None] = mapped_column(Integer)
