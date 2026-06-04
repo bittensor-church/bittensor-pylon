@@ -158,6 +158,9 @@ class AbstractBittensorContact(BittensorPort, ABC):
     async def close(self) -> None: ...
 
     @abstractmethod
+    async def recreate(self) -> None: ...
+
+    @abstractmethod
     async def get_block(self, number: BlockNumber) -> Block | None: ...
 
     @abstractmethod
@@ -289,6 +292,9 @@ class TurboBtContact(AbstractBittensorContact):
         self._raw_client = Bittensor(wallet=self.wallet, uri=self.uri)
         await asyncio.shield(self._raw_client.__aenter__())
         self._is_client_ready.set()
+
+    async def recreate(self) -> None:
+        await self._recreate_bt_client()
 
     async def close(self) -> None:
         logger.info("Closing the TurboBtContact for %s", self.uri)

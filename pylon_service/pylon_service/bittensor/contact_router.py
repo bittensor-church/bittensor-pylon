@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 import logging
 from collections.abc import Awaitable, Callable
 
@@ -101,6 +102,7 @@ class BittensorContactRouter:
                     ) from exc
                 except SubstrateException as exc:
                     if "Invalid params" in str(exc):
+                        await asyncio.shield(self._archive_contact.recreate())
                         raise ArchiveInvalidParamsException(
                             detail=(
                                 f"Archive node returned 'Invalid params'. "
@@ -130,6 +132,7 @@ class BittensorContactRouter:
                 ) from archive_exc
             except SubstrateException as exc:
                 if "Invalid params" in str(exc):
+                    await asyncio.shield(self._archive_contact.recreate())
                     raise ArchiveInvalidParamsException(
                         detail=(
                             f"Archive node returned 'Invalid params'. "

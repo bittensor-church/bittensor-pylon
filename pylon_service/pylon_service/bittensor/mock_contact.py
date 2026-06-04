@@ -139,6 +139,9 @@ class MockBittensorContact(AbstractBittensorContact):
     async def close(self) -> None:
         self._is_open = False
 
+    async def recreate(self) -> None:
+        pass
+
     @asynccontextmanager
     async def mock_behavior(self, **behaviors: list[Behavior] | Behavior):
         async with self._behave.mock(**behaviors):
