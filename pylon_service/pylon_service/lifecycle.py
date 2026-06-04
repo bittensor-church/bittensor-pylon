@@ -7,6 +7,8 @@ from litestar import Litestar
 from pylon_service.bittensor.contact import ContactFactory
 from pylon_service.bittensor.pool import BittensorContactPool
 from pylon_service.db.database import run_migrations
+from pylon_service.evm.contact import EvmContact
+from pylon_service.evm.contact_router import EvmContactRouter
 from pylon_service.scheduler import create_scheduler
 from pylon_service.settings import settings
 from pylon_service.tasks import reschedule_weight_tasks
@@ -30,6 +32,26 @@ async def bittensor_contact_pool_lifespan(app: Litestar) -> AsyncGenerator[None]
     ) as pool:
         app.state.bittensor_contact_pool = pool
         yield
+
+
+@asynccontextmanager
+async def evm_contact_lifespan(app: Litestar) -> AsyncGenerator[None]:
+    """
+    Lifespan for the EVM contact router. Connects to the configured main and archive EVM RPC nodes.
+    Recent blocks are served from the main node; older blocks fall back to the archive node.
+    """
+    router = EvmContactRouter(
+        main_contact=EvmContact(settings.evm_rpc_url),
+        archive_contact=EvmContact(settings.evm_archive_rpc_url),
+        archive_blocks_cutoff=settings.evm_archive_blocks_cutoff,
+    )
+    logger.debug("Opening EVM contact router (main=%s, archive=%s)", settings.evm_rpc_url, settings.evm_archive_rpc_url)
+    try:
+        await router.open()
+        app.state.evm_contact_router = router
+        yield
+    finally:
+        await router.close()
 
 
 @asynccontextmanager

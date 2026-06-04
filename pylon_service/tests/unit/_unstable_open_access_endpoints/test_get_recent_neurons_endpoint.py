@@ -27,7 +27,7 @@ def subnet_neurons(neurons: list[Neuron], block: Block):
     return SubnetNeurons(block=block, neurons={neuron.hotkey: neuron for neuron in neurons})
 
 
-_ENDPOINT = "/api/_unstable/subnet/1/block/recent/neurons"
+_ENDPOINT = "/api/_unstable/openaccess/subnet/1/block/recent/neurons"
 
 
 @pytest.mark.asyncio

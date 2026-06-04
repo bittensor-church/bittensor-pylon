@@ -6,7 +6,7 @@ from pylon_client._internal.pylon_commons.types import Hotkey, IdentityName, Net
 from pylon_client.artanis import PylonClient, PylonNetuidMismatch
 from pylon_client.artanis.unstable import GetNeuronsResponse
 
-IDENTITIES_URL = Endpoint.IDENTITIES.absolute_url()
+IDENTITIES_URL = Endpoint.IDENTITIES.absolute_url(is_public_=True)
 
 
 def _neurons_url(netuid: int) -> str:

@@ -13,7 +13,7 @@ async def test_get_extrinsic_success(pact: Pact, get_extrinsic_response_matcher:
     (
         pact.upon_receiving("a request for a specific extrinsic")
         .given("extrinsic exists", block_number=BLOCK_NUMBER, extrinsic_index=EXTRINSIC_INDEX)
-        .with_request("GET", f"/api/_unstable/block/{BLOCK_NUMBER}/extrinsic/{EXTRINSIC_INDEX}")
+        .with_request("GET", f"/api/_unstable/openaccess/block/{BLOCK_NUMBER}/extrinsic/{EXTRINSIC_INDEX}")
         .will_respond_with(codes.OK)
         .with_body(get_extrinsic_response_matcher, content_type="application/json")
     )

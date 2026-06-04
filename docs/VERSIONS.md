@@ -126,7 +126,9 @@ and API-specific classes. The versioning follows a hierarchy:
 ```
 pylon_commons/
 ├── models.py                 # Source of truth — all model definitions
-├── types.py                  # Type definitions (stable, not versioned)
+├── types/                    # Type definitions (stable, not versioned)
+│   ├── bittensor.py          # Bittensor-domain NewType definitions
+│   └── evm.py                # EVM-domain NewType definitions
 ├── _unstable/
 │   ├── models.py             # Re-exports from ../models.py (canonical)
 │   ├── responses.py          # Canonical response classes

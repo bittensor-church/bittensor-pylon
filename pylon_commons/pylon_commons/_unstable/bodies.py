@@ -1,3 +1,5 @@
+from typing import Any
+
 from pydantic import BaseModel, field_serializer, field_validator
 
 from ..types import CommitmentDataBytes, CommitmentDataHex, Hotkey, RevealedCommitmentData, Weight
@@ -65,3 +67,11 @@ class SetRevealedCommitmentBody(PylonBody):
 
     commitment: RevealedCommitmentData
     blocks_until_reveal: int
+
+
+class EvmLogsBody(PylonBody):
+    """
+    Class used to fetch and decode EVM contract logs via the API.
+    """
+
+    abi: list[dict[str, Any]]

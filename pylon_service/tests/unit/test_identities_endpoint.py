@@ -34,8 +34,8 @@ async def test_get_identities_v1(test_client: AsyncTestClient):
 
 
 @pytest.mark.asyncio
-async def test_get_identities_unstable(test_client: AsyncTestClient):
-    response = await test_client.get("/api/_unstable/identities")
+async def test_get_identities_unstable(open_access_test_client: AsyncTestClient):
+    response = await open_access_test_client.get("/api/_unstable/openaccess/identities")
 
     assert response.status_code == HTTP_200_OK
     assert response.json() == _EXPECTED_RESPONSE

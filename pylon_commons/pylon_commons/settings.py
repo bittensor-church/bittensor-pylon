@@ -8,6 +8,7 @@ from .types import (
     BittensorNetwork,
     IdentityName,
 )
+from .types import evm as evm_types
 
 ENV_FILE = os.environ.get("PYLON_ENV_FILE", ".env")
 
@@ -52,6 +53,11 @@ class Settings(BaseSettings):
     # request timeouts
     default_request_timeout_seconds: float = 60.0
     max_request_timeout_seconds: float = 300.0
+
+    # evm
+    evm_rpc_url: evm_types.RpcUrl = evm_types.RpcUrl("https://lite.chain.opentensor.ai")
+    evm_archive_rpc_url: evm_types.RpcUrl = evm_types.RpcUrl("https://archive.chain.opentensor.ai")
+    evm_archive_blocks_cutoff: ArchiveBlocksCutoff = ArchiveBlocksCutoff(300)
 
     # debug
     debug: bool = False

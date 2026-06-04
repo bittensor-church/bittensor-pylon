@@ -46,3 +46,10 @@ def identity_test_client_factory(test_app):
 @pytest.fixture
 def mock_recent_objects_store(mock_stores) -> MockStore:
     return mock_stores[StoreName.RECENT_OBJECTS]
+
+
+@pytest.fixture
+def mock_evm_client(mock_evm_contact):
+    mock_evm_contact.reset()
+    yield mock_evm_contact
+    mock_evm_contact.reset()

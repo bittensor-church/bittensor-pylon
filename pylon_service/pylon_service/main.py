@@ -42,6 +42,7 @@ def create_app() -> Litestar:
         lifespan=[
             lifecycle.bittensor_contact_pool_lifespan,
             lifecycle.scheduler_lifespan,
+            lifecycle.evm_contact_lifespan,
         ],
         on_startup=[
             lifecycle.initialize_database,

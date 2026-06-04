@@ -27,7 +27,7 @@ from pylon_client.artanis.unstable import SetWeightsResponse
 )
 @pytest.mark.asyncio
 async def test_async_config_retries_success(service_mock, test_url, attempts):
-    identities_url = EndpointUnstable.IDENTITIES.absolute_url()
+    identities_url = EndpointUnstable.IDENTITIES.absolute_url(is_public_=True)
     weights_url = EndpointUnstable.SUBNET_MECHANISM_WEIGHTS.absolute_url(
         identity_name_=IdentityName("sn1"), netuid_=NetUid(1), mechanism_id=MechanismId(0)
     )
@@ -62,7 +62,7 @@ async def test_async_config_retries_success(service_mock, test_url, attempts):
 
 @pytest.mark.asyncio
 async def test_async_config_retries_error(service_mock, test_url):
-    identities_url = EndpointUnstable.IDENTITIES.absolute_url()
+    identities_url = EndpointUnstable.IDENTITIES.absolute_url(is_public_=True)
     weights_url = EndpointUnstable.SUBNET_MECHANISM_WEIGHTS.absolute_url(
         identity_name_=IdentityName("sn1"), netuid_=NetUid(1), mechanism_id=MechanismId(0)
     )

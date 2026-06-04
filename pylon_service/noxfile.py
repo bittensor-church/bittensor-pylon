@@ -48,6 +48,11 @@ def test_integration_contact_resilience(session):
     test_integration(session, suite_sufix="contact_resilience/")
 
 
+@nox.session(name="test-integration-evm", python=PYTHON_VERSION)
+def test_integration_evm(session):
+    test_integration(session, suite_sufix="evm/")
+
+
 @nox.session(name="test-integration-e2e", python=PYTHON_VERSION)
 def test_integration_e2e(session):
     test_integration(session, suite_sufix="client_service_e2e/")

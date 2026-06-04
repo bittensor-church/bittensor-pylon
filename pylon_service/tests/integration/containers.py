@@ -9,7 +9,7 @@ from typing import Any
 from dotenv import dotenv_values
 from testcontainers.core.container import DockerContainer
 from testcontainers.core.image import DockerImage
-from testcontainers.core.wait_strategies import HttpWaitStrategy
+from testcontainers.core.wait_strategies import HttpWaitStrategy, LogMessageWaitStrategy
 
 from tests.helpers import find_free_port
 
@@ -270,3 +270,27 @@ class MitmproxyContainer(BaseDockerContainer):
     @property
     def internal_ws_url(self) -> str:
         return f"ws://{self.first_network_alias}:{_MITMPROXY_LISTEN_PORT}"
+
+
+_ANVIL_PORT = 8545
+_ANVIL_IMAGE = "ghcr.io/foundry-rs/foundry:nightly"
+
+
+class AnvilContainer(BaseDockerContainer):
+    """
+    Anvil local EVM node container for integration testing.
+
+    Starts a local Anvil node with pre-funded test accounts and waits
+    until it is ready to accept JSON-RPC requests.
+    """
+
+    def __init__(self, startup_timeout: int = 30, *, host_port: int | None = None, **kwargs: Any) -> None:
+        super().__init__(_ANVIL_IMAGE, **kwargs)
+        self._host_port = host_port if host_port is not None else find_free_port()
+        self.with_bind_ports(_ANVIL_PORT, self._host_port)
+        self.with_command(["anvil --host 0.0.0.0"])
+        self.waiting_for(LogMessageWaitStrategy("Listening on").with_startup_timeout(startup_timeout))
+
+    @property
+    def http_url(self) -> str:
+        return f"http://{self.get_container_host_ip()}:{self._host_port}"

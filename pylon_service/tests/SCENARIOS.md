@@ -4,10 +4,10 @@ This file lists the required public-API test scenarios for `pylon_service` befor
 
 The list is derived from:
 
-- [api/_unstable/api.py](/Users/junie/synced_p/bittensor-pylon/pylon_service/pylon_service/api/_unstable/api.py)
-- [api/v1/api.py](/Users/junie/synced_p/bittensor-pylon/pylon_service/pylon_service/api/v1/api.py)
-- [pylon_commons/_unstable/endpoints.py](/Users/junie/synced_p/bittensor-pylon/pylon_commons/pylon_commons/_unstable/endpoints.py)
-- [pylon_commons/v1/endpoints.py](/Users/junie/synced_p/bittensor-pylon/pylon_commons/pylon_commons/v1/endpoints.py)
+- [api/_unstable/api.py](/pylon_service/pylon_service/api/_unstable/api.py)
+- [api/v1/api.py](/pylon_service/pylon_service/api/v1/api.py)
+- [pylon_commons/_unstable/endpoints.py](/pylon_commons/pylon_commons/_unstable/endpoints.py)
+- [pylon_commons/v1/endpoints.py](/pylon_commons/pylon_commons/v1/endpoints.py)
 
 It is a checklist of scenario names, not a statement that each scenario needs its own physical test file.
 
@@ -185,6 +185,34 @@ For `v1`:
 - `test_{version}_identity_generate_certificate_keypair_unknown_identity_returns_404`
 - `test_{version}_identity_generate_certificate_keypair_unsupported_algorithm_returns_400_or_422`
 - `test_{version}_identity_generate_certificate_keypair_generation_failure_returns_502`
+
+## Unstable Open-Access General Endpoints
+
+These endpoints are only available in the `_unstable` API and are not subnet-scoped.
+
+### `GET /api/_unstable/openaccess/block/latest`
+
+- `test_unstable_open_access_latest_block_info_returns_latest_block_info`
+
+### `GET /api/_unstable/openaccess/block/{block_number}/extrinsic/{extrinsic_index}`
+
+- `test_unstable_open_access_get_extrinsic_returns_decoded_extrinsic`
+- `test_unstable_open_access_get_extrinsic_missing_block_returns_404`
+- `test_unstable_open_access_get_extrinsic_missing_extrinsic_returns_404`
+
+### `GET /api/_unstable/openaccess/block/latest/drand/last_stored_round`
+
+- `test_unstable_open_access_get_drand_last_stored_round_returns_round`
+
+### `POST /api/_unstable/openaccess/evm/contracts/{contract_address}/logs`
+
+- `test_unstable_open_access_evm_logs_returns_logs`
+- `test_unstable_open_access_evm_logs_returns_empty_list_when_no_logs`
+- `test_unstable_open_access_evm_logs_invalid_address_returns_400`
+- `test_unstable_open_access_evm_logs_invalid_abi_returns_422`
+- `test_unstable_open_access_evm_logs_rpc_error_returns_502`
+- `test_unstable_open_access_evm_logs_missing_abi_returns_400`
+- `test_unstable_open_access_evm_logs_missing_token_returns_401`
 
 ## Coverage Notes
 

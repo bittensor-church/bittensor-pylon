@@ -13,7 +13,7 @@ async def test_get_latest_neurons_success(pact: Pact, get_neurons_response_match
     (
         pact.upon_receiving("a request for latest neurons")
         .given("neurons exist", netuid=1, neuron_count=2)
-        .with_request("GET", "/api/_unstable/subnet/1/block/latest/neurons")
+        .with_request("GET", "/api/_unstable/openaccess/subnet/1/block/latest/neurons")
         .with_header("Authorization", f"Bearer {OPEN_ACCESS_TOKEN}")
         .will_respond_with(codes.OK)
         .with_body(get_neurons_response_matcher, content_type="application/json")

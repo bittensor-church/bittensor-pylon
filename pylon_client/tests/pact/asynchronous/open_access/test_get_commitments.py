@@ -13,7 +13,7 @@ async def test_get_commitments_success(pact: Pact, get_commitments_response_matc
     (
         pact.upon_receiving("a request for all commitments")
         .given("commitments exist", netuid=1, commitment_count=2)
-        .with_request("GET", "/api/_unstable/subnet/1/block/latest/commitments")
+        .with_request("GET", "/api/_unstable/openaccess/subnet/1/block/latest/commitments")
         .with_header("Authorization", f"Bearer {OPEN_ACCESS_TOKEN}")
         .will_respond_with(codes.OK)
         .with_body(get_commitments_response_matcher, content_type="application/json")

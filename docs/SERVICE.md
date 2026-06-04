@@ -18,6 +18,10 @@ depending on service configuration.
 Open access endpoints follow the pattern `/api/v1/subnet/{netuid}/...` and do not require
 an identity. See the full list at `/schema/swagger` when the service is running.
 
+The unstable API consolidates all open-access endpoints under the `/openaccess` prefix:
+- Subnet-scoped: `/api/_unstable/openaccess/subnet/{netuid}/...`
+- General (subnet-agnostic): `/api/_unstable/openaccess/...` (e.g. block info, extrinsic, EVM logs)
+
 ### Identity Access
 
 Identity is a combination of a Bittensor wallet and a subnet.
@@ -142,6 +146,17 @@ The Pylon client sets this header automatically based on its timeout configurati
 | `PYLON_COMMITMENT_RETRY_ATTEMPTS` | Max retry attempts for commitment submission | `10` |
 | `PYLON_COMMITMENT_RETRY_DELAY_SECONDS` | Delay between commitment retries in seconds | `1` |
 
+### EVM
+
+Pylon can query EVM-compatible smart contract logs via the `/api/_unstable/openaccess/evm/contracts/{contract_address}/logs` endpoint.
+By default it connects to the public Bittensor EVM nodes.
+
+| Variable | Description | Default |
+|----------|-------------|---------|
+| `PYLON_EVM_RPC_URL` | EVM main RPC URL for recent blocks | `https://lite.chain.opentensor.ai` |
+| `PYLON_EVM_ARCHIVE_RPC_URL` | EVM archive RPC URL for historical logs | `https://archive.chain.opentensor.ai` |
+| `PYLON_EVM_ARCHIVE_BLOCKS_CUTOFF` | Blocks threshold for switching to archive network | `300` |
+
 ### Recent Objects Caching
 
 Pylon can cache neuron data for fast retrieval via the `/block/recent/neurons` endpoint.
@@ -244,6 +259,16 @@ All HTTP metrics include labels: `method`, `path`, `status_code`, `app_name`.
 | `pylon_bittensor_fallback_total` | Counter | Archive client fallback events |
 
 Labels: `operation`, `status`, `uri`, `netuid`, `hotkey`, `reason`.
+
+*EVM Operations Metrics:*
+
+| Metric | Type | Description |
+|--------|------|-------------|
+| `pylon_evm_operation_duration_seconds` | Histogram | Duration of EVM contact operations |
+| `pylon_evm_archive_routing_total` | Counter | EVM log query routing decisions |
+
+Labels for `pylon_evm_operation_duration_seconds`: `operation`, `status`, `rpc_url`.
+Labels for `pylon_evm_archive_routing_total`: `reason` (`archive`, `main`, or `split`).
 
 *ApplyWeights Job Metrics:*
 

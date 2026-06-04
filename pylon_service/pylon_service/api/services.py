@@ -1,8 +1,14 @@
 from pylon_service.bittensor.contact import BittensorPort
+from pylon_service.evm.contact_router import EvmContactRouter
 
 
 class BaseService:
     def __init__(self, contact_router: BittensorPort) -> None:
+        self.contact_router = contact_router
+
+
+class BaseEvmService:
+    def __init__(self, contact_router: EvmContactRouter) -> None:
         self.contact_router = contact_router
 
 

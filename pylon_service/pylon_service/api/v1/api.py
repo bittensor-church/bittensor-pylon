@@ -14,7 +14,7 @@ from pylon_service.api._unstable.api import (
 from pylon_service.api.utils import check_identity_netuid, handler
 from pylon_service.dependencies import (
     IDENTITY_PROVIDERS,
-    OPEN_ACCESS_PROVIDERS,
+    OPEN_ACCESS_SUBNET_PROVIDERS,
     PUBLIC_PROVIDERS,
 )
 from pylon_service.guards import identity_auth_guard, open_access_auth_guard
@@ -65,7 +65,7 @@ class PublicController(Controller):
 class OpenAccessController(Controller):
     path = "/subnet/{netuid:int}/"
     guards = [open_access_auth_guard]
-    dependencies = OPEN_ACCESS_PROVIDERS
+    dependencies = OPEN_ACCESS_SUBNET_PROVIDERS
 
     get_commitments_endpoint = Handlers.get_commitments_endpoint
     get_commitment_endpoint = Handlers.get_commitment_endpoint

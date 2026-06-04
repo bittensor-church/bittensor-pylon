@@ -10,7 +10,7 @@ def test_get_latest_prices_success(pact: Pact, get_prices_response_matcher: dict
     (
         pact.upon_receiving("a request for latest prices")
         .given("prices exist")
-        .with_request("GET", "/api/_unstable/block/latest/prices")
+        .with_request("GET", "/api/_unstable/openaccess/block/latest/prices")
         .will_respond_with(codes.OK)
         .with_body(get_prices_response_matcher, content_type="application/json")
     )
@@ -27,7 +27,7 @@ def test_get_prices_success(pact: Pact, get_prices_response_matcher: dict, pylon
     (
         pact.upon_receiving("a request for prices at specific block")
         .given("prices exist at block", block_number=BLOCK_NUMBER)
-        .with_request("GET", f"/api/_unstable/block/{BLOCK_NUMBER}/prices")
+        .with_request("GET", f"/api/_unstable/openaccess/block/{BLOCK_NUMBER}/prices")
         .will_respond_with(codes.OK)
         .with_body(get_prices_response_matcher, content_type="application/json")
     )

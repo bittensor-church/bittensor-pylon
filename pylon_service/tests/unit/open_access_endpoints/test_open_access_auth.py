@@ -46,7 +46,7 @@ async def test_correct_token_succeeds(test_client: AsyncTestClient):
 
 @pytest.mark.asyncio
 async def test_no_auth_header_returns_401_unstable(test_client: AsyncTestClient):
-    response = await test_client.get("/api/_unstable/subnet/1/block/latest/neurons")
+    response = await test_client.get("/api/_unstable/openaccess/subnet/1/block/latest/neurons")
 
     assert response.status_code == HTTP_401_UNAUTHORIZED
 
@@ -54,7 +54,7 @@ async def test_no_auth_header_returns_401_unstable(test_client: AsyncTestClient)
 @pytest.mark.asyncio
 async def test_wrong_token_returns_403_unstable(test_client: AsyncTestClient):
     response = await test_client.get(
-        "/api/_unstable/subnet/1/block/latest/neurons",
+        "/api/_unstable/openaccess/subnet/1/block/latest/neurons",
         headers={"Authorization": "Bearer wrong_token"},
     )
 
@@ -64,7 +64,7 @@ async def test_wrong_token_returns_403_unstable(test_client: AsyncTestClient):
 @pytest.mark.asyncio
 async def test_correct_token_succeeds_unstable(test_client: AsyncTestClient):
     response = await test_client.get(
-        "/api/_unstable/subnet/1/block/latest/neurons",
+        "/api/_unstable/openaccess/subnet/1/block/latest/neurons",
         headers={"Authorization": "Bearer test_token"},
     )
 

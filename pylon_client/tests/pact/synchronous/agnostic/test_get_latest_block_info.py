@@ -9,7 +9,7 @@ def test_get_latest_block_info_success(pact: Pact, get_latest_block_info_respons
     (
         pact.upon_receiving("a request for latest block info")
         .given("latest block info exists")
-        .with_request("GET", "/api/_unstable/block/latest")
+        .with_request("GET", "/api/_unstable/openaccess/block/latest")
         .will_respond_with(codes.OK)
         .with_body(get_latest_block_info_response_matcher, content_type="application/json")
     )

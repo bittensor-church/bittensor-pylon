@@ -40,7 +40,7 @@ async def test_unstable_open_access_get_revealed_commitments_by_hotkey_returns_l
     async with mock_bt_client_factory() as mock_client:
         async with mock_client.mock_behavior(get_revealed_commitments=[resolve_revealed_commitments]):
             response = await open_access_test_client.get(
-                f"/api/_unstable/subnet/{REVEALED_COMMITMENTS_NETUID}/block/latest/commitments/revealed/hotkey1"
+                f"/api/_unstable/openaccess/subnet/{REVEALED_COMMITMENTS_NETUID}/block/latest/commitments/revealed/hotkey1"
             )
 
     assert response.status_code == HTTP_200_OK
@@ -57,7 +57,7 @@ async def test_unstable_open_access_get_revealed_commitments_by_hotkey_returns_4
             get_revealed_commitments=[None],
         ):
             response = await open_access_test_client.get(
-                f"/api/_unstable/subnet/{REVEALED_COMMITMENTS_NETUID}/block/latest/commitments/revealed/hotkey1"
+                f"/api/_unstable/openaccess/subnet/{REVEALED_COMMITMENTS_NETUID}/block/latest/commitments/revealed/hotkey1"
             )
 
     assert response.status_code == HTTP_404_NOT_FOUND

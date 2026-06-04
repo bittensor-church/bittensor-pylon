@@ -1,0 +1,32 @@
+{
+  "from_block": 100,
+  "logs": [
+    {
+      "address": "0x1234567890123456789012345678901234567890",
+      "args": {
+        "from": "0xabc",
+        "to": "0xdef",
+        "value": 1000
+      },
+      "block_number": 150,
+      "event": "Transfer",
+      "log_index": 0,
+      "transaction_hash": "0xdeadbeef",
+      "transaction_index": 0
+    },
+    {
+      "address": "0x1234567890123456789012345678901234567890",
+      "args": {
+        "from": "0xabc",
+        "to": "0xdef",
+        "value": 1000
+      },
+      "block_number": 160,
+      "event": "Transfer",
+      "log_index": 0,
+      "transaction_hash": "0xdeadbeef",
+      "transaction_index": 0
+    }
+  ],
+  "to_block": 200
+}

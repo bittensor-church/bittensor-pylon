@@ -22,7 +22,7 @@ async def test_get_all_revealed_commitments_success(
     (
         pact.upon_receiving("an open access request for all revealed commitments")
         .given("revealed commitments exist", netuid=NETUID)
-        .with_request("GET", f"/api/_unstable/subnet/{NETUID}/block/latest/commitments/revealed")
+        .with_request("GET", f"/api/_unstable/openaccess/subnet/{NETUID}/block/latest/commitments/revealed")
         .with_header("Authorization", f"Bearer {OPEN_ACCESS_TOKEN}")
         .will_respond_with(codes.OK)
         .with_body(get_revealed_commitments_response_matcher, content_type="application/json")
