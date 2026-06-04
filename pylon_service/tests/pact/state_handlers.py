@@ -5,6 +5,7 @@ from types import SimpleNamespace
 from typing import TYPE_CHECKING, Any, ClassVar, Literal
 from unittest.mock import AsyncMock
 
+from pylon_commons.currency import CurrencyRao, Token
 from pylon_commons.models import (
     CommitmentVariant,
     HexDataCommitment,
@@ -12,12 +13,17 @@ from pylon_commons.models import (
     SubnetCommitments,
     SubnetHyperparams,
     SubnetNeurons,
+    SubnetPrice,
+    SubnetPriceEntry,
+    SubnetPrices,
     SubnetRevealedCommitments,
 )
 from pylon_commons.types import (
+    AlphaPriceRao,
     BlockNumber,
     CommitmentDataHex,
     Hotkey,
+    NetUid,
     RevealedCommitmentData,
     Tempo,
     Timestamp,
@@ -385,3 +391,69 @@ class BittensorHangs(StateHandler):
 
         client = self._get_client(parameters)
         client.add_behavior(parameters["method"], hang)
+
+
+def _build_subnet_prices(block) -> SubnetPrices:
+    return SubnetPrices(
+        block=block,
+        prices={
+            NetUid(1): SubnetPriceEntry(value=AlphaPriceRao(CurrencyRao[Token.TAO](1_000_000))),
+            NetUid(2): SubnetPriceEntry(value=AlphaPriceRao(CurrencyRao[Token.TAO](2_000_000))),
+        },
+    )
+
+
+class PricesExistHandler(StateHandler):
+    name = "prices exist"
+
+    def setup(self, parameters: dict[str, Any]) -> None:
+        block = BlockFactory.build()
+        prices = _build_subnet_prices(block)
+        client = self._get_client(parameters)
+        self._set_default_latest_block(client, block)
+        client.add_behavior("get_alpha_prices", prices)
+
+
+class PricesExistAtBlockHandler(StateHandler):
+    name = "prices exist at block"
+
+    def setup(self, parameters: dict[str, Any]) -> None:
+        block = BlockFactory.build(number=parameters["block_number"])
+        prices = _build_subnet_prices(block)
+        client = self._get_client(parameters)
+        self._set_default_latest_block(client, block)
+        client.add_behavior("get_block", block)
+        client.add_behavior("get_alpha_prices", prices)
+
+
+class PriceExistsHandler(StateHandler):
+    name = "price exists"
+
+    def setup(self, parameters: dict[str, Any]) -> None:
+        block = BlockFactory.build()
+        netuid = NetUid(parameters.get("netuid", 1))
+        price = SubnetPrice(
+            block=block,
+            netuid=netuid,
+            price=SubnetPriceEntry(value=AlphaPriceRao(CurrencyRao[Token.TAO](1_000_000))),
+        )
+        client = self._get_client(parameters)
+        self._set_default_latest_block(client, block)
+        client.add_behavior("get_alpha_price", price)
+
+
+class PriceExistsAtBlockHandler(StateHandler):
+    name = "price exists at block"
+
+    def setup(self, parameters: dict[str, Any]) -> None:
+        block = BlockFactory.build(number=parameters["block_number"])
+        netuid = NetUid(parameters.get("netuid", 1))
+        price = SubnetPrice(
+            block=block,
+            netuid=netuid,
+            price=SubnetPriceEntry(value=AlphaPriceRao(CurrencyRao[Token.TAO](1_000_000))),
+        )
+        client = self._get_client(parameters)
+        self._set_default_latest_block(client, block)
+        client.add_behavior("get_block", block)
+        client.add_behavior("get_alpha_price", price)
