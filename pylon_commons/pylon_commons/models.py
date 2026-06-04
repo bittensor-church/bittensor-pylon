@@ -6,6 +6,7 @@ from pydantic import BaseModel, ConfigDict, Field
 
 from .currency import Currency, Token
 from .types import (
+    AlphaPriceRao,
     AlphaStake,
     AlphaStakeRao,
     BlockHash,
@@ -137,6 +138,17 @@ class SubnetNeurons(BittensorModel):
 class SubnetValidators(BittensorModel):
     block: Block
     validators: list[Neuron]
+
+
+class SubnetPrices(BittensorModel):
+    block: Block
+    prices: dict[NetUid, AlphaPriceRao]
+
+
+class SubnetPrice(BittensorModel):
+    block: Block
+    netuid: NetUid
+    price: AlphaPriceRao
 
 
 class SubnetHyperparams(BittensorModel):

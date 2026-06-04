@@ -20,6 +20,8 @@ from ..models import (
     SubnetCommitments,
     SubnetHyperparams,
     SubnetNeurons,
+    SubnetPrice,
+    SubnetPrices,
     SubnetRevealedCommitments,
     SubnetState,
     SubnetValidators,

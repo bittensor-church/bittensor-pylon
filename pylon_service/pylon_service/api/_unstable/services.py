@@ -5,6 +5,8 @@ from pylon_commons.models import (
     RevealedCommitment,
     SubnetCommitments,
     SubnetNeurons,
+    SubnetPrice,
+    SubnetPrices,
     SubnetRevealedCommitments,
     SubnetValidators,
     WeightsStatus,
@@ -60,6 +62,28 @@ class BlockService(BaseService):
             raise ExtrinsicNotFoundError(f"Extrinsic {block_number}-{extrinsic_index} not found.")
 
         return extrinsic
+
+
+class PriceService(BaseService):
+    async def get_latest_prices(self) -> SubnetPrices:
+        block = await self.contact_router.get_latest_block()
+        return await self.contact_router.get_alpha_prices(block)
+
+    async def get_prices(self, block_number: BlockNumber) -> SubnetPrices:
+        block = await self.contact_router.get_block(block_number)
+        if block is None:
+            raise BlockNotFoundError(f"Block {block_number} not found.")
+        return await self.contact_router.get_alpha_prices(block)
+
+    async def get_latest_price(self, netuid: NetUid) -> SubnetPrice:
+        block = await self.contact_router.get_latest_block()
+        return await self.contact_router.get_alpha_price(netuid, block)
+
+    async def get_price(self, netuid: NetUid, block_number: BlockNumber) -> SubnetPrice:
+        block = await self.contact_router.get_block(block_number)
+        if block is None:
+            raise BlockNotFoundError(f"Block {block_number} not found.")
+        return await self.contact_router.get_alpha_price(netuid, block)
 
 
 class NeuronService(BaseService):

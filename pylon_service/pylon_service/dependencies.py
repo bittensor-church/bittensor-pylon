@@ -12,6 +12,7 @@ from pylon_service.api._unstable.services import (
     CommitmentService,
     DrandService,
     NeuronService,
+    PriceService,
     WeightService,
 )
 from pylon_service.api.v1.services import (
@@ -119,6 +120,12 @@ async def unstable_drand_service_dep(
     return DrandService(bt_contact_router)
 
 
+async def unstable_price_service_dep(
+    bt_contact_router: BittensorContactRouter,
+) -> PriceService:
+    return PriceService(bt_contact_router)
+
+
 async def v1_commitment_service_dep(
     bt_contact_router: BittensorContactRouter,
     unstable_commitment_service: CommitmentService,
@@ -140,6 +147,7 @@ SERVICE_PROVIDERS = {
     "unstable_commitment_service": Provide(unstable_commitment_service_dep),
     "unstable_weight_service": Provide(unstable_weight_service_dep),
     "unstable_drand_service": Provide(unstable_drand_service_dep),
+    "unstable_price_service": Provide(unstable_price_service_dep),
     "v1_commitment_service": Provide(v1_commitment_service_dep),
     "v1_weight_service": Provide(v1_weight_service_dep),
 }

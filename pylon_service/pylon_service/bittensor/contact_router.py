@@ -30,6 +30,8 @@ from pylon_service.bittensor.models import (
     SubnetCommitments,
     SubnetHyperparams,
     SubnetNeurons,
+    SubnetPrice,
+    SubnetPrices,
     SubnetState,
 )
 from pylon_service.metrics import bittensor_fallback_total
@@ -208,6 +210,22 @@ class BittensorContactRouter:
             "get_neurons",
             main_call=lambda: self._main_contact.get_neurons(netuid, block),
             archive_call=lambda: self._archive_contact.get_neurons(netuid, block),
+            block=block,
+        )
+
+    async def get_alpha_prices(self, block: Block) -> SubnetPrices:
+        return await self._delegate(
+            "get_alpha_prices",
+            main_call=lambda: self._main_contact.get_alpha_prices(block),
+            archive_call=lambda: self._archive_contact.get_alpha_prices(block),
+            block=block,
+        )
+
+    async def get_alpha_price(self, netuid: NetUid, block: Block) -> SubnetPrice:
+        return await self._delegate(
+            "get_alpha_price",
+            main_call=lambda: self._main_contact.get_alpha_price(netuid, block),
+            archive_call=lambda: self._archive_contact.get_alpha_price(netuid, block),
             block=block,
         )
 

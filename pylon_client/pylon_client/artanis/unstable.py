@@ -18,6 +18,8 @@ from pylon_client._internal.pylon_commons._unstable.models import (
     RevealedCommitment,
     Stakes,
     SubnetNeurons,
+    SubnetPrice,
+    SubnetPrices,
     SubnetValidators,
     TimelockEncryptedCommitment,
 )
@@ -29,6 +31,8 @@ from pylon_client._internal.pylon_commons._unstable.responses import (
     GetExtrinsicResponse,
     GetLatestBlockInfoResponse,
     GetNeuronsResponse,
+    GetPriceResponse,
+    GetPricesResponse,
     GetRevealedCommitmentsResponse,
     GetValidatorsResponse,
     GetWeightsStatusResponse,

@@ -2,9 +2,10 @@ import ipaddress
 
 import pytest
 from bittensor_wallet import Wallet
-from pylon_commons.currency import Currency, Token
-from pylon_commons.models import AxonInfo, AxonProtocol, Block, Neuron, Stakes
+from pylon_commons.currency import Currency, CurrencyRao, Token
+from pylon_commons.models import AxonInfo, AxonProtocol, Block, Neuron, Stakes, SubnetPrice, SubnetPrices
 from pylon_commons.types import (
+    AlphaPriceRao,
     AlphaStake,
     ArchiveBlocksCutoff,
     BlockHash,
@@ -148,3 +149,49 @@ async def test_contact_router_unknown_block_on_both_nodes_raises_archive_fallbac
         ):
             with pytest.raises(ArchiveFallbackException, match="unavailable on both main and archive nodes"):
                 await contact_router.get_neurons_list(netuid=NetUid(1), block=recent_block)
+
+
+@pytest.mark.asyncio
+async def test_contact_router_get_alpha_prices_uses_main_for_recent_block(
+    contact_router, main_contact, archive_contact
+):
+    """
+    A recent block reads alpha prices from the main contact, not the archive.
+    """
+    recent_block = Block(number=BlockNumber(450), hash=BlockHash("0xrecent"))
+    latest_block = Block(number=BlockNumber(500), hash=BlockHash("0xlatest"))
+    expected = SubnetPrices(
+        block=recent_block,
+        prices={
+            NetUid(1): AlphaPriceRao(CurrencyRao[Token.TAO](5)),
+            NetUid(2): AlphaPriceRao(CurrencyRao[Token.TAO](7)),
+        },
+    )
+
+    async with contact_router:
+        async with main_contact.mock_behavior(get_latest_block=[latest_block], get_alpha_prices=[expected]):
+            result = await contact_router.get_alpha_prices(recent_block)
+
+    assert result == expected
+    assert main_contact.calls["get_alpha_prices"] == [(recent_block,)]
+    assert archive_contact.calls["get_alpha_prices"] == []
+
+
+@pytest.mark.asyncio
+async def test_contact_router_get_alpha_price_falls_back_to_archive_for_stale_block(
+    contact_router, main_contact, archive_contact
+):
+    """
+    A stale block (older than the 300-block cutoff) routes the single-subnet price read to the archive contact.
+    """
+    latest_block = Block(number=BlockNumber(100_000), hash=BlockHash("0xlatest"))
+    stale_block = Block(number=BlockNumber(1), hash=BlockHash("0xstale"))
+    expected = SubnetPrice(block=stale_block, netuid=NetUid(1), price=AlphaPriceRao(CurrencyRao[Token.TAO](42)))
+
+    async with contact_router:
+        async with main_contact.mock_behavior(get_latest_block=[latest_block]):
+            async with archive_contact.mock_behavior(get_alpha_price=[expected]):
+                result = await contact_router.get_alpha_price(NetUid(1), stale_block)
+
+    assert result == expected
+    assert archive_contact.calls["get_alpha_price"] == [(NetUid(1), stale_block)]

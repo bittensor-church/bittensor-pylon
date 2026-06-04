@@ -15,10 +15,14 @@ from pylon_client._internal.pylon_commons._unstable.requests import (
     GetIdentitiesRequest,
     GetLatestBlockInfoRequest,
     GetLatestNeuronsRequest,
+    GetLatestPriceRequest,
+    GetLatestPricesRequest,
     GetLatestValidatorsRequest,
     GetNeuronsRequest,
     GetOwnCommitmentRequest,
     GetOwnRevealedCommitmentsRequest,
+    GetPriceRequest,
+    GetPricesRequest,
     GetRecentNeuronsRequest,
     GetRevealedCommitmentsRequest,
     GetValidatorsRequest,
@@ -211,6 +215,32 @@ class HttpTranslator(AbstractRequestTranslator[Request, HttpCommunicatorT]):
         headers = self._get_auth_headers(request, communicator)
         return communicator.raw_client.build_request(
             method=self._endpoint_cls.LATEST_BLOCK_INFO.method, url=url, headers=headers
+        )
+
+    def _translate_get_latest_prices(self, request: GetLatestPricesRequest, communicator: HttpCommunicatorT) -> Request:
+        url = self._build_url(self._endpoint_cls.LATEST_PRICES, request)
+        headers = self._get_auth_headers(request, communicator)
+        return communicator.raw_client.build_request(
+            method=self._endpoint_cls.LATEST_PRICES.method, url=url, headers=headers
+        )
+
+    def _translate_get_prices(self, request: GetPricesRequest, communicator: HttpCommunicatorT) -> Request:
+        url = self._build_url(self._endpoint_cls.PRICES, request)
+        headers = self._get_auth_headers(request, communicator)
+        return communicator.raw_client.build_request(method=self._endpoint_cls.PRICES.method, url=url, headers=headers)
+
+    def _translate_get_latest_price(self, request: GetLatestPriceRequest, communicator: HttpCommunicatorT) -> Request:
+        url = self._build_url(self._endpoint_cls.SUBNET_LATEST_PRICE, request)
+        headers = self._get_auth_headers(request, communicator)
+        return communicator.raw_client.build_request(
+            method=self._endpoint_cls.SUBNET_LATEST_PRICE.method, url=url, headers=headers
+        )
+
+    def _translate_get_price(self, request: GetPriceRequest, communicator: HttpCommunicatorT) -> Request:
+        url = self._build_url(self._endpoint_cls.SUBNET_PRICE, request)
+        headers = self._get_auth_headers(request, communicator)
+        return communicator.raw_client.build_request(
+            method=self._endpoint_cls.SUBNET_PRICE.method, url=url, headers=headers
         )
 
     def _translate_get_extrinsic(self, request: GetExtrinsicRequest, communicator: HttpCommunicatorT) -> Request:

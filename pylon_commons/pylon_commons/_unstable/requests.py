@@ -16,6 +16,8 @@ from .responses import (
     GetIdentitiesResponse,
     GetLatestBlockInfoResponse,
     GetNeuronsResponse,
+    GetPriceResponse,
+    GetPricesResponse,
     GetRevealedCommitmentsResponse,
     GetValidatorsResponse,
     GetWeightsStatusResponse,
@@ -105,6 +107,24 @@ class GetRecentNeuronsRequest(AuthenticatedPylonRequest[GetNeuronsResponse]):
     response_cls = GetNeuronsResponse
 
 
+class GetLatestPriceRequest(AuthenticatedPylonRequest[GetPriceResponse]):
+    """
+    Class used to fetch the alpha price for a single subnet at the latest block.
+    """
+
+    response_cls = GetPriceResponse
+
+
+class GetPriceRequest(AuthenticatedPylonRequest[GetPriceResponse]):
+    """
+    Class used to fetch the alpha price for a single subnet at a specific block.
+    """
+
+    response_cls = GetPriceResponse
+
+    block_number: BlockNumber
+
+
 class GetValidatorsRequest(AuthenticatedPylonRequest[GetValidatorsResponse]):
     """
     Class used to fetch the validators by the Pylon client.
@@ -166,6 +186,28 @@ class GetLatestBlockInfoRequest(PylonRequest[GetLatestBlockInfoResponse]):
     """
 
     response_cls = GetLatestBlockInfoResponse
+
+
+class GetLatestPricesRequest(PylonRequest[GetPricesResponse]):
+    """
+    Class used to fetch alpha prices for all subnets at the latest block.
+
+    This request does not require subnet context as it is blockchain-level data.
+    """
+
+    response_cls = GetPricesResponse
+
+
+class GetPricesRequest(PylonRequest[GetPricesResponse]):
+    """
+    Class used to fetch alpha prices for all subnets at a specific block.
+
+    This request does not require subnet context as it is blockchain-level data.
+    """
+
+    response_cls = GetPricesResponse
+
+    block_number: BlockNumber
 
 
 class GetExtrinsicRequest(PylonRequest[GetExtrinsicResponse]):

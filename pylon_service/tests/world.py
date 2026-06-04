@@ -14,11 +14,14 @@ from pylon_commons.models import (
     SubnetCommitments,
     SubnetHyperparams,
     SubnetNeurons,
+    SubnetPrice,
+    SubnetPrices,
     SubnetRevealedCommitments,
     SubnetState,
     TimelockEncryptedCommitment,
 )
 from pylon_commons.types import (
+    AlphaPriceRao,
     AlphaStake,
     AlphaStakeRao,
     BlockHash,
@@ -157,6 +160,22 @@ class SharedWorld:
                 ),
             )
             contact.set_default("set_weights", lambda netuid, mechanism_id, weights: None)
+            contact.set_default(
+                "get_alpha_prices",
+                lambda block: SubnetPrices(
+                    block=block,
+                    prices={
+                        NetUid(1): AlphaPriceRao(CurrencyRao[Token.TAO](1_000_000)),
+                        NetUid(2): AlphaPriceRao(CurrencyRao[Token.TAO](2_000_000)),
+                    },
+                ),
+            )
+            contact.set_default(
+                "get_alpha_price",
+                lambda netuid, block: SubnetPrice(
+                    block=block, netuid=netuid, price=AlphaPriceRao(CurrencyRao[Token.TAO](1_000_000))
+                ),
+            )
 
 
 def default_latest_block() -> Block:

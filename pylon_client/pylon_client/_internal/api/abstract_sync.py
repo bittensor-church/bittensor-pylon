@@ -13,10 +13,14 @@ from pylon_client._internal.pylon_commons._unstable.requests import (
     GetExtrinsicRequest,
     GetLatestBlockInfoRequest,
     GetLatestNeuronsRequest,
+    GetLatestPriceRequest,
+    GetLatestPricesRequest,
     GetLatestValidatorsRequest,
     GetNeuronsRequest,
     GetOwnCommitmentRequest,
     GetOwnRevealedCommitmentsRequest,
+    GetPriceRequest,
+    GetPricesRequest,
     GetRecentNeuronsRequest,
     GetRevealedCommitmentsRequest,
     GetValidatorsRequest,
@@ -34,6 +38,8 @@ from pylon_client._internal.pylon_commons._unstable.responses import (
     GetExtrinsicResponse,
     GetLatestBlockInfoResponse,
     GetNeuronsResponse,
+    GetPriceResponse,
+    GetPricesResponse,
     GetRevealedCommitmentsResponse,
     GetValidatorsResponse,
     GetWeightsStatusResponse,
@@ -247,6 +253,30 @@ class AbstractOpenAccessApi(AbstractApi, ABC):
         """
         return self._send_request(self._get_latest_block_info_request())
 
+    def get_latest_prices(self) -> GetPricesResponse:
+        """
+        Retrieves alpha prices (rao) for all subnets at the latest block.
+        """
+        return self._send_request(self._get_latest_prices_request())
+
+    def get_prices(self, block_number: BlockNumber) -> GetPricesResponse:
+        """
+        Retrieves alpha prices (rao) for all subnets at a given block.
+        """
+        return self._send_request(self._get_prices_request(block_number))
+
+    def get_latest_price(self, netuid: NetUid) -> GetPriceResponse:
+        """
+        Retrieves the alpha price (rao) for a single subnet at the latest block.
+        """
+        return self._send_request(self._get_latest_price_request(netuid))
+
+    def get_price(self, netuid: NetUid, block_number: BlockNumber) -> GetPriceResponse:
+        """
+        Retrieves the alpha price (rao) for a single subnet at a given block.
+        """
+        return self._send_request(self._get_price_request(netuid, block_number))
+
     def get_extrinsic(self, block_number: BlockNumber, extrinsic_index: ExtrinsicIndex) -> GetExtrinsicResponse:
         """
         Retrieves a decoded extrinsic from a specific block.
@@ -304,6 +334,18 @@ class AbstractOpenAccessApi(AbstractApi, ABC):
 
     @abstractmethod
     def _get_latest_block_info_request(self) -> GetLatestBlockInfoRequest: ...
+
+    @abstractmethod
+    def _get_latest_prices_request(self) -> GetLatestPricesRequest: ...
+
+    @abstractmethod
+    def _get_prices_request(self, block_number: BlockNumber) -> GetPricesRequest: ...
+
+    @abstractmethod
+    def _get_latest_price_request(self, netuid: NetUid) -> GetLatestPriceRequest: ...
+
+    @abstractmethod
+    def _get_price_request(self, netuid: NetUid, block_number: BlockNumber) -> GetPriceRequest: ...
 
     @abstractmethod
     def _get_extrinsic_request(
@@ -586,6 +628,30 @@ class AbstractIdentityApi(AbstractApi, ABC):
         """
         return self._send_identity_request(self._get_latest_block_info_request)
 
+    def get_latest_prices(self) -> GetPricesResponse:
+        """
+        Retrieves alpha prices (rao) for all subnets at the latest block.
+        """
+        return self._send_identity_request(self._get_latest_prices_request)
+
+    def get_prices(self, block_number: BlockNumber) -> GetPricesResponse:
+        """
+        Retrieves alpha prices (rao) for all subnets at a given block.
+        """
+        return self._send_identity_request(partial(self._get_prices_request, block_number))
+
+    def get_latest_price(self) -> GetPriceResponse:
+        """
+        Retrieves the alpha price (rao) for the identity's subnet at the latest block.
+        """
+        return self._send_identity_request(self._get_latest_price_request)
+
+    def get_price(self, block_number: BlockNumber) -> GetPriceResponse:
+        """
+        Retrieves the alpha price (rao) for the identity's subnet at a given block.
+        """
+        return self._send_identity_request(partial(self._get_price_request, block_number))
+
     def get_extrinsic(self, block_number: BlockNumber, extrinsic_index: ExtrinsicIndex) -> GetExtrinsicResponse:
         """
         Retrieves a decoded extrinsic from a specific block.
@@ -665,6 +731,18 @@ class AbstractIdentityApi(AbstractApi, ABC):
 
     @abstractmethod
     def _get_latest_block_info_request(self) -> GetLatestBlockInfoRequest: ...
+
+    @abstractmethod
+    def _get_latest_prices_request(self) -> GetLatestPricesRequest: ...
+
+    @abstractmethod
+    def _get_prices_request(self, block_number: BlockNumber) -> GetPricesRequest: ...
+
+    @abstractmethod
+    def _get_latest_price_request(self) -> GetLatestPriceRequest: ...
+
+    @abstractmethod
+    def _get_price_request(self, block_number: BlockNumber) -> GetPriceRequest: ...
 
     @abstractmethod
     def _get_extrinsic_request(
