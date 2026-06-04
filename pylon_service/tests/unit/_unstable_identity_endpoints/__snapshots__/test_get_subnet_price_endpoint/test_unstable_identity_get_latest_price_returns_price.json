@@ -1,0 +1,10 @@
+{
+  "block": {
+    "hash": "0xlatest",
+    "number": 1000
+  },
+  "netuid": 1,
+  "price": {
+    "value": 1000000
+  }
+}

@@ -13,6 +13,8 @@ from pylon_commons._unstable.responses import (
     GetIdentitiesResponse,
     GetLatestBlockInfoResponse,
     GetNeuronsResponse,
+    GetPriceResponse,
+    GetPricesResponse,
     GetRevealedCommitmentsResponse,
     GetValidatorsResponse,
     GetWeightsStatusResponse,
@@ -27,6 +29,7 @@ from pylon_service.api._unstable.services import (
     CommitmentService,
     DrandService,
     NeuronService,
+    PriceService,
     WeightService,
 )
 from pylon_service.api.utils import check_identity_netuid, handler
@@ -79,6 +82,30 @@ class Handlers:
         """
         last_stored_round = await unstable_drand_service.get_drand_last_stored_round()
         return GetDrandLastStoredRoundResponse(last_stored_round=last_stored_round)
+
+    @handler(Endpoint.LATEST_PRICES)
+    async def get_latest_prices_endpoint(self, unstable_price_service: PriceService) -> GetPricesResponse:
+        prices = await unstable_price_service.get_latest_prices()
+        return GetPricesResponse.model_validate(prices, from_attributes=True)
+
+    @handler(Endpoint.PRICES)
+    async def get_prices_endpoint(
+        self, unstable_price_service: PriceService, block_number: BlockNumber
+    ) -> GetPricesResponse:
+        prices = await unstable_price_service.get_prices(block_number)
+        return GetPricesResponse.model_validate(prices, from_attributes=True)
+
+    @handler(Endpoint.SUBNET_LATEST_PRICE)
+    async def get_latest_price_endpoint(self, unstable_price_service: PriceService, netuid: NetUid) -> GetPriceResponse:
+        price = await unstable_price_service.get_latest_price(netuid)
+        return GetPriceResponse.model_validate(price, from_attributes=True)
+
+    @handler(Endpoint.SUBNET_PRICE)
+    async def get_price_endpoint(
+        self, unstable_price_service: PriceService, netuid: NetUid, block_number: BlockNumber
+    ) -> GetPriceResponse:
+        price = await unstable_price_service.get_price(netuid, block_number)
+        return GetPriceResponse.model_validate(price, from_attributes=True)
 
     @handler(Endpoint.NEURONS)
     async def get_neurons(
@@ -231,6 +258,11 @@ class PublicController(Controller):
     get_latest_block_info_endpoint = Handlers.get_latest_block_info_endpoint
     get_extrinsic_endpoint = Handlers.get_extrinsic_endpoint
     get_last_stored_round_endpoint = Handlers.get_last_stored_round_endpoint
+    # TODO: This placement is temporary. These should be behind an open access controller that does
+    # not prepend the subnet to the path. Once we've decided on the new structure these endpoints
+    # should be moved. Be sure to also move the tests to the correct subfolder.
+    get_latest_prices_endpoint = Handlers.get_latest_prices_endpoint
+    get_prices_endpoint = Handlers.get_prices_endpoint
 
 
 class OpenAccessController(Controller):
@@ -249,6 +281,8 @@ class OpenAccessController(Controller):
     get_commitment_endpoint = Handlers.get_commitment_endpoint
     get_all_revealed_commitments_endpoint = Handlers.get_all_revealed_commitments_endpoint
     get_revealed_commitments_endpoint = Handlers.get_revealed_commitments_endpoint
+    get_latest_price_endpoint = Handlers.get_latest_price_endpoint
+    get_price_endpoint = Handlers.get_price_endpoint
 
 
 class IdentityController(Controller):
@@ -276,6 +310,8 @@ class IdentityController(Controller):
     set_revealed_commitment_endpoint = Handlers.set_revealed_commitment_endpoint
     get_own_revealed_commitments_endpoint = Handlers.get_own_revealed_commitments_endpoint
     generate_certificate_keypair_endpoint = Handlers.generate_certificate_keypair_endpoint
+    get_latest_price_endpoint = Handlers.get_latest_price_endpoint
+    get_price_endpoint = Handlers.get_price_endpoint
 
 
 __all__ = ["Handlers", "PublicController", "OpenAccessController", "IdentityController"]

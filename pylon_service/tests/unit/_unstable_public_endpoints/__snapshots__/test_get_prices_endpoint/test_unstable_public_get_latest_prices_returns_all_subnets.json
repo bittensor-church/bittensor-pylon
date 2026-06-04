@@ -1,0 +1,14 @@
+{
+  "block": {
+    "hash": "0xlatest",
+    "number": 1000
+  },
+  "prices": {
+    "1": {
+      "value": 1000000
+    },
+    "2": {
+      "value": 2500000
+    }
+  }
+}

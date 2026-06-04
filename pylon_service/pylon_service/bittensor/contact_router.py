@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 import logging
 from collections.abc import Awaitable, Callable
 
@@ -16,10 +17,10 @@ from pylon_commons.types import (
     RevealedCommitmentData,
     Weight,
 )
-from turbobt.substrate.exceptions import UnknownBlock
+from turbobt.substrate.exceptions import SubstrateException, UnknownBlock
 
 from pylon_service.bittensor.contact import AbstractBittensorContact
-from pylon_service.bittensor.exceptions import ArchiveFallbackException
+from pylon_service.bittensor.exceptions import ArchiveFallbackException, ArchiveInvalidParamsException
 from pylon_service.bittensor.models import (
     Block,
     CertificateAlgorithm,
@@ -30,6 +31,8 @@ from pylon_service.bittensor.models import (
     SubnetCommitments,
     SubnetHyperparams,
     SubnetNeurons,
+    SubnetPrice,
+    SubnetPrices,
     SubnetState,
 )
 from pylon_service.metrics import bittensor_fallback_total
@@ -97,6 +100,16 @@ class BittensorContactRouter:
                             f"Archive was used because the block exceeded archive block cutoff ({self._archive_blocks_cutoff} blocks)."
                         )
                     ) from exc
+                except SubstrateException as exc:
+                    if "Invalid params" in str(exc):
+                        await asyncio.shield(self._archive_contact.recreate())
+                        raise ArchiveInvalidParamsException(
+                            detail=(
+                                f"Archive node returned 'Invalid params'. "
+                                f"This may indicate the archive node ({self.archive_uri}) does not support named keyword arguments."
+                            )
+                        ) from exc
+                    raise
 
         try:
             return await main_call()
@@ -117,6 +130,16 @@ class BittensorContactRouter:
                 raise ArchiveFallbackException(
                     detail=f"Block {block.number} data is unavailable on both main and archive nodes."
                 ) from archive_exc
+            except SubstrateException as exc:
+                if "Invalid params" in str(exc):
+                    await asyncio.shield(self._archive_contact.recreate())
+                    raise ArchiveInvalidParamsException(
+                        detail=(
+                            f"Archive node returned 'Invalid params'. "
+                            f"This may indicate the archive node ({self.archive_uri}) does not support named keyword arguments."
+                        )
+                    ) from exc
+                raise
 
     async def get_block(self, number):
         return await self._delegate(
@@ -208,6 +231,22 @@ class BittensorContactRouter:
             "get_neurons",
             main_call=lambda: self._main_contact.get_neurons(netuid, block),
             archive_call=lambda: self._archive_contact.get_neurons(netuid, block),
+            block=block,
+        )
+
+    async def get_alpha_prices(self, block: Block) -> SubnetPrices:
+        return await self._delegate(
+            "get_alpha_prices",
+            main_call=lambda: self._main_contact.get_alpha_prices(block),
+            archive_call=lambda: self._archive_contact.get_alpha_prices(block),
+            block=block,
+        )
+
+    async def get_alpha_price(self, netuid: NetUid, block: Block) -> SubnetPrice:
+        return await self._delegate(
+            "get_alpha_price",
+            main_call=lambda: self._main_contact.get_alpha_price(netuid, block),
+            archive_call=lambda: self._archive_contact.get_alpha_price(netuid, block),
             block=block,
         )
 

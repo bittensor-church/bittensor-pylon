@@ -5,13 +5,14 @@ import logging
 from abc import ABC, abstractmethod
 from collections.abc import Awaitable, Callable
 from dataclasses import dataclass
-from typing import Any, Protocol
+from typing import Any, Protocol, cast
 
 from bittensor_wallet import Wallet
 from pylon_commons.constants import LATEST_BLOCK_MARK
-from pylon_commons.currency import Currency, Token
+from pylon_commons.currency import Currency, CurrencyRao, Token
 from pylon_commons.models import CommitmentVariant, RevealedCommitment, SubnetRevealedCommitments
 from pylon_commons.types import (
+    AlphaPriceRao,
     BittensorNetwork,
     BlockHash,
     BlockNumber,
@@ -70,6 +71,9 @@ from pylon_service.bittensor.models import (
     SubnetCommitments,
     SubnetHyperparams,
     SubnetNeurons,
+    SubnetPrice,
+    SubnetPriceEntry,
+    SubnetPrices,
     SubnetState,
 )
 from pylon_service.bittensor.utils import map_to_commitment, map_to_revealed_commitment
@@ -105,6 +109,8 @@ class BittensorPort(Protocol):
         self, netuid: NetUid, mechanism_id: MechanismId, weights: dict[NeuronUid, Weight]
     ) -> None: ...
     async def get_neurons(self, netuid: NetUid, block: Block) -> SubnetNeurons: ...
+    async def get_alpha_prices(self, block: Block) -> SubnetPrices: ...
+    async def get_alpha_price(self, netuid: NetUid, block: Block) -> SubnetPrice: ...
     async def get_commitment(
         self, netuid: NetUid, block: Block, hotkey: Hotkey | None = None
     ) -> CommitmentVariant | None: ...
@@ -152,6 +158,9 @@ class AbstractBittensorContact(BittensorPort, ABC):
     async def close(self) -> None: ...
 
     @abstractmethod
+    async def recreate(self) -> None: ...
+
+    @abstractmethod
     async def get_block(self, number: BlockNumber) -> Block | None: ...
 
     @abstractmethod
@@ -194,6 +203,18 @@ class AbstractBittensorContact(BittensorPort, ABC):
 
     @abstractmethod
     async def get_neurons(self, netuid: NetUid, block: Block) -> SubnetNeurons: ...
+
+    @abstractmethod
+    async def get_alpha_prices(self, block: Block) -> SubnetPrices:
+        """
+        Fetches alpha prices (in rao) for all subnets at the given block.
+        """
+
+    @abstractmethod
+    async def get_alpha_price(self, netuid: NetUid, block: Block) -> SubnetPrice:
+        """
+        Fetches the alpha price (in rao) for a single subnet at the given block.
+        """
 
     @abstractmethod
     async def get_commitment(
@@ -271,6 +292,9 @@ class TurboBtContact(AbstractBittensorContact):
         self._raw_client = Bittensor(wallet=self.wallet, uri=self.uri)
         await asyncio.shield(self._raw_client.__aenter__())
         self._is_client_ready.set()
+
+    async def recreate(self) -> None:
+        await self._recreate_bt_client()
 
     async def close(self) -> None:
         logger.info("Closing the TurboBtContact for %s", self.uri)
@@ -432,6 +456,50 @@ class TurboBtContact(AbstractBittensorContact):
     async def get_neurons(self, netuid: NetUid, block: Block) -> SubnetNeurons:
         neurons = await self.get_neurons_list(netuid, block)
         return SubnetNeurons(block=block, neurons={neuron.hotkey: neuron for neuron in neurons})
+
+    @track_operation(
+        bittensor_operation_duration,
+        labels={"uri": Attr("uri"), "hotkey": Attr("hotkey")},
+    )
+    async def get_alpha_prices(self, block: Block) -> SubnetPrices:
+        # No None/empty guard is needed here (unlike get_block/get_certificates): the SwapRuntimeApi
+        # call either raises a meaningful turbobt error (UnknownBlock for a pruned/unknown block,
+        # KeyError if the runtime API is absent) or returns a SCALE-decoded list. An empty list is the
+        # worst harmless case and simply yields an empty `prices` dict. Verified against the localchain
+        # in tests/integration/contact/test_prices.py.
+        result = cast(
+            "list[dict[str, int]]",
+            await self._protect_turbobt(
+                "get_alpha_prices",
+                lambda c: c.subtensor.api_call("SwapRuntimeApi", "current_alpha_price_all", block_hash=block.hash),
+            ),
+        )
+        prices = {
+            NetUid(entry["netuid"]): SubnetPriceEntry(value=AlphaPriceRao(CurrencyRao[Token.TAO](entry["price"])))
+            for entry in result
+        }
+        return SubnetPrices(block=block, prices=prices)
+
+    @track_operation(
+        bittensor_operation_duration,
+        labels={"uri": Attr("uri"), "netuid": Param("netuid"), "hotkey": Attr("hotkey")},
+    )
+    async def get_alpha_price(self, netuid: NetUid, block: Block) -> SubnetPrice:
+        # No None guard is needed (see get_alpha_prices): the SwapRuntimeApi call decodes to an int
+        # (an unknown netuid yields the runtime default price, not None) or raises a meaningful turbobt
+        # error. Verified against the localchain in tests/integration/contact/test_prices.py.
+        result = cast(
+            "int",
+            await self._protect_turbobt(
+                "get_alpha_price",
+                lambda c: c.subtensor.api_call(
+                    "SwapRuntimeApi", "current_alpha_price", block_hash=block.hash, netuid=netuid
+                ),
+            ),
+        )
+        return SubnetPrice(
+            block=block, netuid=netuid, price=SubnetPriceEntry(value=AlphaPriceRao(CurrencyRao[Token.TAO](result)))
+        )
 
     @staticmethod
     async def _translate_hyperparams(params: TurboBtSubnetHyperparams) -> SubnetHyperparams:

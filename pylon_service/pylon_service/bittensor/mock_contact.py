@@ -34,6 +34,8 @@ from pylon_service.bittensor.models import (
     SubnetCommitments,
     SubnetHyperparams,
     SubnetNeurons,
+    SubnetPrice,
+    SubnetPrices,
     SubnetState,
 )
 
@@ -137,6 +139,9 @@ class MockBittensorContact(AbstractBittensorContact):
     async def close(self) -> None:
         self._is_open = False
 
+    async def recreate(self) -> None:
+        pass
+
     @asynccontextmanager
     async def mock_behavior(self, **behaviors: list[Behavior] | Behavior):
         async with self._behave.mock(**behaviors):
@@ -215,6 +220,12 @@ class MockBittensorContact(AbstractBittensorContact):
 
     async def get_neurons(self, netuid: NetUid, block: Block) -> SubnetNeurons:
         return await self._execute_behavior("get_neurons", netuid, block)
+
+    async def get_alpha_prices(self, block: Block) -> SubnetPrices:
+        return await self._execute_behavior("get_alpha_prices", block)
+
+    async def get_alpha_price(self, netuid: NetUid, block: Block) -> SubnetPrice:
+        return await self._execute_behavior("get_alpha_price", netuid, block)
 
     async def get_commitment(
         self, netuid: NetUid, block: Block, hotkey: Hotkey | None = None

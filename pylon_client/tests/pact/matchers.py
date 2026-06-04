@@ -8,6 +8,10 @@ from tests.pact.constants import (
     COMMITMENT_HEX,
     EXTRINSIC_HASH,
     EXTRINSIC_INDEX,
+    NETUID,
+    NETUID_2,
+    PRICE_VALUE_RAO,
+    PRICE_VALUE_RAO_2,
 )
 
 
@@ -212,4 +216,28 @@ def latest_block_info_response_matcher() -> dict:
 def get_weights_status_response_matcher() -> dict:
     return {
         "weights_submitted": match.bool(False),
+    }
+
+
+def prices_response_matcher() -> dict:
+    return {
+        "block": block_matcher(),
+        "prices": match.each_value_matches(
+            match.each_key_matches(  # type: ignore[reportArgumentType]
+                {
+                    str(NETUID): {"value": match.int(PRICE_VALUE_RAO)},
+                    str(NETUID_2): {"value": match.int(PRICE_VALUE_RAO_2)},
+                },
+                rules=match.str(str(NETUID)),
+            ),
+            rules=match.like({"value": match.int(PRICE_VALUE_RAO)}),
+        ),
+    }
+
+
+def price_response_matcher() -> dict:
+    return {
+        "block": block_matcher(),
+        "netuid": match.int(NETUID),
+        "price": {"value": match.int(PRICE_VALUE_RAO)},
     }

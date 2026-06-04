@@ -29,6 +29,12 @@ class ArchiveFallbackException(BittensorException):
     """
 
 
+class ArchiveInvalidParamsException(ArchiveFallbackException):
+    """
+    Raised when the archive node returns 'Invalid params', possibly because it does not support named keyword arguments.
+    """
+
+
 class SubnetStateUnavailable(BittensorException):
     """
     Raised when subnet state is not available for a given netuid and block.

@@ -48,6 +48,10 @@ class Endpoint(BaseEndpoint):
     LATEST_VALIDATORS = (HTTPMethod.GET, "/block/latest/validators", "latest_validators")
     NEURONS = (HTTPMethod.GET, "/block/{block_number:int}/neurons", "neurons")
     RECENT_NEURONS = (HTTPMethod.GET, "/block/recent/neurons", "recent_neurons")
+    LATEST_PRICES = (HTTPMethod.GET, "/block/latest/prices", "latest_prices")
+    PRICES = (HTTPMethod.GET, "/block/{block_number:int}/prices", "prices")
+    SUBNET_LATEST_PRICE = (HTTPMethod.GET, "/block/latest/price", "subnet_latest_price")
+    SUBNET_PRICE = (HTTPMethod.GET, "/block/{block_number:int}/price", "subnet_price")
     SUBNET_WEIGHTS = (HTTPMethod.PUT, "/weights", "subnet_weights")
     SUBNET_MECHANISM_WEIGHTS = (HTTPMethod.PUT, "/mechanism/{mechanism_id:int}/weights", "subnet_mechanism_weights")
     SUBNET_MECHANISM_WEIGHTS_STATUS = (

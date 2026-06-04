@@ -10,6 +10,8 @@ from tests.pact.matchers import (
     get_weights_status_response_matcher,
     latest_block_info_response_matcher,
     neurons_response_matcher,
+    price_response_matcher,
+    prices_response_matcher,
     revealed_commitments_response_matcher,
     set_commitment_response_matcher,
     set_revealed_commitment_response_matcher,
@@ -91,3 +93,13 @@ def get_latest_block_info_response_matcher() -> dict:
 @pytest.fixture
 def get_weights_status_response_fixture() -> dict:
     return get_weights_status_response_matcher()
+
+
+@pytest.fixture
+def get_prices_response_matcher() -> dict:
+    return prices_response_matcher()
+
+
+@pytest.fixture
+def get_price_response_matcher() -> dict:
+    return price_response_matcher()

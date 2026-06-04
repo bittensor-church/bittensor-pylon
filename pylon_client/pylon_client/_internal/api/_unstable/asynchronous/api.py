@@ -13,10 +13,14 @@ from pylon_client._internal.pylon_commons._unstable.requests import (
     GetIdentitiesRequest,
     GetLatestBlockInfoRequest,
     GetLatestNeuronsRequest,
+    GetLatestPriceRequest,
+    GetLatestPricesRequest,
     GetLatestValidatorsRequest,
     GetNeuronsRequest,
     GetOwnCommitmentRequest,
     GetOwnRevealedCommitmentsRequest,
+    GetPriceRequest,
+    GetPricesRequest,
     GetRecentNeuronsRequest,
     GetRevealedCommitmentsRequest,
     GetValidatorsRequest,
@@ -75,6 +79,18 @@ class AsyncOpenAccessApi(AbstractAsyncOpenAccessApi):
 
     async def _get_latest_block_info_request(self) -> GetLatestBlockInfoRequest:
         return GetLatestBlockInfoRequest()
+
+    async def _get_latest_prices_request(self) -> GetLatestPricesRequest:
+        return GetLatestPricesRequest()
+
+    async def _get_prices_request(self, block_number: BlockNumber) -> GetPricesRequest:
+        return GetPricesRequest(block_number=block_number)
+
+    async def _get_latest_price_request(self, netuid: NetUid) -> GetLatestPriceRequest:
+        return GetLatestPriceRequest(netuid=netuid)
+
+    async def _get_price_request(self, netuid: NetUid, block_number: BlockNumber) -> GetPriceRequest:
+        return GetPriceRequest(netuid=netuid, block_number=block_number)
 
     async def _get_extrinsic_request(
         self, block_number: BlockNumber, extrinsic_index: ExtrinsicIndex
@@ -205,6 +221,18 @@ class AsyncIdentityApi(AbstractAsyncIdentityApi):
 
     async def _get_latest_block_info_request(self) -> GetLatestBlockInfoRequest:
         return GetLatestBlockInfoRequest()
+
+    async def _get_latest_prices_request(self) -> GetLatestPricesRequest:
+        return GetLatestPricesRequest()
+
+    async def _get_prices_request(self, block_number: BlockNumber) -> GetPricesRequest:
+        return GetPricesRequest(block_number=block_number)
+
+    async def _get_latest_price_request(self) -> GetLatestPriceRequest:
+        return GetLatestPriceRequest(netuid=self.netuid, identity_name=self.identity_name)
+
+    async def _get_price_request(self, block_number: BlockNumber) -> GetPriceRequest:
+        return GetPriceRequest(netuid=self.netuid, identity_name=self.identity_name, block_number=block_number)
 
     async def _get_extrinsic_request(
         self, block_number: BlockNumber, extrinsic_index: ExtrinsicIndex

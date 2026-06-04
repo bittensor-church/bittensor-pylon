@@ -1,5 +1,7 @@
 from ipaddress import IPv4Address
 
+from pylon_client._internal.pylon_commons.currency import CurrencyRao
+from pylon_client._internal.pylon_commons.types import AlphaPriceRao
 from pylon_client.artanis import (
     AlphaStake,
     BlockHash,
@@ -14,6 +16,7 @@ from pylon_client.artanis import (
     ExtrinsicLength,
     Hotkey,
     Incentive,
+    NetUid,
     NeuronActive,
     NeuronUid,
     Port,
@@ -36,10 +39,24 @@ from pylon_client.artanis.unstable import (
     Extrinsic,
     ExtrinsicCall,
     ExtrinsicCallArg,
+    GetPriceResponse,
+    GetPricesResponse,
     Neuron,
     Stakes,
+    SubnetPriceEntry,
 )
-from tests.pact.constants import BLOCK_HASH, BLOCK_NUMBER, BLOCK_TIMESTAMP, COLDKEY, EXTRINSIC_HASH, EXTRINSIC_INDEX
+from tests.pact.constants import (
+    BLOCK_HASH,
+    BLOCK_NUMBER,
+    BLOCK_TIMESTAMP,
+    COLDKEY,
+    EXTRINSIC_HASH,
+    EXTRINSIC_INDEX,
+    NETUID,
+    NETUID_2,
+    PRICE_VALUE_RAO,
+    PRICE_VALUE_RAO_2,
+)
 
 
 def build_block() -> Block:
@@ -77,6 +94,24 @@ def build_neuron(hotkey: str, uid: int) -> Neuron:
             tao=TaoStake(Currency[Token.TAO](200.2)),
             total=TotalStake(Currency[Token.ALPHA](300.3)),
         ),
+    )
+
+
+def build_prices() -> GetPricesResponse:
+    return GetPricesResponse(
+        block=build_block(),
+        prices={
+            NetUid(NETUID): SubnetPriceEntry(value=AlphaPriceRao(CurrencyRao[Token.TAO](PRICE_VALUE_RAO))),
+            NetUid(NETUID_2): SubnetPriceEntry(value=AlphaPriceRao(CurrencyRao[Token.TAO](PRICE_VALUE_RAO_2))),
+        },
+    )
+
+
+def build_price(netuid: int = NETUID) -> GetPriceResponse:
+    return GetPriceResponse(
+        block=build_block(),
+        netuid=NetUid(netuid),
+        price=SubnetPriceEntry(value=AlphaPriceRao(CurrencyRao[Token.TAO](PRICE_VALUE_RAO))),
     )
 
 

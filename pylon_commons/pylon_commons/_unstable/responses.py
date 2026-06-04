@@ -9,6 +9,8 @@ from .models import (
     RevealedCommitment,
     SubnetCommitments,
     SubnetNeurons,
+    SubnetPrice,
+    SubnetPrices,
     SubnetRevealedCommitments,
     SubnetValidators,
     WeightsStatus,
@@ -159,3 +161,19 @@ class GetDrandLastStoredRoundResponse(PylonResponse):
     """
 
     last_stored_round: int
+
+
+class GetPricesResponse(PylonResponse, SubnetPrices):
+    """
+    Response class that is returned for the GetPricesRequest (all subnets).
+    """
+
+    pass
+
+
+class GetPriceResponse(PylonResponse, SubnetPrice):
+    """
+    Response class that is returned for the GetPriceRequest (single subnet).
+    """
+
+    pass
