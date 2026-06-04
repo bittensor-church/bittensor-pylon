@@ -37,6 +37,8 @@ def test_get_price_success(pact: Pact, get_price_response_matcher: dict, pylon_c
     with pact.serve() as srv:
         client = pylon_client_factory(str(srv.url))
         with client:
-            response = client.unstable.open_access.get_price(netuid=NetUid(NETUID), block_number=BlockNumber(BLOCK_NUMBER))
+            response = client.unstable.open_access.get_price(
+                netuid=NetUid(NETUID), block_number=BlockNumber(BLOCK_NUMBER)
+            )
 
     assert response == build_price(netuid=NETUID)
