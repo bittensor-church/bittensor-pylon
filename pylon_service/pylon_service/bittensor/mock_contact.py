@@ -31,6 +31,7 @@ from pylon_service.bittensor.models import (
     Neuron,
     NeuronCertificate,
     NeuronCertificateKeypair,
+    RawEvmKeyAssociationInfo,
     SubnetCommitments,
     SubnetHyperparams,
     SubnetNeurons,
@@ -245,3 +246,8 @@ class MockBittensorContact(AbstractBittensorContact):
 
     async def get_drand_last_stored_round(self, block: Block | None = None) -> int:
         return await self._execute_behavior("get_drand_last_stored_round", block)
+
+    async def get_evm_key_associations(
+        self, netuid: NetUid, block: Block | None = None
+    ) -> dict[int, RawEvmKeyAssociationInfo]:
+        return await self._execute_behavior("get_evm_key_associations", netuid, block)

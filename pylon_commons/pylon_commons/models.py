@@ -287,6 +287,6 @@ class Extrinsic(BittensorModel):
 
 
 class WeightsStatus(BittensorModel):
-    model_config = ConfigDict(extra="allow")
+    model_config = ConfigDict(extra="allow") # FIXME likely unnecessary
 
     weights_submitted: bool

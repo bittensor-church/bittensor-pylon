@@ -20,6 +20,7 @@ from pylon_commons.types import (
     Consensus,
     Dividends,
     Emission,
+    EvmAddress,
     ExtrinsicHash,
     ExtrinsicIndex,
     ExtrinsicLength,
@@ -66,6 +67,7 @@ from pylon_service.bittensor.models import (
     Neuron,
     NeuronCertificate,
     NeuronCertificateKeypair,
+    RawEvmKeyAssociationInfo,
     Stakes,
     SubnetCommitments,
     SubnetHyperparams,
@@ -123,6 +125,10 @@ class BittensorPort(Protocol):
     ) -> int: ...
 
     async def get_drand_last_stored_round(self, block: Block | None = None) -> int: ...
+
+    async def get_evm_key_associations(
+        self, netuid: NetUid, block: Block | None = None
+    ) -> dict[int, RawEvmKeyAssociationInfo]: ...
 
 
 class AbstractBittensorContact(BittensorPort, ABC):
@@ -250,6 +256,11 @@ class AbstractBittensorContact(BittensorPort, ABC):
 
     @abstractmethod
     async def get_extrinsic(self, block: Block, extrinsic_index: ExtrinsicIndex) -> Extrinsic | None: ...
+
+    @abstractmethod
+    async def get_evm_key_associations(
+        self, netuid: NetUid, block: Block | None = None
+    ) -> dict[int, RawEvmKeyAssociationInfo]: ...
 
 
 class TurboBtContact(AbstractBittensorContact):
@@ -670,6 +681,21 @@ class TurboBtContact(AbstractBittensorContact):
 
     async def _get_signed_block(self, block: Block) -> SignedBlock | None:
         return await self._protect_turbobt("get_signed_block", lambda c: c.subtensor.chain.getBlock(block.hash))
+
+    async def get_evm_key_associations(
+        self, netuid: NetUid, block: Block | None = None
+    ) -> dict[int, RawEvmKeyAssociationInfo]:
+        associations = await self._protect_turbobt(
+            "get_evm_key_associations",
+            lambda c: c.subnet(netuid).associated_evm_addresses.fetch(block_hash=block.hash if block else None),
+        )
+        return {
+            uid: RawEvmKeyAssociationInfo(
+                evm_address=EvmAddress(association_info.h160_address),
+                last_block_where_ownership_was_proven=BlockNumber(association_info.last_block),
+            )
+            for uid, association_info in associations.items()
+        }
 
     @staticmethod
     def _translate_extrinsic(

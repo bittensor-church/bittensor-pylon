@@ -14,6 +14,7 @@ from apscheduler.schedulers.asyncio import AsyncIOScheduler, BaseScheduler
 from litestar import Litestar
 from pylon_commons.types import NetUid
 
+from pylon_service.bittensor.evm_keys.tasks import EvmKeyAssociationsUpdateTaskExecutor, UpdateEvmKeyAssociations
 from pylon_service.bittensor.recent import (
     AbstractContext,
     IdentitySubnetContext,
@@ -62,6 +63,28 @@ def _add_recent_neurons_job(app: Litestar, scheduler: BaseScheduler):
     )
 
 
+def _add_evm_key_associations_job(app: Litestar, scheduler: BaseScheduler):
+    netuids: set[NetUid] = set()
+
+    for identity in identities.values():
+        if identity.netuid not in netuids:
+            netuids.add(identity.netuid)
+
+    persistence_retention_blocks = 200  # FIXME read from settings
+    interval = 60.0  # FIXME read from settings
+    timeout = interval
+    updater = UpdateEvmKeyAssociations(app.state.bittensor_contact_pool, persistence_retention_blocks)
+    executor = EvmKeyAssociationsUpdateTaskExecutor(updater, netuids, timeout)
+
+    scheduler.add_job(
+        executor.run,
+        id="persist_evm_key_associations",
+        trigger="interval",
+        seconds=interval,
+        next_run_time=dt.datetime.now(tz=dt.UTC),  # update immediately
+    )
+
+
 def create_scheduler(app: Litestar) -> AsyncIOScheduler:
     global _SCHEDULER
 
@@ -73,5 +96,6 @@ def create_scheduler(app: Litestar) -> AsyncIOScheduler:
     _SCHEDULER = AsyncIOScheduler()
 
     _add_recent_neurons_job(app, _SCHEDULER)
+    _add_evm_key_associations_job(app, _SCHEDULER)
 
     return _SCHEDULER
