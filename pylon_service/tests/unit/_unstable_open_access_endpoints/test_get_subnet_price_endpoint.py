@@ -16,7 +16,7 @@ async def test_unstable_open_access_get_latest_price_returns_price(
     )
     async with mock_bt_client_factory() as mock_client:
         async with mock_client.mock_behavior(get_latest_block=[block], get_alpha_price=[price]):
-            response = await open_access_test_client.get("/api/_unstable/subnet/1/block/latest/price")
+            response = await open_access_test_client.get("/api/_unstable/openaccess/subnet/1/block/latest/price")
 
     assert response.status_code == HTTP_200_OK, response.content
     assert response.json() == snapshot_json
@@ -32,7 +32,7 @@ async def test_unstable_open_access_get_price_at_block_returns_price(
     )
     async with mock_bt_client_factory() as mock_client:
         async with mock_client.mock_behavior(get_block=[block], get_alpha_price=[price]):
-            response = await open_access_test_client.get("/api/_unstable/subnet/1/block/500/price")
+            response = await open_access_test_client.get("/api/_unstable/openaccess/subnet/1/block/500/price")
 
             assert response.status_code == HTTP_200_OK, response.content
             assert response.json() == snapshot_json
@@ -46,7 +46,7 @@ async def test_unstable_open_access_get_price_block_not_found_returns_404(
 ):
     async with mock_bt_client_factory() as mock_client:
         async with mock_client.mock_behavior(get_block=[None]):
-            response = await open_access_test_client.get("/api/_unstable/subnet/1/block/999999999/price")
+            response = await open_access_test_client.get("/api/_unstable/openaccess/subnet/1/block/999999999/price")
 
     assert response.status_code == HTTP_404_NOT_FOUND, response.content
     assert response.json() == snapshot_json
