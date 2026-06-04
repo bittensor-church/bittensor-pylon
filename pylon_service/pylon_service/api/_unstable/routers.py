@@ -5,6 +5,7 @@ from pylon_service.api._unstable.api import (
     IdentityController,
     OpenAccessGeneralController,
     OpenAccessSubnetController,
+    PublicController,
 )
 
 unstable_router = Router(
@@ -13,5 +14,6 @@ unstable_router = Router(
         IdentityController,
         OpenAccessGeneralController,
         OpenAccessSubnetController,
+        PublicController,
     ],
 )

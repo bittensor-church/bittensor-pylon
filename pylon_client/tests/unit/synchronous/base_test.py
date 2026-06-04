@@ -144,14 +144,14 @@ class IdentityEndpointTest(BaseEndpointTest, ABC):
         return type(self.endpoint)["IDENTITIES"]
 
     def _setup_login_mock(self, service_mock):
-        identities_url = self._identities_endpoint.absolute_url()
+        identities_url = self._identities_endpoint.absolute_url(is_public_=True)
         service_mock.get(identities_url).mock(
             return_value=Response(status_code=codes.OK, json={"identities": {"sn1": 1}})
         )
 
     def test_login_request_error(self, pylon_client, service_mock):
         assert pylon_client.config.retry.stop.max_attempt_number <= 3
-        identities_url = self._identities_endpoint.absolute_url()
+        identities_url = self._identities_endpoint.absolute_url(is_public_=True)
         service_mock.get(identities_url).mock(side_effect=ConnectError("Connection failed"))
 
         with pylon_client:
@@ -159,7 +159,7 @@ class IdentityEndpointTest(BaseEndpointTest, ABC):
                 self.make_endpoint_call(pylon_client)
 
     def test_login_response_error(self, pylon_client, service_mock):
-        identities_url = self._identities_endpoint.absolute_url()
+        identities_url = self._identities_endpoint.absolute_url(is_public_=True)
         service_mock.get(identities_url).mock(return_value=Response(status_code=codes.INTERNAL_SERVER_ERROR))
 
         with pylon_client:

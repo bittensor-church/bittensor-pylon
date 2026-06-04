@@ -68,7 +68,7 @@ class HttpTranslator(AbstractRequestTranslator[Request, HttpCommunicatorT]):
                 identity_name_=request.identity_name,
                 **request.model_dump(exclude={"netuid", "identity_name"}),
             )
-        return endpoint.absolute_url(**request.model_dump())
+        return endpoint.absolute_url(is_public_=True, **request.model_dump())
 
     def _translate_get_neurons(self, request: GetNeuronsRequest, communicator: HttpCommunicatorT) -> Request:
         url = self._build_url(self._endpoint_cls.NEURONS, request)

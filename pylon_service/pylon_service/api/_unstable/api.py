@@ -352,6 +352,7 @@ class IdentityController(Controller):
 
 __all__ = [
     "Handlers",
+    "PublicController",
     "OpenAccessBaseController",
     "OpenAccessGeneralController",
     "OpenAccessSubnetController",

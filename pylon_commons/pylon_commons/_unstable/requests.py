@@ -78,7 +78,7 @@ class AuthenticatedPylonRequest(PylonRequest[PylonResponseT], typing.Generic[Pyl
       (e.g. ``/api/v1/identity/{identity_name}/subnet/{netuid}/...``).
     """
 
-    netuid: NetUid
+    netuid: NetUid | None = None
     identity_name: IdentityName | None = None
 
 
@@ -179,7 +179,7 @@ class GetAllRevealedCommitmentsRequest(AuthenticatedPylonRequest[GetAllRevealedC
     response_cls = GetAllRevealedCommitmentsResponse
 
 
-class GetLatestBlockInfoRequest(PylonRequest[GetLatestBlockInfoResponse]):
+class GetLatestBlockInfoRequest(AuthenticatedPylonRequest[GetLatestBlockInfoResponse]):
     """
     Class used to fetch latest block info by the Pylon client.
 
@@ -189,7 +189,7 @@ class GetLatestBlockInfoRequest(PylonRequest[GetLatestBlockInfoResponse]):
     response_cls = GetLatestBlockInfoResponse
 
 
-class GetLatestPricesRequest(PylonRequest[GetPricesResponse]):
+class GetLatestPricesRequest(AuthenticatedPylonRequest[GetPricesResponse]):
     """
     Class used to fetch alpha prices for all subnets at the latest block.
 
@@ -199,7 +199,7 @@ class GetLatestPricesRequest(PylonRequest[GetPricesResponse]):
     response_cls = GetPricesResponse
 
 
-class GetPricesRequest(PylonRequest[GetPricesResponse]):
+class GetPricesRequest(AuthenticatedPylonRequest[GetPricesResponse]):
     """
     Class used to fetch alpha prices for all subnets at a specific block.
 
@@ -211,7 +211,7 @@ class GetPricesRequest(PylonRequest[GetPricesResponse]):
     block_number: BlockNumber
 
 
-class GetExtrinsicRequest(PylonRequest[GetExtrinsicResponse]):
+class GetExtrinsicRequest(AuthenticatedPylonRequest[GetExtrinsicResponse]):
     """
     Class used to fetch an extrinsic from a specific block by the Pylon client.
 
@@ -224,7 +224,7 @@ class GetExtrinsicRequest(PylonRequest[GetExtrinsicResponse]):
     extrinsic_index: ExtrinsicIndex
 
 
-class GetDrandLastStoredRoundRequest(PylonRequest[GetDrandLastStoredRoundResponse]):
+class GetDrandLastStoredRoundRequest(AuthenticatedPylonRequest[GetDrandLastStoredRoundResponse]):
     """
     Class used to fetch the last stored round for drand by the Pylon client.
 

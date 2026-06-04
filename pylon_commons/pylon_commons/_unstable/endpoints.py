@@ -64,9 +64,15 @@ class Endpoint(BaseEndpoint):
     VALIDATORS = (HTTPMethod.GET, "/block/{block_number:int}/validators", "validators")
     LATEST_EVM_ASSOCIATIONS = (HTTPMethod.GET, "/block/latest/evm_associations", "latest_evm_associations")
 
-    def absolute_url(self, netuid_: NetUid | None = None, identity_name_: IdentityName | None = None, **kwargs):
+    def absolute_url(
+        self,
+        netuid_: NetUid | None = None,
+        identity_name_: IdentityName | None = None,
+        is_public_: bool = False,
+        **kwargs,
+    ):
         formatted_endpoint = self.format_url(**kwargs)
         netuid_part = f"/subnet/{netuid_}" if netuid_ is not None else ""
         identity_part = f"/identity/{identity_name_}" if identity_name_ is not None else ""
-        open_access_part = "/openaccess" if identity_name_ is None else ""
+        open_access_part = "/openaccess" if identity_name_ is None and not is_public_ else ""
         return f"{self._version.prefix}{identity_part}{open_access_part}{netuid_part}{formatted_endpoint}"
