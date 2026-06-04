@@ -140,7 +140,6 @@ class SubnetValidators(BittensorModel):
     validators: list[Neuron]
 
 
-
 class SubnetPriceEntry(BittensorModel):
     value: AlphaPriceRao
 
