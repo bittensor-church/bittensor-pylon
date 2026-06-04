@@ -4,5 +4,7 @@
     "number": 500
   },
   "netuid": 1,
-  "price": 7777
+  "price": {
+    "value": 7777
+  }
 }

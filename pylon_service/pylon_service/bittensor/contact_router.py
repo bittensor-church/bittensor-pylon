@@ -16,10 +16,10 @@ from pylon_commons.types import (
     RevealedCommitmentData,
     Weight,
 )
-from turbobt.substrate.exceptions import UnknownBlock
+from turbobt.substrate.exceptions import SubstrateException, UnknownBlock
 
 from pylon_service.bittensor.contact import AbstractBittensorContact
-from pylon_service.bittensor.exceptions import ArchiveFallbackException
+from pylon_service.bittensor.exceptions import ArchiveFallbackException, ArchiveInvalidParamsException
 from pylon_service.bittensor.models import (
     Block,
     CertificateAlgorithm,
@@ -99,6 +99,15 @@ class BittensorContactRouter:
                             f"Archive was used because the block exceeded archive block cutoff ({self._archive_blocks_cutoff} blocks)."
                         )
                     ) from exc
+                except SubstrateException as exc:
+                    if "Invalid params" in str(exc):
+                        raise ArchiveInvalidParamsException(
+                            detail=(
+                                f"Archive node returned 'Invalid params'. "
+                                f"This may indicate the archive node ({self.archive_uri}) does not support named keyword arguments."
+                            )
+                        ) from exc
+                    raise
 
         try:
             return await main_call()
@@ -119,6 +128,15 @@ class BittensorContactRouter:
                 raise ArchiveFallbackException(
                     detail=f"Block {block.number} data is unavailable on both main and archive nodes."
                 ) from archive_exc
+            except SubstrateException as exc:
+                if "Invalid params" in str(exc):
+                    raise ArchiveInvalidParamsException(
+                        detail=(
+                            f"Archive node returned 'Invalid params'. "
+                            f"This may indicate the archive node ({self.archive_uri}) does not support named keyword arguments."
+                        )
+                    ) from exc
+                raise
 
     async def get_block(self, number):
         return await self._delegate(

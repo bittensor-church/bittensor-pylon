@@ -258,6 +258,9 @@ class PublicController(Controller):
     get_latest_block_info_endpoint = Handlers.get_latest_block_info_endpoint
     get_extrinsic_endpoint = Handlers.get_extrinsic_endpoint
     get_last_stored_round_endpoint = Handlers.get_last_stored_round_endpoint
+    # TODO: This placement is temporary. These should be behind an open access controller that does
+    # not prepend the subnet to the path. Once we've decided on the new structure these endpoints
+    # should be moved. Be sure to also move the tests to the correct subfolder.
     get_latest_prices_endpoint = Handlers.get_latest_prices_endpoint
     get_prices_endpoint = Handlers.get_prices_endpoint
 

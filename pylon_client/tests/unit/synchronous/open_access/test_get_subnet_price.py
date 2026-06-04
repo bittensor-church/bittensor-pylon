@@ -6,7 +6,7 @@ from pylon_client._internal.pylon_commons._unstable.endpoints import Endpoint as
 from pylon_client._internal.pylon_commons.currency import CurrencyRao
 from pylon_client._internal.pylon_commons.types import AlphaPriceRao
 from pylon_client.artanis import BlockHash, BlockNumber, NetUid, Token
-from pylon_client.artanis.unstable import Block, GetPriceResponse
+from pylon_client.artanis.unstable import Block, GetPriceResponse, SubnetPriceEntry
 from tests.unit.synchronous.base_test import OpenAccessEndpointTest
 
 
@@ -23,7 +23,7 @@ class TestSyncOpenAccessGetLatestPrice(OpenAccessEndpointTest):
         return GetPriceResponse(
             block=Block(number=BlockNumber(1000), hash=BlockHash("0x123")),
             netuid=NetUid(1),
-            price=AlphaPriceRao(CurrencyRao[Token.TAO](1_000_000)),
+            price=SubnetPriceEntry(value=AlphaPriceRao(CurrencyRao[Token.TAO](1_000_000))),
         )
 
 
@@ -40,5 +40,5 @@ class TestSyncOpenAccessGetPrice(OpenAccessEndpointTest):
         return GetPriceResponse(
             block=Block(number=BlockNumber(500), hash=BlockHash("0x500")),
             netuid=NetUid(1),
-            price=AlphaPriceRao(CurrencyRao[Token.TAO](7_777)),
+            price=SubnetPriceEntry(value=AlphaPriceRao(CurrencyRao[Token.TAO](7_777))),
         )

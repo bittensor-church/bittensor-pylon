@@ -21,6 +21,7 @@ from ..models import (
     SubnetHyperparams,
     SubnetNeurons,
     SubnetPrice,
+    SubnetPriceEntry,
     SubnetPrices,
     SubnetRevealedCommitments,
     SubnetState,

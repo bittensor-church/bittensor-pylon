@@ -1,7 +1,7 @@
 import pytest
 from litestar.status_codes import HTTP_200_OK, HTTP_404_NOT_FOUND
 from pylon_commons.currency import CurrencyRao, Token
-from pylon_commons.models import Block, SubnetPrices
+from pylon_commons.models import Block, SubnetPriceEntry, SubnetPrices
 from pylon_commons.types import AlphaPriceRao, BlockHash, BlockNumber, NetUid
 
 
@@ -13,8 +13,8 @@ async def test_unstable_public_get_latest_prices_returns_all_subnets(
     prices = SubnetPrices(
         block=block,
         prices={
-            NetUid(1): AlphaPriceRao(CurrencyRao[Token.TAO](1_000_000)),
-            NetUid(2): AlphaPriceRao(CurrencyRao[Token.TAO](2_500_000)),
+            NetUid(1): SubnetPriceEntry(value=AlphaPriceRao(CurrencyRao[Token.TAO](1_000_000))),
+            NetUid(2): SubnetPriceEntry(value=AlphaPriceRao(CurrencyRao[Token.TAO](2_500_000))),
         },
     )
     async with mock_bt_client_factory() as mock_client:
@@ -36,9 +36,9 @@ async def test_unstable_public_get_prices_at_block_returns_mixed_subnets(
     prices = SubnetPrices(
         block=block,
         prices={
-            NetUid(1): AlphaPriceRao(CurrencyRao[Token.TAO](1_000_000)),
-            NetUid(2): AlphaPriceRao(CurrencyRao[Token.TAO](0)),
-            NetUid(7): AlphaPriceRao(CurrencyRao[Token.TAO](9_999)),
+            NetUid(1): SubnetPriceEntry(value=AlphaPriceRao(CurrencyRao[Token.TAO](1_000_000))),
+            NetUid(2): SubnetPriceEntry(value=AlphaPriceRao(CurrencyRao[Token.TAO](0))),
+            NetUid(7): SubnetPriceEntry(value=AlphaPriceRao(CurrencyRao[Token.TAO](9_999))),
         },
     )
     async with mock_bt_client_factory() as mock_client:

@@ -17,7 +17,7 @@ async def test_get_alpha_prices_returns_prepared_subnets(open_contact, prepared_
     assert result.block == block
     prepared_netuids = {subnet.netuid for subnet in prepared_subnets}
     assert prepared_netuids <= set(result.prices)
-    assert all(price >= 0 for price in result.prices.values())
+    assert all(price.value >= 0 for price in result.prices.values())
 
 
 @pytest.mark.asyncio

@@ -140,15 +140,20 @@ class SubnetValidators(BittensorModel):
     validators: list[Neuron]
 
 
+
+class SubnetPriceEntry(BittensorModel):
+    value: AlphaPriceRao
+
+
 class SubnetPrices(BittensorModel):
     block: Block
-    prices: dict[NetUid, AlphaPriceRao]
+    prices: dict[NetUid, SubnetPriceEntry]
 
 
 class SubnetPrice(BittensorModel):
     block: Block
     netuid: NetUid
-    price: AlphaPriceRao
+    price: SubnetPriceEntry
 
 
 class SubnetHyperparams(BittensorModel):

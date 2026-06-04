@@ -72,6 +72,7 @@ from pylon_service.bittensor.models import (
     SubnetHyperparams,
     SubnetNeurons,
     SubnetPrice,
+    SubnetPriceEntry,
     SubnetPrices,
     SubnetState,
 )
@@ -467,7 +468,10 @@ class TurboBtContact(AbstractBittensorContact):
                 lambda c: c.subtensor.api_call("SwapRuntimeApi", "current_alpha_price_all", block_hash=block.hash),
             ),
         )
-        prices = {NetUid(entry["netuid"]): AlphaPriceRao(CurrencyRao[Token.TAO](entry["price"])) for entry in result}
+        prices = {
+            NetUid(entry["netuid"]): SubnetPriceEntry(value=AlphaPriceRao(CurrencyRao[Token.TAO](entry["price"])))
+            for entry in result
+        }
         return SubnetPrices(block=block, prices=prices)
 
     @track_operation(
@@ -487,7 +491,9 @@ class TurboBtContact(AbstractBittensorContact):
                 ),
             ),
         )
-        return SubnetPrice(block=block, netuid=netuid, price=AlphaPriceRao(CurrencyRao[Token.TAO](result)))
+        return SubnetPrice(
+            block=block, netuid=netuid, price=SubnetPriceEntry(value=AlphaPriceRao(CurrencyRao[Token.TAO](result)))
+        )
 
     @staticmethod
     async def _translate_hyperparams(params: TurboBtSubnetHyperparams) -> SubnetHyperparams:

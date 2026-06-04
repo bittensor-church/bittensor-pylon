@@ -15,6 +15,7 @@ from pylon_commons.models import (
     SubnetHyperparams,
     SubnetNeurons,
     SubnetPrice,
+    SubnetPriceEntry,
     SubnetPrices,
     SubnetRevealedCommitments,
     SubnetState,
@@ -165,15 +166,17 @@ class SharedWorld:
                 lambda block: SubnetPrices(
                     block=block,
                     prices={
-                        NetUid(1): AlphaPriceRao(CurrencyRao[Token.TAO](1_000_000)),
-                        NetUid(2): AlphaPriceRao(CurrencyRao[Token.TAO](2_000_000)),
+                        NetUid(1): SubnetPriceEntry(value=AlphaPriceRao(CurrencyRao[Token.TAO](1_000_000))),
+                        NetUid(2): SubnetPriceEntry(value=AlphaPriceRao(CurrencyRao[Token.TAO](2_000_000))),
                     },
                 ),
             )
             contact.set_default(
                 "get_alpha_price",
                 lambda netuid, block: SubnetPrice(
-                    block=block, netuid=netuid, price=AlphaPriceRao(CurrencyRao[Token.TAO](1_000_000))
+                    block=block,
+                    netuid=netuid,
+                    price=SubnetPriceEntry(value=AlphaPriceRao(CurrencyRao[Token.TAO](1_000_000))),
                 ),
             )
 

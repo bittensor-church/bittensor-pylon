@@ -19,6 +19,7 @@ from pylon_client._internal.pylon_commons._unstable.models import (
     Stakes,
     SubnetNeurons,
     SubnetPrice,
+    SubnetPriceEntry,
     SubnetPrices,
     SubnetValidators,
     TimelockEncryptedCommitment,
