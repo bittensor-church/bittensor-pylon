@@ -21,7 +21,7 @@ def test(session):
 def test_pact(session):
     session.run("uv", "sync", "--active", "--group", "dev")
     default_path_args = [] if any(arg.startswith("tests/pact/") for arg in session.posargs) else ["tests/pact/"]
-    session.run("pytest", "-s", "-vvvvv", *default_path_args, *session.posargs)
+    session.run("pytest", "-s", "-vv", *default_path_args, *session.posargs)
 
 
 @nox.session(name="format", python=LINT_PYTHON_VERSION)
