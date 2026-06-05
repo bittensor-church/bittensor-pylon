@@ -5,7 +5,7 @@ from pact import Pact
 from pylon_client.artanis import BlockNumber, ExtrinsicIndex
 from pylon_client.artanis.unstable import GetExtrinsicResponse
 from tests.pact.builders import build_extrinsic
-from tests.pact.constants import BLOCK_NUMBER, EXTRINSIC_INDEX
+from tests.pact.constants import BLOCK_NUMBER, EXTRINSIC_INDEX, OPEN_ACCESS_TOKEN
 
 
 @pytest.mark.asyncio
@@ -14,6 +14,7 @@ async def test_get_extrinsic_success(pact: Pact, get_extrinsic_response_matcher:
         pact.upon_receiving("a request for a specific extrinsic")
         .given("extrinsic exists", block_number=BLOCK_NUMBER, extrinsic_index=EXTRINSIC_INDEX)
         .with_request("GET", f"/api/_unstable/openaccess/block/{BLOCK_NUMBER}/extrinsic/{EXTRINSIC_INDEX}")
+        .with_header("Authorization", f"Bearer {OPEN_ACCESS_TOKEN}")
         .will_respond_with(codes.OK)
         .with_body(get_extrinsic_response_matcher, content_type="application/json")
     )

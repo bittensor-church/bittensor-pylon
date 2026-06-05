@@ -4,6 +4,7 @@ from pact import Pact
 
 from pylon_client.artanis.unstable import GetLatestBlockInfoResponse
 from tests.pact.builders import build_block_info_bag
+from tests.pact.constants import OPEN_ACCESS_TOKEN
 
 
 @pytest.mark.asyncio
@@ -14,6 +15,7 @@ async def test_get_latest_block_info_success(
         pact.upon_receiving("a request for latest block info")
         .given("latest block info exists")
         .with_request("GET", "/api/_unstable/openaccess/block/latest")
+        .with_header("Authorization", f"Bearer {OPEN_ACCESS_TOKEN}")
         .will_respond_with(codes.OK)
         .with_body(get_latest_block_info_response_matcher, content_type="application/json")
     )
