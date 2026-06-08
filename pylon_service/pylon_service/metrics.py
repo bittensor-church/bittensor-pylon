@@ -12,6 +12,7 @@ from typing import Any, cast
 
 from prometheus_client import Counter, Histogram
 from prometheus_client.metrics import MetricWrapperBase
+from turbobt.substrate.exceptions import UnknownBlock
 
 logger = logging.getLogger(__name__)
 
@@ -119,7 +120,7 @@ bittensor_operation_duration = Histogram(
 
     Labels:
         operation: Name of the operation (e.g., get_block, get_neurons, commit_weights).
-        status: Operation outcome ("success", "error", or "cancelled").
+        status: Operation outcome ("success", "error", "unknown_block", or "cancelled").
               Set automatically by _track_operation_context.
         uri: Bittensor network URI.
         netuid: Subnet identifier.
@@ -334,7 +335,7 @@ def _prepare_metric_labels(
 async def _track_operation_context(operation: str, context: MetricsContext, duration_metric: Histogram):
     """Track operation duration with histogram using the provided metrics context.
 
-    Records duration with status label ("success", "error", or "cancelled"). Error count can be
+    Records duration with status label ("success", "error", "unknown_block", or "cancelled"). Error count can be
     derived from histogram bucket counts with status="error".
 
     Raises:
@@ -347,6 +348,9 @@ async def _track_operation_context(operation: str, context: MetricsContext, dura
         yield
     except asyncio.CancelledError:
         status = "cancelled"
+        raise
+    except UnknownBlock:
+        status = "unknown_block"
         raise
     except Exception:
         status = "error"
