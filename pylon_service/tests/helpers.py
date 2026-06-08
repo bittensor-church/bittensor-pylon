@@ -6,10 +6,8 @@ from collections.abc import Callable
 from typing import Any
 
 import uvicorn
-from sqlalchemy import inspect
 
 from pylon_service.api._unstable.tasks import ApplyWeights
-from pylon_service.db.database import Base
 
 
 def find_free_port() -> int:
@@ -83,13 +81,6 @@ def sync_wait_until(func: Callable[[], Any], timeout: float = 2.0, sleep_interva
             return
         time.sleep(sleep_interval)
     raise TimeoutError(f"Condition not met within {timeout}s")
-
-
-def db_row_model_dump(model: Base, *, exclude: set[str] | None = None):
-    exclude = exclude or set()
-    return {
-        column.key: getattr(model, column.key) for column in inspect(type(model)).columns if column.key not in exclude
-    }
 
 
 class UvicornServer:

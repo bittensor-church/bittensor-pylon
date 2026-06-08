@@ -52,7 +52,9 @@ from pylon_commons.types import (
 )
 
 from pylon_service.bittensor.mock_contact import MockBittensorContact
+from pylon_service.bittensor.models import RawEvmKeyAssociationInfo
 from tests.factories import NeuronFactory
+from tests.integration.localchain.dev_evm_wallets import DevEvmWallet
 
 VALIDATORS_NETUID = NetUid(11)
 COMMITMENTS_ALL_NETUID = NetUid(21)
@@ -63,6 +65,8 @@ COMMITMENTS_MIXED_NETUID = NetUid(25)
 COMMITMENTS_TIMELOCK_ONLY_NETUID = NetUid(26)
 OWN_TIMELOCK_COMMITMENT_NETUID = NetUid(27)
 REVEALED_COMMITMENTS_NETUID = NetUid(28)
+EVM_ASSOCIATIONS_NETUID = NetUid(29)
+NO_EVM_ASSOCIATIONS_NETUID = NetUid(30)
 
 
 @dataclass(frozen=True)
@@ -80,6 +84,7 @@ class SharedWorld:
     default_subnet_states: dict[NetUid, SubnetState]
     default_commitments: dict[NetUid, dict[Hotkey, CommitmentVariant]]
     default_revealed_commitments: dict[NetUid, dict[Hotkey, list[RevealedCommitment]]]
+    default_evm_key_associations: dict[NetUid, dict[NeuronUid, RawEvmKeyAssociationInfo]]
 
     @property
     def contacts(self) -> tuple[MockBittensorContact, ...]:
@@ -179,6 +184,12 @@ class SharedWorld:
                     price=SubnetPriceEntry(value=AlphaPriceRao(CurrencyRao[Token.TAO](1_000_000))),
                 ),
             )
+            contact.set_default(
+                "get_evm_key_associations",
+                lambda netuid, block, evm_associations=self.default_evm_key_associations: evm_associations.get(
+                    netuid, {}
+                ),
+            )
 
 
 def default_latest_block() -> Block:
@@ -269,6 +280,15 @@ def default_neurons(*, own_commitment_hotkey: str) -> dict[NetUid, list[Neuron]]
         OWN_TIMELOCK_COMMITMENT_NETUID: [
             build_neuron(27, 1, own_commitment_hotkey),
         ],
+        EVM_ASSOCIATIONS_NETUID: [
+            build_neuron(29, 1, "hotkey1"),
+            build_neuron(29, 2, "hotkey2"),
+            build_neuron(29, 3, "hotkey3"),
+        ],
+        NO_EVM_ASSOCIATIONS_NETUID: [
+            build_neuron(30, 1, "hotkey1"),
+            build_neuron(30, 2, "hotkey2"),
+        ],
     }
 
 
@@ -321,6 +341,8 @@ def default_subnet_states(*, own_commitment_hotkey: str) -> dict[NetUid, SubnetS
             REVEALED_COMMITMENTS_NETUID, ["hotkey1", own_commitment_hotkey]
         ),
         OWN_TIMELOCK_COMMITMENT_NETUID: _build_subnet_state(OWN_TIMELOCK_COMMITMENT_NETUID, [own_commitment_hotkey]),
+        EVM_ASSOCIATIONS_NETUID: _build_subnet_state(EVM_ASSOCIATIONS_NETUID, ["hotkey1", "hotkey2", "hotkey3"]),
+        NO_EVM_ASSOCIATIONS_NETUID: _build_subnet_state(NO_EVM_ASSOCIATIONS_NETUID, ["hotkey1", "hotkey2", "hotkey3"]),
     }
 
 
@@ -431,3 +453,18 @@ def _resolve_revealed_commitments(
     revealed_commitments: dict[NetUid, dict[Hotkey, list[RevealedCommitment]]],
 ) -> list[RevealedCommitment] | None:
     return revealed_commitments.get(netuid, {}).get(hotkey)
+
+
+def default_evm_assocations() -> dict[NetUid, dict[NeuronUid, RawEvmKeyAssociationInfo]]:
+    return {
+        EVM_ASSOCIATIONS_NETUID: {
+            NeuronUid(0): RawEvmKeyAssociationInfo(
+                evm_address=DevEvmWallet.ALICE.evm_address,
+                last_block_where_ownership_was_proven=BlockNumber(1000),
+            ),
+            NeuronUid(2): RawEvmKeyAssociationInfo(
+                evm_address=DevEvmWallet.BOB.evm_address,
+                last_block_where_ownership_was_proven=BlockNumber(500),
+            ),
+        }
+    }

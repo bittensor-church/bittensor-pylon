@@ -14,6 +14,7 @@ from pylon_client._internal.pylon_commons._unstable.requests import (
     GetExtrinsicRequest,
     GetIdentitiesRequest,
     GetLatestBlockInfoRequest,
+    GetLatestEvmAssociationsRequest,
     GetLatestNeuronsRequest,
     GetLatestPriceRequest,
     GetLatestPricesRequest,
@@ -255,3 +256,12 @@ class HttpTranslator(AbstractRequestTranslator[Request, HttpCommunicatorT]):
     ) -> Request:
         url = self._build_url(self._endpoint_cls.DRAND_LAST_STORED_ROUND, request)
         return communicator.raw_client.build_request(method=self._endpoint_cls.DRAND_LAST_STORED_ROUND.method, url=url)
+
+    def _translate_get_latest_evm_associations(
+        self, request: GetLatestEvmAssociationsRequest, communicator: HttpCommunicatorT
+    ) -> Request:
+        url = self._build_url(self._endpoint_cls.LATEST_EVM_ASSOCIATIONS, request)
+        headers = self._get_auth_headers(request, communicator)
+        return communicator.raw_client.build_request(
+            method=self._endpoint_cls.LATEST_EVM_ASSOCIATIONS.method, url=url, headers=headers
+        )

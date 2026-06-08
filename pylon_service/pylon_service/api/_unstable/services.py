@@ -1,9 +1,11 @@
 from pylon_commons.models import (
     BlockInfoBag,
     CommitmentVariant,
+    EvmAssociation,
     Extrinsic,
     RevealedCommitment,
     SubnetCommitments,
+    SubnetEvmAssociations,
     SubnetNeurons,
     SubnetPrice,
     SubnetPrices,
@@ -18,6 +20,7 @@ from pylon_commons.types import (
     Hotkey,
     MechanismId,
     NetUid,
+    NeuronUid,
     RevealedCommitmentData,
     Weight,
 )
@@ -40,6 +43,7 @@ from pylon_service.bittensor.models import (
     CertificateAlgorithm,
     NeuronCertificate,
     NeuronCertificateKeypair,
+    RawEvmKeyAssociationInfo,
 )
 from pylon_service.bittensor.recent import RecentObjectMissing, RecentObjectProvider, RecentObjectStale
 from pylon_service.db.weight_task import weight_task_submitted
@@ -238,3 +242,28 @@ class WeightService(BaseService):
 class DrandService(BaseService):
     async def get_drand_last_stored_round(self) -> int:
         return await self.contact_router.get_drand_last_stored_round()
+
+
+class EvmAssociationService(BaseService):
+    async def get_latest_associations(self, netuid: NetUid) -> SubnetEvmAssociations:
+        block = await self.contact_router.get_latest_block()
+        associations = await self.contact_router.get_evm_key_associations(netuid, block)
+        state = await self.contact_router.get_subnet_state(netuid, block)
+        if state is None:
+            raise RuntimeError(f"Subnet state is unavailable for netuid {netuid} at block {block.number}.")
+
+        def map_to_evm_association(raw_association: RawEvmKeyAssociationInfo, hotkey: Hotkey) -> EvmAssociation:
+            return EvmAssociation(
+                hotkey=hotkey,
+                evm_address=raw_association.evm_address,
+                last_block_where_ownership_was_proven=raw_association.last_block_where_ownership_was_proven,
+            )
+
+        return SubnetEvmAssociations(
+            block=block,
+            evm_associations={
+                state.hotkeys[uid]: map_to_evm_association(associations[NeuronUid(uid)], state.hotkeys[uid])
+                for uid in range(len(state.hotkeys))
+                if uid in associations
+            },
+        )

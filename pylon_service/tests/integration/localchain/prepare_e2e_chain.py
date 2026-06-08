@@ -53,6 +53,7 @@ from bittensor_wallet import Wallet
 from tests.integration.containers import LocalChainContainer, LocalChainImage
 from tests.integration.localchain.common import LOW_TEMPO, log_step
 from tests.integration.localchain.dev_accounts import DevAccount
+from tests.integration.localchain.dev_evm_wallets import DevEvmWallet
 from tests.integration.localchain.manager import LocalChainManager
 
 logger = logging.getLogger(__name__)
@@ -167,6 +168,10 @@ async def main() -> None:
                 wallet=dev.wallet, netuid=1, data=revealed_commitment, blocks_until_reveal=1
             )
         await manager.wait_for_commitment_reveal(netuid=1, expected_count=2)
+
+        log_step("Setting EVM associations")
+        await manager.associate_evm_key(DevAccount.ALICE.wallet, 1, DevEvmWallet.ALICE.wallet)
+        await manager.associate_evm_key(DevAccount.CHARLIE.wallet, 1, DevEvmWallet.CHARLIE.wallet)
 
         log_step("Tuning registration parameters for bulk registration")
         for netuid in FILLER_NEURONS_NETUIDS:

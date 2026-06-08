@@ -14,8 +14,9 @@ from sqlalchemy import select
 
 from pylon_service.db.database import session_factory
 from pylon_service.db.models import TaskStatus, WeightTask
-from tests.helpers import db_row_model_dump, wait_for_apply_weights_tasks
+from tests.helpers import wait_for_apply_weights_tasks
 from tests.integration.localchain.dev_accounts import DevAccount
+from tests.matchers import db_row_model_dump
 
 _EXPECTED_WEIGHTS_TASK = {
     "id": IsInt(ge=0),

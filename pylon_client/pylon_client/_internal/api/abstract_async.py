@@ -12,6 +12,7 @@ from pylon_client._internal.pylon_commons._unstable.requests import (
     GetDrandLastStoredRoundRequest,
     GetExtrinsicRequest,
     GetLatestBlockInfoRequest,
+    GetLatestEvmAssociationsRequest,
     GetLatestNeuronsRequest,
     GetLatestPriceRequest,
     GetLatestPricesRequest,
@@ -37,6 +38,7 @@ from pylon_client._internal.pylon_commons._unstable.responses import (
     GetDrandLastStoredRoundResponse,
     GetExtrinsicResponse,
     GetLatestBlockInfoResponse,
+    GetLatestEvmAssociationsResponse,
     GetNeuronsResponse,
     GetPriceResponse,
     GetPricesResponse,
@@ -295,7 +297,7 @@ class AbstractAsyncOpenAccessApi(AbstractAsyncApi, ABC):
 
     async def get_drand_last_stored_round(self) -> GetDrandLastStoredRoundResponse:
         """
-        Retrieves the last stored drand round from the service.
+        Retrieves the last stored drand round.
 
         This is a blockchain-level query that does not require subnet context.
 
@@ -303,6 +305,15 @@ class AbstractAsyncOpenAccessApi(AbstractAsyncApi, ABC):
             GetDrandLastStoredRoundRequest: containing the last stored round number.
         """
         return await self._send_request(await self._get_drand_last_stored_round_request())
+
+    async def get_latest_evm_associations(self, netuid: NetUid) -> GetLatestEvmAssociationsResponse:
+        """
+        Retrieves the latest EVM key associations in a subnet at the latest available block
+
+        Returns:
+            GetLatestEvmAssociationsResponse: containing data mapping hotkeys to evm key associations.
+        """
+        return await self._send_request(await self._get_latest_evm_associations_request(netuid))
 
     # Private API
 
@@ -357,6 +368,9 @@ class AbstractAsyncOpenAccessApi(AbstractAsyncApi, ABC):
 
     @abstractmethod
     async def _get_drand_last_stored_round_request(self) -> GetDrandLastStoredRoundRequest: ...
+
+    @abstractmethod
+    async def _get_latest_evm_associations_request(self, netuid: NetUid) -> GetLatestEvmAssociationsRequest: ...
 
 
 class AbstractAsyncIdentityApi(AbstractAsyncApi, ABC):
@@ -670,7 +684,7 @@ class AbstractAsyncIdentityApi(AbstractAsyncApi, ABC):
 
     async def get_drand_last_stored_round(self) -> GetDrandLastStoredRoundResponse:
         """
-        Retrieves the last stored drand round from the service.
+        Retrieves the last stored drand round.
 
         This is a blockchain-level query that does not require subnet context.
 
@@ -678,6 +692,15 @@ class AbstractAsyncIdentityApi(AbstractAsyncApi, ABC):
             GetDrandLastStoredRoundRequest: containing the last stored round number.
         """
         return await self._send_identity_request(self._get_drand_last_stored_round_request)
+
+    async def get_latest_evm_associations(self) -> GetLatestEvmAssociationsResponse:
+        """
+        Retrieves the latest EVM key associations for the authenticated identity's subnet at the latest available block
+
+        Returns:
+            GetLatestEvmAssociationsResponse: containing data mapping hotkeys to evm key associations.
+        """
+        return await self._send_identity_request(self._get_latest_evm_associations_request)
 
     # Private API
 
@@ -756,3 +779,6 @@ class AbstractAsyncIdentityApi(AbstractAsyncApi, ABC):
 
     @abstractmethod
     async def _get_drand_last_stored_round_request(self) -> GetDrandLastStoredRoundRequest: ...
+
+    @abstractmethod
+    async def _get_latest_evm_associations_request(self) -> GetLatestEvmAssociationsRequest: ...

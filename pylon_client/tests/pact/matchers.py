@@ -241,3 +241,32 @@ def price_response_matcher() -> dict:
         "netuid": match.int(NETUID),
         "price": {"value": match.int(PRICE_VALUE_RAO)},
     }
+
+
+def evm_associations_response_matcher(hotkey_1: str, hotkey_2: str) -> dict:
+    association_matcher = {
+        "hotkey": match.str(hotkey_1),
+        "evm_address": match.str("0x" + "c" * 40),
+        "last_block_where_ownership_was_proven": match.int(BLOCK_NUMBER),
+    }
+    return {
+        "block": block_matcher(),
+        "evm_associations": match.each_value_matches(
+            match.each_key_matches(  # type: ignore[reportArgumentType]
+                {
+                    hotkey_1: {
+                        "hotkey": match.str(hotkey_1),
+                        "evm_address": match.str("0x" + "c" * 40),
+                        "last_block_where_ownership_was_proven": match.int(BLOCK_NUMBER),
+                    },
+                    hotkey_2: {
+                        "hotkey": match.str(hotkey_2),
+                        "evm_address": match.str("0x" + "c" * 40),
+                        "last_block_where_ownership_was_proven": match.int(BLOCK_NUMBER),
+                    },
+                },
+                rules=match.str(hotkey_1),
+            ),
+            rules=match.like(association_matcher),
+        ),
+    }

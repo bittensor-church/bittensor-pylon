@@ -60,3 +60,4 @@ class Endpoint(BaseEndpoint):
         "subnet_mechanism_weight_status",
     )
     VALIDATORS = (HTTPMethod.GET, "/block/{block_number:int}/validators", "validators")
+    LATEST_EVM_ASSOCIATIONS = (HTTPMethod.GET, "/block/latest/evm_associations", "latest_evm_associations")

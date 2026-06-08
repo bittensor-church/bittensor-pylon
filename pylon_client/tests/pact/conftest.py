@@ -6,6 +6,7 @@ from tests.pact.constants import HOTKEY_1, HOTKEY_2
 from tests.pact.matchers import (
     commitment_response_matcher,
     commitments_response_matcher,
+    evm_associations_response_matcher,
     extrinsic_response_matcher,
     get_weights_status_response_matcher,
     latest_block_info_response_matcher,
@@ -103,3 +104,8 @@ def get_prices_response_matcher() -> dict:
 @pytest.fixture
 def get_price_response_matcher() -> dict:
     return price_response_matcher()
+
+
+@pytest.fixture
+def get_latest_evm_associations_response_matcher() -> dict:
+    return evm_associations_response_matcher(HOTKEY_1, HOTKEY_2)

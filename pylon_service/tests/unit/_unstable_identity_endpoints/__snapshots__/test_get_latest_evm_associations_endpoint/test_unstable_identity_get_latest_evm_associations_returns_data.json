@@ -1,0 +1,18 @@
+{
+  "block": {
+    "hash": "0xshared-latest-block",
+    "number": 1000
+  },
+  "evm_associations": {
+    "hotkey1": {
+      "evm_address": "0x9858effd232b4033e47d90003d41ec34ecaeda94",
+      "hotkey": "hotkey1",
+      "last_block_where_ownership_was_proven": 1000
+    },
+    "hotkey3": {
+      "evm_address": "0x58a57ed9d8d624cbd12e2c467d34787555bb1b25",
+      "hotkey": "hotkey3",
+      "last_block_where_ownership_was_proven": 500
+    }
+  }
+}

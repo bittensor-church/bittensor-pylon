@@ -1,5 +1,6 @@
 from pydantic import BaseModel
 
+from ..models import SubnetEvmAssociations
 from ..types import IdentityName, NetUid
 from .models import (
     Block,
@@ -174,6 +175,14 @@ class GetPricesResponse(PylonResponse, SubnetPrices):
 class GetPriceResponse(PylonResponse, SubnetPrice):
     """
     Response class that is returned for the GetPriceRequest (single subnet).
+    """
+
+    pass
+
+
+class GetLatestEvmAssociationsResponse(PylonResponse, SubnetEvmAssociations):
+    """
+    Response class that is returned for the GetLastestEvmAssociationsRequest.
     """
 
     pass
