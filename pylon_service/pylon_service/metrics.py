@@ -340,6 +340,7 @@ async def _track_operation_context(operation: str, context: MetricsContext, dura
 
     Raises:
         asyncio.CancelledError: Re-raised with status="cancelled" when the operation is cancelled.
+        UnknownBlock: Re-raised with status="unknown_block" when the operation fails due to an unknown block.
     """
     start_time = perf_counter()
     status = "success"
