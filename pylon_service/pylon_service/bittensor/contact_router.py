@@ -324,4 +324,5 @@ class BittensorContactRouter:
             "get_evm_key_associations",
             main_call=lambda: self._main_contact.get_evm_key_associations(netuid, block),
             archive_call=lambda: self._archive_contact.get_evm_key_associations(netuid, block),
+            block=block,
         )

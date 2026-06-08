@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import enum
+from functools import cached_property
 
 from eth_account import Account
 from eth_account.signers.local import LocalAccount
@@ -24,15 +25,10 @@ class DevEvmWallet(enum.Enum):
     def mnemonic(self) -> str:
         return self.value
 
-    @property
+    @cached_property
     def wallet(self) -> LocalAccount:
-        if self not in _EVM_WALLET_CACHE:
-            _EVM_WALLET_CACHE[self] = Account.from_mnemonic(self.mnemonic)
-        return _EVM_WALLET_CACHE[self]
+        return Account.from_mnemonic(self.mnemonic)
 
     @property
     def evm_address(self) -> EvmAddress:
         return EvmAddress(self.wallet.address.lower())
-
-
-_EVM_WALLET_CACHE: dict[DevEvmWallet, LocalAccount] = {}
