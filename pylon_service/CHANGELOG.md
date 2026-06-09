@@ -1,3 +1,10 @@
+## service-v2.2.0 (2026-06-09)
+
+### Feat
+
+- Endpoint to read alpha prices for subnets
+- Associate hotkeys with EVM keys
+
 ## service-v2.1.0 (2026-05-29)
 
 ### Feat
