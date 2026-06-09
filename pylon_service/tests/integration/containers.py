@@ -273,7 +273,7 @@ class MitmproxyContainer(BaseDockerContainer):
 
 
 _ANVIL_PORT = 8545
-_ANVIL_IMAGE = "ghcr.io/foundry-rs/foundry:nightly"
+_ANVIL_IMAGE = "ghcr.io/foundry-rs/foundry:stable"
 
 
 class AnvilContainer(BaseDockerContainer):
