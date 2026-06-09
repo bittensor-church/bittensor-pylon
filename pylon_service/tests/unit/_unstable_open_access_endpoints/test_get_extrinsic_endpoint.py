@@ -5,8 +5,8 @@ from pylon_commons.types import BlockHash, BlockNumber, ExtrinsicHash, Extrinsic
 
 
 @pytest.mark.asyncio
-async def test_unstable_public_get_extrinsic_missing_extrinsic_returns_404(
-    test_client,
+async def test_unstable_open_access_get_extrinsic_missing_extrinsic_returns_404(
+    open_access_test_client,
     mock_bt_client_factory,
     snapshot_json,
 ):
@@ -17,29 +17,29 @@ async def test_unstable_public_get_extrinsic_missing_extrinsic_returns_404(
             get_block=[block],
             get_extrinsic=[None],
         ):
-            response = await test_client.get("/api/_unstable/block/999/extrinsic/99")
+            response = await open_access_test_client.get("/api/_unstable/openaccess/block/999/extrinsic/99")
 
     assert response.status_code == HTTP_404_NOT_FOUND, response.content
     assert response.json() == snapshot_json
 
 
 @pytest.mark.asyncio
-async def test_unstable_public_get_extrinsic_missing_block_returns_404(
-    test_client,
+async def test_unstable_open_access_get_extrinsic_missing_block_returns_404(
+    open_access_test_client,
     mock_bt_client_factory,
     snapshot_json,
 ):
     async with mock_bt_client_factory() as mock_client:
         async with mock_client.mock_behavior(get_block=[None]):
-            response = await test_client.get("/api/_unstable/block/999999999/extrinsic/0")
+            response = await open_access_test_client.get("/api/_unstable/openaccess/block/999999999/extrinsic/0")
 
     assert response.status_code == HTTP_404_NOT_FOUND, response.content
     assert response.json() == snapshot_json
 
 
 @pytest.mark.asyncio
-async def test_unstable_public_get_extrinsic_returns_decoded_extrinsic(
-    test_client,
+async def test_unstable_open_access_get_extrinsic_returns_decoded_extrinsic(
+    open_access_test_client,
     mock_bt_client_factory,
     snapshot_json,
 ):
@@ -58,7 +58,7 @@ async def test_unstable_public_get_extrinsic_returns_decoded_extrinsic(
             get_block=[block],
             get_extrinsic=[extrinsic],
         ):
-            response = await test_client.get("/api/_unstable/block/100/extrinsic/1")
+            response = await open_access_test_client.get("/api/_unstable/openaccess/block/100/extrinsic/1")
 
     assert response.status_code == HTTP_200_OK
     assert response.json() == snapshot_json

@@ -9,6 +9,8 @@ from ..models import (
     CommitmentVariant,
     CommitReveal,
     EvmAssociation,
+    EvmLog,
+    EvmModel,
     Extrinsic,
     ExtrinsicCall,
     ExtrinsicCallArg,

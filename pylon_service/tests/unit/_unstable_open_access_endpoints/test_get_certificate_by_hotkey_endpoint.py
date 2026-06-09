@@ -25,7 +25,9 @@ async def test_get_certificate_open_access_success(open_access_test_client, mock
             get_latest_block=[latest_block],
             get_certificate=[certificate],
         ):
-            response = await open_access_test_client.get(f"/api/_unstable/subnet/1/block/latest/certificates/{hotkey}")
+            response = await open_access_test_client.get(
+                f"/api/_unstable/openaccess/subnet/1/block/latest/certificates/{hotkey}"
+            )
 
             assert response.status_code == HTTP_200_OK
             assert response.json() == snapshot_json
@@ -44,7 +46,9 @@ async def test_get_certificate_open_access_not_found(open_access_test_client, mo
             get_latest_block=[latest_block],
             get_certificate=[None],
         ):
-            response = await open_access_test_client.get(f"/api/_unstable/subnet/1/block/latest/certificates/{hotkey}")
+            response = await open_access_test_client.get(
+                f"/api/_unstable/openaccess/subnet/1/block/latest/certificates/{hotkey}"
+            )
 
             assert response.status_code == HTTP_404_NOT_FOUND
             assert response.json() == snapshot_json

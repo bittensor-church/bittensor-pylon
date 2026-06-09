@@ -20,6 +20,13 @@ PYLON_ID_SN12_HOTKEY_NAME=my_hotkey
 # Token with which the user will authenticate to pylon to use this identity. Keep it secret.
 PYLON_ID_SN12_TOKEN=my_secure_token
 
+# EVM main RPC URL for recent blocks. Default: https://lite.chain.opentensor.ai
+PYLON_EVM_RPC_URL=
+# EVM archive RPC URL for reading historical logs. Default: https://archive.chain.opentensor.ai
+PYLON_EVM_ARCHIVE_RPC_URL=
+# Number of blocks from the chain head below which archive RPC is used. Default is 300.
+PYLON_EVM_ARCHIVE_BLOCKS_CUTOFF=
+
 # Sentry Configuration
 # DSN address for pylon to use - leave empty to disable sentry integration.
 PYLON_SENTRY_DSN=

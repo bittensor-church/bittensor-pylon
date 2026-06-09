@@ -16,7 +16,7 @@ async def test_unstable_open_access_get_commitment_by_hotkey_returns_commitment_
     open_access_test_client: AsyncTestClient, snapshot_json
 ):
     response = await open_access_test_client.get(
-        f"/api/_unstable/subnet/{COMMITMENTS_ALL_NETUID}/block/latest/commitments/hotkey1"
+        f"/api/_unstable/openaccess/subnet/{COMMITMENTS_ALL_NETUID}/block/latest/commitments/hotkey1"
     )
 
     assert response.status_code == HTTP_200_OK
@@ -35,6 +35,8 @@ async def test_get_commitment_open_access_not_found(
             get_latest_block=[Block(number=BlockNumber(1000), hash=BlockHash("0xabc123"))],
             get_commitment=[None],
         ):
-            response = await open_access_test_client.get("/api/_unstable/subnet/1/block/latest/commitments/hotkey1")
+            response = await open_access_test_client.get(
+                "/api/_unstable/openaccess/subnet/1/block/latest/commitments/hotkey1"
+            )
         assert response.status_code == HTTP_404_NOT_FOUND
         assert response.json() == snapshot_json

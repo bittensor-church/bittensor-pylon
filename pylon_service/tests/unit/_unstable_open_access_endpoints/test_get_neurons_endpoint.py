@@ -22,7 +22,9 @@ async def test_get_neurons_open_access_invalid_block_number_type(
     """
     Test that invalid block number types return 404.
     """
-    response = await open_access_test_client.get(f"/api/_unstable/subnet/1/block/{invalid_block_number}/neurons")
+    response = await open_access_test_client.get(
+        f"/api/_unstable/openaccess/subnet/1/block/{invalid_block_number}/neurons"
+    )
 
     assert response.status_code == HTTP_404_NOT_FOUND, response.content
     assert response.json() == snapshot_json
@@ -32,7 +34,7 @@ async def test_get_neurons_open_access_invalid_block_number_type(
 async def test_unstable_open_access_get_neurons_returns_block_neurons(
     open_access_test_client: AsyncTestClient, snapshot_json
 ):
-    response = await open_access_test_client.get("/api/_unstable/subnet/1/block/123/neurons")
+    response = await open_access_test_client.get("/api/_unstable/openaccess/subnet/1/block/123/neurons")
 
     assert response.status_code == HTTP_200_OK
     assert response.json() == snapshot_json
@@ -42,7 +44,7 @@ async def test_unstable_open_access_get_neurons_returns_block_neurons(
 async def test_unstable_open_access_get_latest_neurons_returns_latest_neurons(
     open_access_test_client: AsyncTestClient, snapshot_json
 ):
-    response = await open_access_test_client.get("/api/_unstable/subnet/1/block/latest/neurons")
+    response = await open_access_test_client.get("/api/_unstable/openaccess/subnet/1/block/latest/neurons")
 
     assert response.status_code == HTTP_200_OK
     assert response.json() == snapshot_json
@@ -57,7 +59,7 @@ async def test_get_neurons_open_access_block_not_found(
     """
     async with mock_bt_client_factory() as mock_client:
         async with mock_client.mock_behavior(get_block=[None]):
-            response = await open_access_test_client.get("/api/_unstable/subnet/1/block/123/neurons")
+            response = await open_access_test_client.get("/api/_unstable/openaccess/subnet/1/block/123/neurons")
 
             assert response.status_code == HTTP_404_NOT_FOUND, response.content
             assert response.json() == snapshot_json

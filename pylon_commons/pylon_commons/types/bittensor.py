@@ -1,6 +1,6 @@
 from typing import NewType
 
-from .currency import Currency, CurrencyRao, Token
+from ..currency import Currency, CurrencyRao, Token
 
 # When adding new type, remember to also include it in extend-immutable-calls in pyproject.toml so that ruff does not
 # raise B008 on new type wrapping the function's default value.

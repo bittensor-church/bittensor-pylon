@@ -1,3 +1,5 @@
+from typing import Any
+
 from pylon_commons.models import (
     BlockInfoBag,
     CommitmentVariant,
@@ -24,10 +26,12 @@ from pylon_commons.types import (
     RevealedCommitmentData,
     Weight,
 )
+from pylon_commons.types import evm as evm_types
 
 from pylon_service.api._unstable.tasks import ApplyWeights, SetCommitment, SetRevealedCommitment
 from pylon_service.api.epoch import get_epoch_containing_block, get_tempo_from_hyperparams
 from pylon_service.api.services import (
+    BaseEvmService,
     BaseService,
     BlockNotFoundError,
     CertificateGenerationFailedError,
@@ -47,6 +51,7 @@ from pylon_service.bittensor.models import (
 )
 from pylon_service.bittensor.recent import RecentObjectMissing, RecentObjectProvider, RecentObjectStale
 from pylon_service.db.weight_task import weight_task_submitted
+from pylon_service.evm.contact import EvmLog
 from pylon_service.identities import Identity
 
 
@@ -267,3 +272,14 @@ class EvmAssociationService(BaseService):
                 if uid in associations
             },
         )
+
+
+class EvmService(BaseEvmService):
+    async def get_logs(
+        self,
+        address: evm_types.Address,
+        from_block: evm_types.BlockNumber,
+        to_block: evm_types.BlockNumber,
+        abi: list[dict[str, Any]],
+    ) -> list[EvmLog]:
+        return await self.contact_router.get_logs(address, from_block, to_block, abi)

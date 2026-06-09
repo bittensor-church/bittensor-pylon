@@ -12,6 +12,7 @@ from pylon_service.api._unstable.services import (
     CommitmentService,
     DrandService,
     EvmAssociationService,
+    EvmService,
     NeuronService,
     PriceService,
     WeightService,
@@ -30,6 +31,7 @@ from pylon_service.bittensor.recent import (
     RecentObjectProvider,
     SubnetContext,
 )
+from pylon_service.evm.contact_router import EvmContactRouter
 from pylon_service.identities import Identity, identities
 from pylon_service.settings import recent_objects_settings, settings
 from pylon_service.stores import StoreName
@@ -133,6 +135,14 @@ async def unstable_evm_association_service_dep(
     return EvmAssociationService(bt_contact_router)
 
 
+async def evm_contact_router_dep(state: State) -> EvmContactRouter:
+    return state.evm_contact_router
+
+
+async def evm_service_dep(evm_contact_router: EvmContactRouter) -> EvmService:
+    return EvmService(evm_contact_router)
+
+
 async def v1_commitment_service_dep(
     bt_contact_router: BittensorContactRouter,
     unstable_commitment_service: CommitmentService,
@@ -165,7 +175,18 @@ PUBLIC_PROVIDERS = {
     **SERVICE_PROVIDERS,
 }
 
-OPEN_ACCESS_PROVIDERS = {
+EVM_PROVIDERS = {
+    "evm_contact_router": Provide(evm_contact_router_dep),
+    "evm_service": Provide(evm_service_dep),
+}
+
+OPEN_ACCESS_GENERAL_PROVIDERS = {
+    "bt_contact_router": Provide(bt_contact_router_open_access_dep),
+    **SERVICE_PROVIDERS,
+    **EVM_PROVIDERS,
+}
+
+OPEN_ACCESS_SUBNET_PROVIDERS = {
     "bt_contact_router": Provide(bt_contact_router_open_access_dep),
     "recent_object_provider": Provide(recent_object_provider_open_access_dep),
     **SERVICE_PROVIDERS,

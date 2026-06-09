@@ -114,6 +114,31 @@ class MetricsContext:
         return self.labels
 
 
+evm_operation_duration = Histogram(
+    "pylon_evm_operation_duration_seconds",
+    """Duration of EVM contact operations in seconds.
+
+    Labels:
+        operation: Name of the operation (e.g., get_logs, get_current_block).
+        status: Operation outcome ("success", "error", or "cancelled").
+              Set automatically by _track_operation_context.
+        rpc_url: EVM RPC endpoint URL.
+    """,
+    ["operation", "status", "rpc_url"],
+    buckets=(0.1, 0.5, 1.0, 2.0, 5.0, 10.0, 30.0, 60.0, 120.0),
+)
+
+evm_archive_routing_total = Counter(
+    "pylon_evm_archive_routing_total",
+    """Total number of EVM log query routing decisions.
+
+    Labels:
+        reason: Routing decision ("archive" — all blocks in archive range,
+                "main" — all blocks in main range, "split" — range spans the cutoff).
+    """,
+    ["reason"],
+)
+
 bittensor_operation_duration = Histogram(
     "pylon_bittensor_operation_duration_seconds",
     """Duration of Bittensor operations in seconds.

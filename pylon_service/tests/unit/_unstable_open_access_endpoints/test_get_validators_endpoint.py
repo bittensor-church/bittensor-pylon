@@ -13,7 +13,9 @@ from tests.world import VALIDATORS_NETUID
 async def test_unstable_open_access_get_validators_returns_only_validator_permit_neurons_sorted_by_total_stake_desc(
     open_access_test_client: AsyncTestClient, snapshot_json
 ):
-    response = await open_access_test_client.get(f"/api/_unstable/subnet/{VALIDATORS_NETUID}/block/321/validators")
+    response = await open_access_test_client.get(
+        f"/api/_unstable/openaccess/subnet/{VALIDATORS_NETUID}/block/321/validators"
+    )
 
     assert response.status_code == HTTP_200_OK
     assert response.json() == snapshot_json
@@ -23,7 +25,9 @@ async def test_unstable_open_access_get_validators_returns_only_validator_permit
 async def test_unstable_open_access_get_latest_validators_returns_only_validator_permit_neurons_sorted_by_total_stake_desc(
     open_access_test_client: AsyncTestClient, snapshot_json
 ):
-    response = await open_access_test_client.get(f"/api/_unstable/subnet/{VALIDATORS_NETUID}/block/latest/validators")
+    response = await open_access_test_client.get(
+        f"/api/_unstable/openaccess/subnet/{VALIDATORS_NETUID}/block/latest/validators"
+    )
 
     assert response.status_code == HTTP_200_OK
     assert response.json() == snapshot_json
@@ -39,7 +43,7 @@ async def test_get_validators_open_access_block_not_found(
         async with mock_client.mock_behavior(
             get_block=[None],
         ):
-            response = await open_access_test_client.get("/api/_unstable/subnet/1/block/999999/validators")
+            response = await open_access_test_client.get("/api/_unstable/openaccess/subnet/1/block/999999/validators")
 
             assert response.status_code == HTTP_404_NOT_FOUND
             assert response.json() == snapshot_json
@@ -57,7 +61,9 @@ async def test_get_validators_open_access_block_not_found(
 async def test_get_validators_open_access_invalid_block_number_type(
     open_access_test_client: AsyncTestClient, invalid_block_number: str, snapshot_json
 ):
-    response = await open_access_test_client.get(f"/api/_unstable/subnet/1/block/{invalid_block_number}/validators")
+    response = await open_access_test_client.get(
+        f"/api/_unstable/openaccess/subnet/1/block/{invalid_block_number}/validators"
+    )
 
     assert response.status_code == HTTP_404_NOT_FOUND, response.content
     assert response.json() == snapshot_json

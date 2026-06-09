@@ -24,6 +24,8 @@ from pylon_service.bittensor.mock_contact import MockBittensorContact
 from pylon_service.bittensor.pool import BittensorContactPool
 from pylon_service.db.database import session_factory
 from pylon_service.db.models import WeightTask
+from pylon_service.evm.contact_router import EvmContactRouter
+from pylon_service.evm.mock_contact import MockEvmContact
 from pylon_service.main import create_app
 from pylon_service.settings import database_settings, settings
 from pylon_service.stores import StoreName
@@ -155,7 +157,21 @@ def seed_running_weight_task_before_reschedule(monkeypatch):
 
 
 @pytest.fixture(scope="session")
-def test_app(mock_bt_contact_pool, mock_stores, setup_test_database):
+def mock_evm_contact():
+    return MockEvmContact()
+
+
+@pytest.fixture(scope="session")
+def mock_evm_contact_router(mock_evm_contact):
+    return EvmContactRouter(
+        main_contact=mock_evm_contact,
+        archive_contact=mock_evm_contact,
+        archive_blocks_cutoff=ArchiveBlocksCutoff(10_000_000),
+    )
+
+
+@pytest.fixture(scope="session")
+def test_app(mock_bt_contact_pool, mock_evm_contact_router, mock_stores, setup_test_database):
     """
     Create a test Litestar app with the mock contact pool.
     """
@@ -171,9 +187,15 @@ def test_app(mock_bt_contact_pool, mock_stores, setup_test_database):
     async def mock_scheduler_lifespan(app):
         yield
 
+    @asynccontextmanager
+    async def mock_evm_lifespan(app):
+        app.state.evm_contact_router = mock_evm_contact_router
+        yield
+
     with (
         patch.object(lifecycle, "bittensor_contact_pool_lifespan", mock_lifespan),
         patch.object(lifecycle, "scheduler_lifespan", mock_scheduler_lifespan),
+        patch.object(lifecycle, "evm_contact_lifespan", mock_evm_lifespan),
         # Litestar appends its own stuff to the dict we give it - so let's give it a copy, otherwise we end up
         # resetting the cache store which we don't care about here. (caching is already disabled directly for tests)
         patch.object(main, "stores", {**mock_stores}),

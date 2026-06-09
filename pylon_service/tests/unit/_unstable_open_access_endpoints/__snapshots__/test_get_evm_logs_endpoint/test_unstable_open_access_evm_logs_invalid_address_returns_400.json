@@ -1,0 +1,4 @@
+{
+  "detail": "Invalid contract address: not_an_address",
+  "status_code": 400
+}

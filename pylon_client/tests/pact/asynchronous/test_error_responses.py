@@ -11,7 +11,7 @@ async def test_bad_gateway(pact: Pact, pylon_client_factory):
     (
         pact.upon_receiving("a request")
         .given("block data unavailable", netuid=1, block_number=123)
-        .with_request("GET", "/api/_unstable/subnet/1/block/123/neurons")
+        .with_request("GET", "/api/_unstable/openaccess/subnet/1/block/123/neurons")
         .with_header("Authorization", f"Bearer {OPEN_ACCESS_TOKEN}")
         .will_respond_with(codes.BAD_GATEWAY)
         .with_body(
@@ -32,7 +32,7 @@ async def test_gateway_timeout(pact: Pact, pylon_client_factory):
     (
         pact.upon_receiving("a request")
         .given("bittensor hangs", seconds=1, method="get_latest_block")
-        .with_request("GET", "/api/_unstable/subnet/1/block/latest/neurons")
+        .with_request("GET", "/api/_unstable/openaccess/subnet/1/block/latest/neurons")
         .with_header("Authorization", f"Bearer {OPEN_ACCESS_TOKEN}")
         .with_header("X-Pylon-Timeout", "0.5")
         .will_respond_with(codes.GATEWAY_TIMEOUT)

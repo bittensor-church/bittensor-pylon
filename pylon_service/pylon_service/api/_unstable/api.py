@@ -1,7 +1,7 @@
 import logging
 
 from litestar import Controller, Response, status_codes
-from pylon_commons._unstable.bodies import SetCommitmentBody, SetRevealedCommitmentBody, SetWeightsBody
+from pylon_commons._unstable.bodies import EvmLogsBody, SetCommitmentBody, SetRevealedCommitmentBody, SetWeightsBody
 from pylon_commons._unstable.endpoints import Endpoint
 from pylon_commons._unstable.requests import GenerateCertificateKeypairRequest
 from pylon_commons._unstable.responses import (
@@ -9,6 +9,7 @@ from pylon_commons._unstable.responses import (
     GetCommitmentResponse,
     GetCommitmentsResponse,
     GetDrandLastStoredRoundResponse,
+    GetEvmLogsResponse,
     GetExtrinsicResponse,
     GetIdentitiesResponse,
     GetLatestBlockInfoResponse,
@@ -23,6 +24,7 @@ from pylon_commons._unstable.responses import (
 )
 from pylon_commons.models import Hotkey, NeuronCertificate
 from pylon_commons.types import BlockNumber, ExtrinsicIndex, MechanismId, NetUid
+from pylon_commons.types import evm as evm_types
 
 from pylon_service.api._unstable.services import (
     BlockService,
@@ -30,6 +32,7 @@ from pylon_service.api._unstable.services import (
     CommitmentService,
     DrandService,
     EvmAssociationService,
+    EvmService,
     NeuronService,
     PriceService,
     WeightService,
@@ -38,7 +41,8 @@ from pylon_service.api.utils import check_identity_netuid, handler
 from pylon_service.bittensor.recent import RecentObjectProvider
 from pylon_service.dependencies import (
     IDENTITY_PROVIDERS,
-    OPEN_ACCESS_PROVIDERS,
+    OPEN_ACCESS_GENERAL_PROVIDERS,
+    OPEN_ACCESS_SUBNET_PROVIDERS,
     PUBLIC_PROVIDERS,
 )
 from pylon_service.exceptions import BadGatewayException
@@ -261,25 +265,44 @@ class Handlers:
         subnet_evm_associations = await unstable_evm_association_service.get_latest_associations(netuid)
         return GetLatestEvmAssociationsResponse.model_validate(subnet_evm_associations, from_attributes=True)
 
+    @handler(Endpoint.EVM_LOGS, status_code=status_codes.HTTP_200_OK)
+    async def get_evm_logs(
+        self,
+        evm_service: EvmService,
+        contract_address: evm_types.Address,
+        from_block: evm_types.BlockNumber,
+        to_block: evm_types.BlockNumber,
+        data: EvmLogsBody,
+    ) -> GetEvmLogsResponse:
+        logs = await evm_service.get_logs(contract_address, from_block, to_block, data.abi)
+        return GetEvmLogsResponse(logs=logs, from_block=from_block, to_block=to_block)
+
 
 class PublicController(Controller):
     dependencies = PUBLIC_PROVIDERS
 
     get_identities = Handlers.get_identities
+
+
+class OpenAccessBaseController(Controller):
+    guards = [open_access_auth_guard]
+
+
+class OpenAccessGeneralController(OpenAccessBaseController):
+    path = "/openaccess"
+    dependencies = OPEN_ACCESS_GENERAL_PROVIDERS
+
     get_latest_block_info_endpoint = Handlers.get_latest_block_info_endpoint
     get_extrinsic_endpoint = Handlers.get_extrinsic_endpoint
     get_last_stored_round_endpoint = Handlers.get_last_stored_round_endpoint
-    # TODO: This placement is temporary. These should be behind an open access controller that does
-    # not prepend the subnet to the path. Once we've decided on the new structure these endpoints
-    # should be moved. Be sure to also move the tests to the correct subfolder.
     get_latest_prices_endpoint = Handlers.get_latest_prices_endpoint
     get_prices_endpoint = Handlers.get_prices_endpoint
+    get_evm_logs = Handlers.get_evm_logs
 
 
-class OpenAccessController(Controller):
-    path = "/subnet/{netuid:int}/"
-    guards = [open_access_auth_guard]
-    dependencies = OPEN_ACCESS_PROVIDERS
+class OpenAccessSubnetController(OpenAccessBaseController):
+    path = "/openaccess/subnet/{netuid:int}/"
+    dependencies = OPEN_ACCESS_SUBNET_PROVIDERS
 
     get_neurons = Handlers.get_neurons
     get_latest_neurons = Handlers.get_latest_neurons
@@ -327,4 +350,11 @@ class IdentityController(Controller):
     get_latest_evm_associations_endpoint = Handlers.get_latest_evm_associations_endpoint
 
 
-__all__ = ["Handlers", "PublicController", "OpenAccessController", "IdentityController"]
+__all__ = [
+    "Handlers",
+    "PublicController",
+    "OpenAccessBaseController",
+    "OpenAccessGeneralController",
+    "OpenAccessSubnetController",
+    "IdentityController",
+]

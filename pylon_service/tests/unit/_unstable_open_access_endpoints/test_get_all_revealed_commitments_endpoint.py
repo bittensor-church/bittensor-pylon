@@ -10,7 +10,7 @@ async def test_unstable_open_access_get_all_revealed_commitments_returns_registe
     open_access_test_client: AsyncTestClient, snapshot_json
 ):
     response = await open_access_test_client.get(
-        f"/api/_unstable/subnet/{REVEALED_COMMITMENTS_NETUID}/block/latest/commitments/revealed"
+        f"/api/_unstable/openaccess/subnet/{REVEALED_COMMITMENTS_NETUID}/block/latest/commitments/revealed"
     )
 
     assert response.status_code == HTTP_200_OK

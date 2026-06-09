@@ -29,7 +29,7 @@ def test_sync_config_retries_success(service_mock, test_url, attempts):
     """
     Test that client retries the specified number of times before succeeding.
     """
-    identities_url = EndpointUnstable.IDENTITIES.absolute_url()
+    identities_url = EndpointUnstable.IDENTITIES.absolute_url(is_public_=True)
     weights_url = EndpointUnstable.SUBNET_MECHANISM_WEIGHTS.absolute_url(
         identity_name_=IdentityName("sn1"), netuid_=NetUid(1), mechanism_id=MechanismId(0)
     )
@@ -66,7 +66,7 @@ def test_sync_config_retries_error(service_mock, test_url):
     """
     Test that client raises PylonRequestException after all retries exhausted.
     """
-    identities_url = EndpointUnstable.IDENTITIES.absolute_url()
+    identities_url = EndpointUnstable.IDENTITIES.absolute_url(is_public_=True)
     weights_url = EndpointUnstable.SUBNET_MECHANISM_WEIGHTS.absolute_url(
         identity_name_=IdentityName("sn1"), netuid_=NetUid(1), mechanism_id=MechanismId(0)
     )

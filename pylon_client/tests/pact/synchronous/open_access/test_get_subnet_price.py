@@ -10,7 +10,7 @@ def test_get_latest_price_success(pact: Pact, get_price_response_matcher: dict, 
     (
         pact.upon_receiving("a request for latest subnet price")
         .given("price exists", netuid=NETUID)
-        .with_request("GET", f"/api/_unstable/subnet/{NETUID}/block/latest/price")
+        .with_request("GET", f"/api/_unstable/openaccess/subnet/{NETUID}/block/latest/price")
         .with_header("Authorization", f"Bearer {OPEN_ACCESS_TOKEN}")
         .will_respond_with(codes.OK)
         .with_body(get_price_response_matcher, content_type="application/json")
@@ -28,7 +28,7 @@ def test_get_price_success(pact: Pact, get_price_response_matcher: dict, pylon_c
     (
         pact.upon_receiving("a request for subnet price at specific block")
         .given("price exists at block", netuid=NETUID, block_number=BLOCK_NUMBER)
-        .with_request("GET", f"/api/_unstable/subnet/{NETUID}/block/{BLOCK_NUMBER}/price")
+        .with_request("GET", f"/api/_unstable/openaccess/subnet/{NETUID}/block/{BLOCK_NUMBER}/price")
         .with_header("Authorization", f"Bearer {OPEN_ACCESS_TOKEN}")
         .will_respond_with(codes.OK)
         .with_body(get_price_response_matcher, content_type="application/json")

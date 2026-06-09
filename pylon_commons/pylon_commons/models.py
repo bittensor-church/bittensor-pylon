@@ -45,6 +45,7 @@ from .types import (
     ValidatorPermit,
     ValidatorTrust,
 )
+from .types import evm as evm_types
 
 
 class UnknownIntEnum(IntEnum):
@@ -316,3 +317,17 @@ class EvmAssociation(BittensorModel):
 class SubnetEvmAssociations(BittensorModel):
     block: Block
     evm_associations: dict[Hotkey, EvmAssociation]
+
+
+class EvmModel(BaseModel):
+    pass
+
+
+class EvmLog(EvmModel):
+    event: str
+    args: dict[str, Any]
+    address: evm_types.Address
+    block_number: evm_types.BlockNumber
+    transaction_hash: evm_types.TransactionHash
+    transaction_index: evm_types.TransactionIndex
+    log_index: evm_types.LogIndex

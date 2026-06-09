@@ -79,6 +79,10 @@ pylon_service/
         pool.py             - manages `BittensorContactPool` reuse
         recent/
             ...
+    evm/
+        contact.py          - defines the EVM RPC boundary (EvmPort, AbstractEvmContact, EvmContact)
+        contact_router.py   - defines main/archive routing for EVM queries
+        exceptions.py       - EVM-specific exceptions (EvmRpcError, EvmInvalidAddressError, EvmInvalidAbiError)
 ```
 
 ## Responsibilities
@@ -422,7 +426,7 @@ Update procedure:
 
 The required public-API scenario checklist lives in:
 
-- [tests/SCENARIOS.md](/Users/junie/synced_p/bittensor-pylon/pylon_service/tests/SCENARIOS.md)
+- [tests/SCENARIOS.md](/pylon_service/tests/SCENARIOS.md)
 
 Do not mock:
 

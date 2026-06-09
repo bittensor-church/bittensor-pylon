@@ -2,10 +2,12 @@ from pydantic import BaseModel
 
 from ..models import SubnetEvmAssociations
 from ..types import IdentityName, NetUid
+from ..types import evm as evm_types
 from .models import (
     Block,
     BlockInfoBag,
     CommitmentVariant,
+    EvmLog,
     Extrinsic,
     RevealedCommitment,
     SubnetCommitments,
@@ -186,3 +188,13 @@ class GetLatestEvmAssociationsResponse(PylonResponse, SubnetEvmAssociations):
     """
 
     pass
+
+
+class GetEvmLogsResponse(PylonResponse):
+    """
+    Response class that is returned for the GetEvmLogsRequest.
+    """
+
+    logs: list[EvmLog]
+    from_block: evm_types.BlockNumber
+    to_block: evm_types.BlockNumber
