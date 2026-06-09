@@ -8,6 +8,7 @@ from unittest.mock import AsyncMock
 from pylon_commons.currency import CurrencyRao, Token
 from pylon_commons.models import (
     CommitmentVariant,
+    EvmLog,
     HexDataCommitment,
     RevealedCommitment,
     SubnetCommitments,
@@ -29,6 +30,9 @@ from pylon_commons.types import (
     Tempo,
     Timestamp,
 )
+from pylon_commons.types import (
+    evm as evm_types,
+)
 
 from pylon_service.bittensor.exceptions import ArchiveFallbackException
 from pylon_service.bittensor.models import RawEvmKeyAssociationInfo
@@ -41,6 +45,7 @@ if TYPE_CHECKING:
     from pytest import MonkeyPatch
 
     from pylon_service.bittensor.mock_contact import MockBittensorContact
+    from pylon_service.evm.mock_contact import MockEvmContact
 
 _registry: dict[str, type["StateHandler"]] = {}
 
@@ -65,6 +70,7 @@ class StateHandler(ABC):
         sn2_client: "MockBittensorContact",
         mock_stores: dict[StoreName, MockStore],
         monkeypatch: "MonkeyPatch",
+        mock_evm_contact: "MockEvmContact | None" = None,
     ) -> None:
         self._clients = {
             None: open_access_client,
@@ -73,6 +79,7 @@ class StateHandler(ABC):
         }
         self.mock_stores = mock_stores
         self.monkeypatch = monkeypatch
+        self._evm_contact = mock_evm_contact
 
     def __init_subclass__(cls, **kwargs) -> None:
         super().__init_subclass__(**kwargs)
@@ -108,6 +115,8 @@ class StateHandler(ABC):
             client.reset()
         for store in self.mock_stores.values():
             store.reset()
+        if self._evm_contact is not None:
+            self._evm_contact.reset()
         self.monkeypatch.undo()
 
     @classmethod
@@ -118,9 +127,10 @@ class StateHandler(ABC):
         sn2_client: "MockBittensorContact",
         mock_stores: dict[StoreName, MockStore],
         monkeypatch: "MonkeyPatch",
+        mock_evm_contact: "MockEvmContact | None" = None,
     ) -> dict[str, "StateHandler"]:
         return {
-            name: handler_cls(open_access_client, sn1_client, sn2_client, mock_stores, monkeypatch)
+            name: handler_cls(open_access_client, sn1_client, sn2_client, mock_stores, monkeypatch, mock_evm_contact)
             for name, handler_cls in _registry.items()
         }
 
@@ -481,3 +491,34 @@ class PriceExistsAtBlockHandler(StateHandler):
         self._set_default_latest_block(client, block)
         client.add_behavior("get_block", block)
         client.add_behavior("get_alpha_price", price)
+
+
+class EvmContractLogsExistHandler(StateHandler):
+    name = "evm contract logs exist"
+
+    def setup(self, parameters: dict[str, Any]) -> None:
+        assert self._evm_contact is not None
+        self._evm_contact.add_behavior("get_current_block", evm_types.BlockNumber(1000))
+        self._evm_contact.add_behavior(
+            "get_logs",
+            [
+                EvmLog(
+                    event="Transfer",
+                    args={"from": "0xaaaa", "to": "0xbbbb", "value": 1000},
+                    address=evm_types.Address("0x" + "d" * 40),
+                    block_number=evm_types.BlockNumber(1000),
+                    transaction_hash=evm_types.TransactionHash("0x" + "e" * 64),
+                    transaction_index=evm_types.TransactionIndex(0),
+                    log_index=evm_types.LogIndex(0),
+                )
+            ],
+        )
+
+
+class NoEvmContractLogsExistHandler(StateHandler):
+    name = "no evm contract logs exist"
+
+    def setup(self, parameters: dict[str, Any]) -> None:
+        assert self._evm_contact is not None
+        self._evm_contact.add_behavior("get_current_block", evm_types.BlockNumber(1000))
+        self._evm_contact.add_behavior("get_logs", [])
