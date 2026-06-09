@@ -11,7 +11,13 @@ from pylon_client.artanis import Config, IdentityName, PylonAuthToken, PylonClie
 from testcontainers.core.container import DockerContainer
 from testcontainers.core.network import Network
 
-from tests.integration.containers import LocalChainContainer, LocalChainImage, MitmproxyContainer, PylonServiceContainer
+from tests.integration.containers import (
+    AnvilContainer,
+    LocalChainContainer,
+    LocalChainImage,
+    MitmproxyContainer,
+    PylonServiceContainer,
+)
 from tests.integration.localchain.manager import LocalChainManager
 from tests.integration.mitmproxy import WSRecorderClient
 
@@ -93,6 +99,16 @@ def _stream_container_logs_to_console(container: DockerContainer, name: str) -> 
     thread = threading.Thread(target=stream_logs, daemon=True)
     thread.start()
     return thread
+
+
+@pytest.fixture(scope="package")
+def anvil(docker_network):
+    with (
+        AnvilContainer()
+        .with_network(docker_network)
+        .with_network_aliases("mock-evm-main", "mock-evm-archive") as container
+    ):
+        yield container
 
 
 @pytest.fixture(scope="package")

@@ -6,6 +6,10 @@ from tests.pact.constants import (
     BLOCK_TIMESTAMP,
     COLDKEY,
     COMMITMENT_HEX,
+    EVM_CONTRACT_ADDRESS,
+    EVM_FROM_BLOCK,
+    EVM_TO_BLOCK,
+    EVM_TRANSACTION_HASH,
     EXTRINSIC_HASH,
     EXTRINSIC_INDEX,
     NETUID,
@@ -240,6 +244,34 @@ def price_response_matcher() -> dict:
         "block": block_matcher(),
         "netuid": match.int(NETUID),
         "price": {"value": match.int(PRICE_VALUE_RAO)},
+    }
+
+
+def evm_log_matcher() -> dict:
+    return {
+        "event": match.str("Transfer"),
+        "args": match.like({"from": "0xaaaa", "to": "0xbbbb", "value": 1000}),
+        "address": match.str(EVM_CONTRACT_ADDRESS),
+        "block_number": match.int(BLOCK_NUMBER),
+        "transaction_hash": match.str(EVM_TRANSACTION_HASH),
+        "transaction_index": match.int(0),
+        "log_index": match.int(0),
+    }
+
+
+def evm_logs_response_matcher() -> dict:
+    return {
+        "logs": match.each_like(evm_log_matcher()),
+        "from_block": match.int(EVM_FROM_BLOCK),
+        "to_block": match.int(EVM_TO_BLOCK),
+    }
+
+
+def evm_empty_logs_response_matcher() -> dict:
+    return {
+        "logs": [],
+        "from_block": match.int(EVM_FROM_BLOCK),
+        "to_block": match.int(EVM_TO_BLOCK),
     }
 
 

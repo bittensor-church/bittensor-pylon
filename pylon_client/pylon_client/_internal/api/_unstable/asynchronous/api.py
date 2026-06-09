@@ -1,4 +1,4 @@
-from typing import cast
+from typing import Any, cast
 
 from pylon_client._internal.api.abstract_async import (
     AbstractAsyncIdentityApi,
@@ -9,6 +9,7 @@ from pylon_client._internal.pylon_commons._unstable.requests import (
     GetCommitmentRequest,
     GetCommitmentsRequest,
     GetDrandLastStoredRoundRequest,
+    GetEvmLogsRequest,
     GetExtrinsicRequest,
     GetIdentitiesRequest,
     GetLatestBlockInfoRequest,
@@ -43,6 +44,7 @@ from pylon_client._internal.pylon_commons.types import (
     RevealedCommitmentData,
     Weight,
 )
+from pylon_client._internal.pylon_commons.types import evm as evm_types
 
 
 class AsyncOpenAccessApi(AbstractAsyncOpenAccessApi):
@@ -103,6 +105,20 @@ class AsyncOpenAccessApi(AbstractAsyncOpenAccessApi):
 
     async def _get_latest_evm_associations_request(self, netuid: NetUid) -> GetLatestEvmAssociationsRequest:
         return GetLatestEvmAssociationsRequest(netuid=netuid)
+
+    async def _get_evm_logs_request(
+        self,
+        contract_address: evm_types.Address,
+        from_block: evm_types.BlockNumber,
+        to_block: evm_types.BlockNumber,
+        abi: list[dict[str, Any]],
+    ) -> GetEvmLogsRequest:
+        return GetEvmLogsRequest(
+            contract_address=contract_address,
+            from_block=from_block,
+            to_block=to_block,
+            abi=abi,
+        )
 
 
 class AsyncIdentityApi(AbstractAsyncIdentityApi):

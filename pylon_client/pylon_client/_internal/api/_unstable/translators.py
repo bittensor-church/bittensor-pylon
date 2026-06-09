@@ -11,6 +11,7 @@ from pylon_client._internal.pylon_commons._unstable.requests import (
     GetCommitmentRequest,
     GetCommitmentsRequest,
     GetDrandLastStoredRoundRequest,
+    GetEvmLogsRequest,
     GetExtrinsicRequest,
     GetIdentitiesRequest,
     GetLatestBlockInfoRequest,
@@ -264,4 +265,15 @@ class HttpTranslator(AbstractRequestTranslator[Request, HttpCommunicatorT]):
         headers = self._get_auth_headers(request, communicator)
         return communicator.raw_client.build_request(
             method=self._endpoint_cls.LATEST_EVM_ASSOCIATIONS.method, url=url, headers=headers
+        )
+
+    def _translate_get_evm_logs(self, request: GetEvmLogsRequest, communicator: HttpCommunicatorT) -> Request:
+        url = self._endpoint_cls.EVM_LOGS.absolute_url(contract_address=request.contract_address)
+        headers = self._get_auth_headers(request, communicator)
+        return communicator.raw_client.build_request(
+            method=self._endpoint_cls.EVM_LOGS.method,
+            url=url,
+            headers=headers,
+            params={"from_block": request.from_block, "to_block": request.to_block},
+            json=request.model_dump(include={"abi"}),
         )

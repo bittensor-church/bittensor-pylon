@@ -14,3 +14,19 @@ EXTRINSIC_INDEX = 0
 EXTRINSIC_HASH = "0x" + "b" * 64
 PRICE_VALUE_RAO = 1_000_000
 PRICE_VALUE_RAO_2 = 2_000_000
+EVM_CONTRACT_ADDRESS = "0x" + "d" * 40
+EVM_FROM_BLOCK = 100
+EVM_TO_BLOCK = 200
+EVM_TRANSACTION_HASH = "0x" + "e" * 64
+EVM_TRANSFER_ABI = [
+    {
+        "type": "event",
+        "name": "Transfer",
+        "anonymous": False,
+        "inputs": [
+            {"name": "from", "type": "address", "indexed": True},
+            {"name": "to", "type": "address", "indexed": True},
+            {"name": "value", "type": "uint256", "indexed": False},
+        ],
+    }
+]

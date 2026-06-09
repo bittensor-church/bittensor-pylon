@@ -2,7 +2,7 @@ import threading
 from abc import ABC, abstractmethod
 from collections.abc import Callable
 from functools import partial
-from typing import TypeVar
+from typing import Any, TypeVar
 
 from pylon_client._internal.client.sync.communicators import AbstractCommunicator
 from pylon_client._internal.pylon_commons._unstable.requests import (
@@ -10,6 +10,7 @@ from pylon_client._internal.pylon_commons._unstable.requests import (
     GetCommitmentRequest,
     GetCommitmentsRequest,
     GetDrandLastStoredRoundRequest,
+    GetEvmLogsRequest,
     GetExtrinsicRequest,
     GetLatestBlockInfoRequest,
     GetLatestEvmAssociationsRequest,
@@ -36,6 +37,7 @@ from pylon_client._internal.pylon_commons._unstable.responses import (
     GetCommitmentResponse,
     GetCommitmentsResponse,
     GetDrandLastStoredRoundResponse,
+    GetEvmLogsResponse,
     GetExtrinsicResponse,
     GetLatestBlockInfoResponse,
     GetLatestEvmAssociationsResponse,
@@ -66,6 +68,7 @@ from pylon_client._internal.pylon_commons.types import (
     NetUid,
     Weight,
 )
+from pylon_client._internal.pylon_commons.types import evm as evm_types
 
 ResponseT = TypeVar("ResponseT", bound=PylonResponse)
 
@@ -314,6 +317,27 @@ class AbstractOpenAccessApi(AbstractApi, ABC):
         """
         return self._send_request(self._get_latest_evm_associations_request(netuid))
 
+    def get_evm_logs(
+        self,
+        contract_address: evm_types.Address,
+        from_block: evm_types.BlockNumber,
+        to_block: evm_types.BlockNumber,
+        abi: list[dict[str, Any]],
+    ) -> GetEvmLogsResponse:
+        """
+        Retrieves decoded EVM contract logs for a given address and block range.
+
+        Args:
+            contract_address: The EVM contract address to query logs for.
+            from_block: The starting block number (inclusive).
+            to_block: The ending block number (inclusive).
+            abi: The contract ABI as a list of dicts, used to decode event logs.
+
+        Returns:
+            GetEvmLogsResponse: containing the decoded logs and the queried block range.
+        """
+        return self._send_request(self._get_evm_logs_request(contract_address, from_block, to_block, abi))
+
     # Private API
 
     @abstractmethod
@@ -368,6 +392,15 @@ class AbstractOpenAccessApi(AbstractApi, ABC):
 
     @abstractmethod
     def _get_latest_evm_associations_request(self, netuid: NetUid) -> GetLatestEvmAssociationsRequest: ...
+
+    @abstractmethod
+    def _get_evm_logs_request(
+        self,
+        contract_address: evm_types.Address,
+        from_block: evm_types.BlockNumber,
+        to_block: evm_types.BlockNumber,
+        abi: list[dict[str, Any]],
+    ) -> GetEvmLogsRequest: ...
 
 
 class AbstractIdentityApi(AbstractApi, ABC):
