@@ -18,5 +18,9 @@ COPY pylon_service ./pylon_service
 COPY --from=ghcr.io/astral-sh/uv:0.10 /uv /uvx /bin/
 RUN cd pylon_service && /bin/uv sync --no-dev --no-sources-package bittensor-pylon-client
 
+# service version injected at build time (no .git in image, so hatch-vcs cannot derive it at runtime)
+ARG SERVICE_VERSION=
+ENV PYLON_OTEL_SERVICE_VERSION=${SERVICE_VERSION}
+
 EXPOSE 8000
 CMD ["pylon_service/.venv/bin/python", "-m", "pylon_service.uvicorn_entrypoint"]

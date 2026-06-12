@@ -1,3 +1,4 @@
+import uuid
 from typing import Self
 
 from litestar.config.response_cache import ResponseCacheConfig
@@ -68,6 +69,58 @@ class RecentObjectsSettings(BaseSettings):
 
 
 recent_objects_settings = RecentObjectsSettings()
+
+
+_DEFAULT_SERVICE_INSTANCE_ID = str(uuid.uuid4())
+
+
+class OtelSettings(BaseSettings):
+    """OpenTelemetry resource attributes injected into every log line."""
+
+    service_namespace: str = "bittensor-pylon"
+    service_name: str = "pylon_service"
+    deployment_environment: str = Field(default_factory=lambda: settings.environment)
+    service_instance_id: str = _DEFAULT_SERVICE_INSTANCE_ID
+    service_version: str = ""
+
+    model_config = SettingsConfigDict(
+        env_file=ENV_FILE,
+        env_file_encoding="utf-8",
+        env_prefix="PYLON_OTEL_",
+        extra="ignore",
+    )
+
+    def resource_attributes(self) -> dict[str, str]:
+        """Return OTEL resource attributes as dotted-key fields for log injection."""
+        attrs = {
+            "service.namespace": self.service_namespace,
+            "service.name": self.service_name,
+            "deployment.environment.name": self.deployment_environment,
+            "service.instance.id": self.service_instance_id,
+        }
+        if self.service_version:
+            attrs["service.version"] = self.service_version
+        return attrs
+
+
+otel_settings = OtelSettings()
+
+
+class SentrySettings(BaseSettings):
+    """Settings for Sentry error tracking."""
+
+    dsn: str = ""
+    environment: str = Field(default_factory=lambda: settings.environment)
+
+    model_config = SettingsConfigDict(
+        env_file=ENV_FILE,
+        env_file_encoding="utf-8",
+        env_prefix="PYLON_SENTRY_",
+        extra="ignore",
+    )
+
+
+sentry_settings = SentrySettings()
 
 # Default cache config. Only used for endpoints with explicit @handler(..., cache=...)
 response_cache_config = ResponseCacheConfig()

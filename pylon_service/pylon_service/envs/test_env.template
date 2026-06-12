@@ -27,11 +27,24 @@ PYLON_EVM_ARCHIVE_RPC_URL=
 # Number of blocks from the chain head below which archive RPC is used. Default is 300.
 PYLON_EVM_ARCHIVE_BLOCKS_CUTOFF=
 
+# Deployment environment name. Single source of truth used by both Sentry and OTEL log resource attributes.
+PYLON_ENVIRONMENT=development
+
+# Service version reported in OTEL log resource attributes. Injected automatically at Docker build time
+# (via the SERVICE_VERSION build-arg); leave empty for local runs.
+PYLON_OTEL_SERVICE_VERSION=
+
+# OTEL deployment environment name. Defaults to PYLON_ENVIRONMENT when left commented out.
+# To override, uncomment the line below and set a non-empty value (an empty value would disable the fallback).
+# PYLON_OTEL_DEPLOYMENT_ENVIRONMENT=
+
 # Sentry Configuration
 # DSN address for pylon to use - leave empty to disable sentry integration.
 PYLON_SENTRY_DSN=
-# Sentry environment to use.
-PYLON_SENTRY_ENVIRONMENT=development
+
+# Sentry environment name. Defaults to PYLON_ENVIRONMENT when left commented out.
+# To override, uncomment the line below and set a non-empty value (an empty value would disable the fallback).
+# PYLON_SENTRY_ENVIRONMENT=
 
 # Token for accessing /metrics endpoint. Must be passed as Bearer token in Authorization header.
 # If empty, /metrics endpoint will return 403 Forbidden.

@@ -2,17 +2,17 @@ import sentry_sdk
 from sentry_sdk.integrations.asyncio import AsyncioIntegration
 from sentry_sdk.integrations.litestar import LitestarIntegration
 
-from pylon_service.settings import settings
+from pylon_service.settings import sentry_settings
 
 
 def init_sentry() -> None:
     """Initialize Sentry if DSN is configured."""
-    if not settings.sentry_dsn:
+    if not sentry_settings.dsn:
         return
 
     sentry_sdk.init(
-        dsn=settings.sentry_dsn,
-        environment=settings.sentry_environment,
+        dsn=sentry_settings.dsn,
+        environment=sentry_settings.environment,
         integrations=[
             LitestarIntegration(),
             AsyncioIntegration(),

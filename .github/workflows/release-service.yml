@@ -39,6 +39,8 @@ jobs:
           context: .
           file: pylon_service/Dockerfile
           push: true
+          build-args: |
+            SERVICE_VERSION=${{ steps.version.outputs.VERSION }}
           tags: |
             ${{ env.DOCKER_REPO_NAME }}:${{ steps.version.outputs.VERSION }}
             ${{ env.DOCKER_REPO_NAME }}:latest

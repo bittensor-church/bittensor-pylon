@@ -78,6 +78,8 @@ jobs:
           context: .
           file: pylon_service/Dockerfile
           push: false
+          build-args: |
+            SERVICE_VERSION=dev
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
