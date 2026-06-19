@@ -26,6 +26,9 @@ class MockEvmContact(AbstractEvmContact):
         async with self._behave.mock(**behaviors):
             yield
 
+    def add_behavior(self, method_name: str, behavior: Any) -> None:
+        self._behave.add_behavior(method_name, behavior)
+
     def reset(self) -> None:
         self._behave.reset()
 

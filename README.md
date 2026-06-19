@@ -1,13 +1,13 @@
 # Pylon
 
-Pylon is a high-performance HTTP service that provides fast, cached access to the Bittensor blockchain.
+Pylon is a high-performance HTTP service that provides fast, cached access to the Bittensor blockchain and EVM.
 It is designed to be used by validators, miners, and other actors like indexers,
-allowing them to interact with the Bittensor network without direct blockchain calls
+allowing them to interact with the Bittensor network without direct blockchain or EVM calls
 or installing any blockchain-related libraries.
 
 The benefits of using Pylon are:
 
-- **Simplicity** - Complex subtensor operations like setting weights made easy via one API call
+- **Simplicity** - Complex subtensor operations like setting weights, or EVM queries like fetching logs, made easy via one API call
 - **Safety** - Your hotkey is visible only to a small, easily verifiable software component
 - **Durability** - Automatic handling of connection pooling, retries, and commit-reveal cycles
 - **Convenience** - Easy to use Python client provided

@@ -19,6 +19,7 @@ def test_provider_honors_pact_with_pylon_client(
     provider_url,
     mock_stores,
     monkeypatch,
+    mock_evm_contact,
 ):
     """
     Verify that pylon_service honors all contracts with pylon_client.
@@ -41,6 +42,7 @@ def test_provider_honors_pact_with_pylon_client(
                 shared_world.identity_contacts[IdentityName("sn2")].main,
                 mock_stores,
                 monkeypatch,
+                mock_evm_contact,
             ),
             teardown=True,
         )

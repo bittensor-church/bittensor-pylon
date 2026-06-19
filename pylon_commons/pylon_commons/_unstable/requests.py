@@ -5,13 +5,15 @@ from pydantic import BaseModel, Field, field_validator
 
 from ..apiver import ApiVersion
 from ..types import BlockNumber, ExtrinsicIndex, Hotkey, IdentityName, MechanismId, NetUid
-from .bodies import SetCommitmentBody, SetRevealedCommitmentBody, SetWeightsBody
+from ..types import evm as evm_types
+from .bodies import EvmLogsBody, SetCommitmentBody, SetRevealedCommitmentBody, SetWeightsBody
 from .models import CertificateAlgorithm
 from .responses import (
     GetAllRevealedCommitmentsResponse,
     GetCommitmentResponse,
     GetCommitmentsResponse,
     GetDrandLastStoredRoundResponse,
+    GetEvmLogsResponse,
     GetExtrinsicResponse,
     GetIdentitiesResponse,
     GetLatestBlockInfoResponse,
@@ -315,3 +317,15 @@ class GetLatestEvmAssociationsRequest(AuthenticatedPylonRequest[GetLatestEvmAsso
     """
 
     response_cls = GetLatestEvmAssociationsResponse
+
+
+class GetEvmLogsRequest(EvmLogsBody, AuthenticatedPylonRequest[GetEvmLogsResponse]):
+    """
+    Class used to fetch decoded EVM contract logs by the Pylon client.
+    """
+
+    response_cls = GetEvmLogsResponse
+
+    contract_address: evm_types.Address
+    from_block: evm_types.BlockNumber
+    to_block: evm_types.BlockNumber

@@ -2,6 +2,7 @@ from ipaddress import IPv4Address
 
 from pylon_client._internal.pylon_commons.currency import CurrencyRao
 from pylon_client._internal.pylon_commons.types import AlphaPriceRao
+from pylon_client._internal.pylon_commons.types import evm as evm_types
 from pylon_client.artanis import (
     AlphaStake,
     BlockHash,
@@ -38,9 +39,11 @@ from pylon_client.artanis.unstable import (
     Block,
     BlockInfoBag,
     EvmAssociation,
+    EvmLog,
     Extrinsic,
     ExtrinsicCall,
     ExtrinsicCallArg,
+    GetEvmLogsResponse,
     GetPriceResponse,
     GetPricesResponse,
     Neuron,
@@ -52,6 +55,10 @@ from tests.pact.constants import (
     BLOCK_NUMBER,
     BLOCK_TIMESTAMP,
     COLDKEY,
+    EVM_CONTRACT_ADDRESS,
+    EVM_FROM_BLOCK,
+    EVM_TO_BLOCK,
+    EVM_TRANSACTION_HASH,
     EXTRINSIC_HASH,
     EXTRINSIC_INDEX,
     NETUID,
@@ -122,6 +129,34 @@ def build_evm_association(hotkey: Hotkey) -> EvmAssociation:
         hotkey=hotkey,
         evm_address=EvmAddress("0x" + "c" * 40),
         last_block_where_ownership_was_proven=BlockNumber(BLOCK_NUMBER),
+    )
+
+
+def build_evm_log() -> EvmLog:
+    return EvmLog(
+        event="Transfer",
+        args={"from": "0xaaaa", "to": "0xbbbb", "value": 1000},
+        address=evm_types.Address(EVM_CONTRACT_ADDRESS),
+        block_number=evm_types.BlockNumber(BLOCK_NUMBER),
+        transaction_hash=evm_types.TransactionHash(EVM_TRANSACTION_HASH),
+        transaction_index=evm_types.TransactionIndex(0),
+        log_index=evm_types.LogIndex(0),
+    )
+
+
+def build_evm_logs_response() -> GetEvmLogsResponse:
+    return GetEvmLogsResponse(
+        logs=[build_evm_log()],
+        from_block=evm_types.BlockNumber(EVM_FROM_BLOCK),
+        to_block=evm_types.BlockNumber(EVM_TO_BLOCK),
+    )
+
+
+def build_empty_evm_logs_response() -> GetEvmLogsResponse:
+    return GetEvmLogsResponse(
+        logs=[],
+        from_block=evm_types.BlockNumber(EVM_FROM_BLOCK),
+        to_block=evm_types.BlockNumber(EVM_TO_BLOCK),
     )
 
 
