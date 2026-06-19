@@ -466,6 +466,41 @@ That means:
 This keeps one execution path for public behavior.
 
 
+## Observability
+
+The service ships optional, disabled-by-default integrations for error tracking and tracing. Both are enabled purely
+by setting an endpoint/DSN — no separate feature flag.
+
+### Sentry
+
+- Enabled iff `PYLON_SENTRY_DSN` is set. Reports errors through the Litestar and asyncio integrations.
+
+### OpenTelemetry traces
+
+- Enabled iff `PYLON_OTEL_COLLECTOR_ENDPOINT` is set to the base URL of an OTLP collector (e.g. `http://alloy:4318`).
+  Traces are exported via OTLP HTTP/protobuf to `<endpoint>/v1/traces`.
+- When enabled, auto-instrumentation covers: the Litestar HTTP server (incoming requests), `httpx` and `aiohttp`
+  (outgoing HTTP — chain RPC over `httpx`, web3/EVM RPC over `aiohttp`), and `SQLAlchemy` (database). The active span's
+  `trace_id` / `span_id` are injected into structured logs for log↔trace correlation.
+- Outgoing HTTP URLs are recorded on spans verbatim, so do **not** embed credentials in the configured RPC URLs
+  (`PYLON_EVM_RPC_URL`, `PYLON_EVM_ARCHIVE_RPC_URL`, or an `http(s)://` `PYLON_BITTENSOR_NETWORK`) — see the warning in
+  `pylon_commons/settings.py`. The same URLs also appear in debug logs and the Prometheus `rpc_url` metric label.
+- **Not traced:** the default Bittensor chain transport in `turbobt` is websockets, for which no OpenTelemetry
+  instrumentation exists — so chain RPC calls are not auto-traced. They are covered only when
+  `PYLON_BITTENSOR_NETWORK` points at an `http(s)://` URI, where `turbobt` falls back to `httpx`.
+- The service does not ship a collector. Running and configuring Alloy (or any OTLP collector) at the configured
+  endpoint, including any tail-sampling or endpoint filtering, is the deployer's responsibility.
+- **Long-lived on-chain submission spans:** background submission tasks (`apply_weights`, `set_commitment`,
+  `set_revealed_commitment`) emit one short, self-contained span per retry attempt, each with its own `trace_id` and
+  span links back to the originating request and the previous attempt — this keeps traces short across the (up to 200)
+  retries. A *single* attempt can still take up to 120s while waiting for extrinsic finalization (~12s per block, longer
+  under congestion). Backends that bound trace lifetime — notably Tempo's `max_trace_live` (default 30s) — will split
+  such an attempt's trace. If you use Tempo, set `max_trace_live` to at least 180s (a margin above the 120s submission
+  timeout) and `max_trace_idle` to at least 30s.
+- Traces require the service to run as a single uvicorn process; both `--workers` and `WEB_CONCURRENCY` (other than
+  `1`) are rejected (see `uvicorn_entrypoint.py`) because the SDK is initialised once at import and would not survive
+  `fork()`.
+
 ## Change checklist
 
 Before merging changes in `pylon_service`, verify:

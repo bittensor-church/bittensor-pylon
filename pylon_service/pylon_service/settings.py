@@ -2,6 +2,8 @@ import uuid
 from typing import Self
 
 from litestar.config.response_cache import ResponseCacheConfig
+from opentelemetry.semconv._incubating.attributes.deployment_attributes import DEPLOYMENT_ENVIRONMENT_NAME
+from opentelemetry.semconv.resource import ResourceAttributes
 from pydantic import Field, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 from pylon_commons.settings import ENV_FILE, Settings
@@ -82,6 +84,7 @@ class OtelSettings(BaseSettings):
     deployment_environment: str = Field(default_factory=lambda: settings.environment)
     service_instance_id: str = _DEFAULT_SERVICE_INSTANCE_ID
     service_version: str = ""
+    collector_endpoint: str = ""
 
     model_config = SettingsConfigDict(
         env_file=ENV_FILE,
@@ -90,16 +93,31 @@ class OtelSettings(BaseSettings):
         extra="ignore",
     )
 
+    @property
+    def normalized_collector_endpoint(self) -> str:
+        """
+        Return the collector endpoint with surrounding whitespace and trailing slashes removed,
+        so signal paths can be appended without producing a double slash.
+        """
+        return self.collector_endpoint.strip().rstrip("/")
+
+    @property
+    def traces_enabled(self) -> bool:
+        """
+        Return whether traces export is enabled (a non-empty endpoint is configured).
+        """
+        return bool(self.normalized_collector_endpoint)
+
     def resource_attributes(self) -> dict[str, str]:
         """Return OTEL resource attributes as dotted-key fields for log injection."""
         attrs = {
-            "service.namespace": self.service_namespace,
-            "service.name": self.service_name,
-            "deployment.environment.name": self.deployment_environment,
-            "service.instance.id": self.service_instance_id,
+            ResourceAttributes.SERVICE_NAMESPACE: self.service_namespace,
+            ResourceAttributes.SERVICE_NAME: self.service_name,
+            DEPLOYMENT_ENVIRONMENT_NAME: self.deployment_environment,
+            ResourceAttributes.SERVICE_INSTANCE_ID: self.service_instance_id,
         }
         if self.service_version:
-            attrs["service.version"] = self.service_version
+            attrs[ResourceAttributes.SERVICE_VERSION] = self.service_version
         return attrs
 
 

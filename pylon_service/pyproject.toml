@@ -18,6 +18,15 @@ dependencies = [
     "aiosqlite>=0.22.1",
     "web3>=7.16.0",
     "structlog>=25,<26",
+    # OpenTelemetry uses split versioning: the stable API/SDK/exporters track 1.x while the
+    # instrumentation packages track 0.Nb pre-releases, and both are released together (the 1.4x
+    # line pairs with 0.63b). The differing pin styles are intentional, not a mismatch.
+    "opentelemetry-sdk~=1.41",
+    "opentelemetry-exporter-otlp-proto-http~=1.41",
+    "opentelemetry-instrumentation-asgi~=0.63b1",
+    "opentelemetry-instrumentation-httpx~=0.63b1",
+    "opentelemetry-instrumentation-aiohttp-client~=0.63b1",
+    "opentelemetry-instrumentation-sqlalchemy~=0.63b1",
 ]
 
 [dependency-groups]

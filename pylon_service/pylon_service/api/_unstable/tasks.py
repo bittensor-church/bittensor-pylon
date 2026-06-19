@@ -1,7 +1,13 @@
 import asyncio
 from abc import ABC, abstractmethod
+from collections.abc import Iterator
+from contextlib import contextmanager
 from typing import Any, ClassVar, TypeVar
 
+from opentelemetry import trace
+from opentelemetry.context import Context
+from opentelemetry.trace import Link, SpanContext
+from opentelemetry.util.types import AttributeValue
 import structlog
 from prometheus_client import Histogram
 from pylon_commons.models import Block, CommitReveal
@@ -44,8 +50,10 @@ from pylon_service.metrics import (
     track_operation,
 )
 from pylon_service.settings import settings
+from pylon_service.tracing import TraceLinkType, get_current_valid_span_context
 
 logger = structlog.stdlib.get_logger(__name__)
+_tracer = trace.get_tracer(__name__)
 
 
 class StopRetrying(Exception):
@@ -79,9 +87,13 @@ class BackgroundTask[ReturnT](ABC):
 
     def __init__(self) -> None:
         self._running_task: asyncio.Task[ReturnT] | None = None
+        self._request_span_context: SpanContext | None = None
+        self._previous_attempt_context: SpanContext | None = None
 
     async def schedule(self) -> asyncio.Task[ReturnT]:
         await self._on_task_scheduled()
+
+        self._request_span_context = get_current_valid_span_context()
 
         self._running_task = asyncio.create_task(self(), name=self.JOB_NAME)
         type(self).tasks_running.add(self)
@@ -91,15 +103,46 @@ class BackgroundTask[ReturnT](ABC):
     async def __call__(self) -> ReturnT:
         return await self._submit_with_retries()
 
+    @contextmanager
+    def _attempt_span(self, attempt_number: int) -> Iterator[None]:
+        links: list[Link] = []
+        if self._request_span_context is not None:
+            links.append(
+                Link(
+                    self._request_span_context,
+                    attributes={TraceLinkType.ATTRIBUTE_KEY: TraceLinkType.ORIGINATING_REQUEST},
+                )
+            )
+        if self._previous_attempt_context is not None:
+            links.append(
+                Link(
+                    self._previous_attempt_context,
+                    attributes={TraceLinkType.ATTRIBUTE_KEY: TraceLinkType.PREVIOUS_ATTEMPT},
+                )
+            )
+        with _tracer.start_as_current_span(
+            f"{self.JOB_NAME}.attempt",
+            context=Context(),
+            links=links,
+            attributes={
+                "attempt_number": attempt_number,
+                **self._attempt_span_attributes(),
+            },
+        ):
+            self._previous_attempt_context = get_current_valid_span_context()
+            yield
+
     async def _submit_with_retries(self) -> ReturnT:
         prepared = False
+        self._previous_attempt_context = None
 
         async def attempt() -> ReturnT:
             nonlocal prepared
-            if not prepared:
-                await self._prepare()
-                prepared = True
-            return await self._single_attempt()
+            with self._attempt_span(retrying.statistics["attempt_number"]):
+                if not prepared:
+                    await self._prepare()
+                    prepared = True
+                return await self._single_attempt()
 
         retrying = AsyncRetrying(
             stop=stop_after_attempt(self._retry_attempts + 1),
@@ -148,6 +191,12 @@ class BackgroundTask[ReturnT](ABC):
             logger.exception("task_failed", job_name=type(self).JOB_NAME, error_type=type(exc).__name__)
         else:
             logger.info("task_finished", task=task, job_name=self.JOB_NAME)
+
+    def _attempt_span_attributes(self) -> dict[str, AttributeValue]:
+        """
+        Per-task attributes attached to each attempt span; overridden by subclasses that have them.
+        """
+        return {}
 
     async def _on_task_scheduled(self) -> None:
         pass
@@ -212,6 +261,12 @@ class ApplyWeights(
     @property
     def _retry_delay_seconds(self) -> int:
         return settings.weights_retry_delay_seconds
+
+    def _attempt_span_attributes(self) -> dict[str, AttributeValue]:
+        """
+        Attach netuid and hotkey to each attempt span for trace filtering.
+        """
+        return {"netuid": self._netuid, "hotkey": self._hotkey}
 
     async def _on_task_scheduled(self) -> None:
         if self._is_rescheduled:

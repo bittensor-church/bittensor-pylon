@@ -3,10 +3,12 @@ from unittest.mock import patch
 
 import pytest
 from litestar.types import HTTPRequestEvent, Message
+from opentelemetry.sdk.trace import TracerProvider
 
 from pylon_service.logging import (
     _get_current_coroutine_name,
     add_coro_name_to_structlog,
+    add_otel_context_to_structlog,
     add_otel_resource_to_structlog,
     add_request_id_to_structlog,
 )
@@ -112,3 +114,18 @@ def test_otel_resource_attributes_override_event_fields():
         "service.instance.id": otel_settings.service_instance_id,
         "service.name": "pylon_service",
     }
+
+
+def test_otel_context_processor_adds_nothing_without_active_span():
+    assert add_otel_context_to_structlog(None, "info", {"event": "hello"}) == {"event": "hello"}
+
+
+def test_otel_context_processor_injects_trace_and_span_ids():
+    tracer = TracerProvider().get_tracer("test")
+    with tracer.start_as_current_span("test-span") as span:
+        ctx = span.get_span_context()
+        assert add_otel_context_to_structlog(None, "info", {"event": "hello"}) == {
+            "event": "hello",
+            "trace_id": format(ctx.trace_id, "032x"),
+            "span_id": format(ctx.span_id, "016x"),
+        }
