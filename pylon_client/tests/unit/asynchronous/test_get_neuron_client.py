@@ -1,9 +1,11 @@
-from ipaddress import ip_address
+from ipaddress import IPv4Address, ip_address
+from unittest.mock import AsyncMock, MagicMock
 
 import httpx
 import pytest
 from tenacity import wait_none
 
+from pylon_client._internal.client.neuron_client import NEURON_CLIENT_CACHE_SIZE, AsyncNeuronClientManager
 from pylon_client._internal.pylon_commons.types import Port
 from pylon_client._internal.pylon_commons.v1.endpoints import Endpoint as V1Endpoint
 from pylon_client.artanis import (
@@ -14,6 +16,7 @@ from pylon_client.artanis import (
     NetUid,
     PylonAuthToken,
 )
+from pylon_client.exceptions import MtlsVerificationError
 from tests.factories import NeuronFactory
 from tests.mtls_helpers import generate_ed25519_cert, mtls_server, plain_http_server
 from tests.neurons_file_helpers import write_neurons_file
@@ -35,6 +38,53 @@ async def test_no_cert_yields_plain_client(test_url, neuron_factory: NeuronFacto
     async with client:
         async with client.get_neuron_client(neuron) as http_client:
             assert isinstance(http_client, httpx.AsyncClient)
+
+
+@pytest.mark.asyncio
+async def test_lru_eviction_closes_oldest_client():
+    """
+    build_async closes and evicts the LRU client when the cache exceeds capacity.
+    """
+    manager = AsyncNeuronClientManager(keepalive_expiry=5.0, mtls_cert_path=None, mtls_key_path=None, neurons_file=None)
+    oldest = MagicMock(spec=httpx.AsyncClient)
+    oldest.aclose = AsyncMock()
+    oldest_key = (IPv4Address("127.0.0.1"), Port(1))
+    manager._client_lru[oldest_key] = oldest
+    for i in range(2, NEURON_CLIENT_CACHE_SIZE + 1):
+        mock = MagicMock(spec=httpx.AsyncClient)
+        mock.aclose = AsyncMock()
+        manager._client_lru[(IPv4Address("127.0.0.1"), Port(i))] = mock
+
+    await manager.build_async(IPv4Address("127.0.0.1"), Port(NEURON_CLIENT_CACHE_SIZE + 1), 30.0)
+
+    oldest.aclose.assert_called_once()
+    assert oldest_key not in manager._client_lru
+
+
+@pytest.mark.asyncio
+async def test_mtls_error_evicts_cache_entry(test_url, neuron_factory: NeuronFactory):
+    """
+    MtlsVerificationError raised inside get_neuron_client removes the entry from cache and closes the client.
+    """  # noqa: DOC501
+    client = AsyncPylonClient(
+        AsyncConfig(
+            address=test_url,
+            open_access_token=PylonAuthToken("tok"),
+            retry=ASYNC_DEFAULT_RETRIES.copy(wait=wait_none()),
+        )
+    )
+    neuron = neuron_factory.build()
+    key = (neuron.axon_info.ip, neuron.axon_info.port)
+    mock_http_client = MagicMock(spec=httpx.AsyncClient)
+    mock_http_client.aclose = AsyncMock()
+    client._neuron_client_manager._client_lru[key] = mock_http_client
+
+    with pytest.raises(MtlsVerificationError):
+        async with client.get_neuron_client(neuron):
+            raise MtlsVerificationError("cert rotated")
+
+    assert key not in client._neuron_client_manager._client_lru
+    mock_http_client.aclose.assert_called_once()
 
 
 @pytest.mark.asyncio
@@ -111,6 +161,28 @@ async def test_plain_http_connection(test_url, neuron_factory: NeuronFactory):
 
         assert response.status_code == 200
         assert server.client_cert_der is None
+
+
+@pytest.mark.asyncio
+async def test_same_neuron_returns_cached_client(test_url, neuron_factory: NeuronFactory):
+    """
+    Second call to get_neuron_client for the same neuron returns the same client object,
+    confirming that the connection pool is reused.
+    """
+    client = AsyncPylonClient(
+        AsyncConfig(
+            address=test_url,
+            open_access_token=PylonAuthToken("tok"),
+            retry=ASYNC_DEFAULT_RETRIES.copy(wait=wait_none()),
+        )
+    )
+    neuron = neuron_factory.build()
+    async with client:
+        async with client.get_neuron_client(neuron) as first:
+            pass
+        async with client.get_neuron_client(neuron) as second:
+            pass
+    assert first is second
 
 
 @pytest.mark.asyncio

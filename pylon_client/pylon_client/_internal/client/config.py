@@ -32,6 +32,8 @@ class BaseConfig(BaseSettings, Generic[RetryT]):
         neurons_file: Path to a local JSON file of neurons used for local development and testing.
             When set, get_neuron_client skips mTLS and uses plain HTTP, and neuron discovery reads
             from this file instead of querying the Pylon service.
+        neuron_keepalive_expiry: Seconds an idle connection to a miner is kept alive in the pool
+            before being closed. Applies only to clients created by get_neuron_client (default 5.0).
     """
 
     model_config = SettingsConfigDict(
@@ -47,6 +49,7 @@ class BaseConfig(BaseSettings, Generic[RetryT]):
     mtls_cert_path: str | None = None
     mtls_key_path: str | None = None
     neurons_file: str | None = None
+    neuron_keepalive_expiry: float = 5.0
 
     def model_post_init(self, context) -> None:
         self.retry.reraise = True

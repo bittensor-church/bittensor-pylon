@@ -370,6 +370,19 @@ BasePylonException
 │   └── PylonForbidden         # Trying to access the resource with no permissions.
 ├── PylonClosed                # Trying to use closed client instance.
 └── PylonMisconfigured         # Invalid client configuration
+
+├── PylonMisconfigured         # Invalid client configuration
+└── MtlsVerificationError      # mTLS verification failed when connecting to a miner
+```
+
+`MtlsVerificationError` is raised by `get_neuron_client` when the miner does not present a
+certificate, its public key does not match the Pylon registry, or TLS verification fails.
+When this happens the cached client for that miner is evicted, so the next call re-probes
+the certificate from scratch. Other exceptions (network errors, timeouts) leave the cache
+intact — the same client is reused on the next call.
+
+```python
+from pylon_client.artanis import MtlsVerificationError
 ```
 
 **Example:**

@@ -3,8 +3,12 @@ from pathlib import Path
 
 import yaml
 
+from pylon_client._internal.file_backed_neurons import (
+    _FileBackedAxonInfo,
+    _FileBackedNeuron,
+    _FileBackedNeuronsResponse,
+)
 from pylon_client._internal.pylon_commons.types import Hotkey, Port
-from pylon_client._internal.file_backed_neurons import _FileBackedAxonInfo, _FileBackedNeuron, _FileBackedNeuronsResponse
 
 
 def build_file_backed_neurons(neurons: dict[str, tuple[str, int]]) -> _FileBackedNeuronsResponse:
