@@ -5,6 +5,7 @@ from functools import partial
 from typing import Any, TypeVar
 
 from pylon_client._internal.client.sync.communicators import AbstractCommunicator
+from pylon_client._internal.file_backed_neurons import load_file_backed_neurons
 from pylon_client._internal.pylon_commons._unstable.requests import (
     GetAllRevealedCommitmentsRequest,
     GetCertificateRequest,
@@ -70,7 +71,6 @@ from pylon_client._internal.pylon_commons.types import (
     NetUid,
     Weight,
 )
-from pylon_client._internal.file_backed_neurons import load_file_backed_neurons
 
 ResponseT = TypeVar("ResponseT", bound=PylonResponse)
 

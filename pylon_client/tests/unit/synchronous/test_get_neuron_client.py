@@ -1,6 +1,8 @@
-from ipaddress import ip_address
+from ipaddress import IPv4Address, ip_address
+from unittest.mock import MagicMock
 
 import httpx
+import pytest
 from tenacity import wait_none
 
 from pylon_client._internal.client.neuron_client import NEURON_CLIENT_CACHE_SIZE, SyncNeuronClientManager
@@ -28,6 +30,47 @@ def test_no_cert_yields_plain_client(test_url, neuron_factory: NeuronFactory):
     with client:
         with client.get_neuron_client(neuron) as http_client:
             assert isinstance(http_client, httpx.Client)
+
+
+def test_lru_eviction_closes_oldest_client():
+    """
+    build_sync closes and evicts the LRU client when the cache exceeds capacity.
+    """
+    manager = SyncNeuronClientManager(keepalive_expiry=5.0, mtls_cert_path=None, mtls_key_path=None, neurons_file=None)
+    oldest = MagicMock(spec=httpx.Client)
+    oldest_key = (IPv4Address("127.0.0.1"), Port(1))
+    manager._client_lru[oldest_key] = oldest
+    for i in range(2, NEURON_CLIENT_CACHE_SIZE + 1):
+        manager._client_lru[(IPv4Address("127.0.0.1"), Port(i))] = MagicMock(spec=httpx.Client)
+
+    manager.build_sync(IPv4Address("127.0.0.1"), Port(NEURON_CLIENT_CACHE_SIZE + 1), 30.0)
+
+    oldest.close.assert_called_once()
+    assert oldest_key not in manager._client_lru
+
+
+def test_mtls_error_evicts_cache_entry(test_url, neuron_factory: NeuronFactory):
+    """
+    MtlsVerificationError raised inside get_neuron_client removes the entry from cache and closes the client.
+    """  # noqa: DOC501
+    client = PylonClient(
+        Config(
+            address=test_url,
+            open_access_token=PylonAuthToken("tok"),
+            retry=DEFAULT_RETRIES.copy(wait=wait_none()),
+        )
+    )
+    neuron = neuron_factory.build()
+    key = (neuron.axon_info.ip, neuron.axon_info.port)
+    mock_http_client = MagicMock(spec=httpx.Client)
+    client._neuron_client_manager._client_lru[key] = mock_http_client
+
+    with pytest.raises(MtlsVerificationError):
+        with client.get_neuron_client(neuron):
+            raise MtlsVerificationError("cert rotated")
+
+    assert key not in client._neuron_client_manager._client_lru
+    mock_http_client.close.assert_called_once()
 
 
 def test_mtls_connection_presents_client_cert(tmp_path, test_url, neuron_factory: NeuronFactory, service_mock):
@@ -102,6 +145,27 @@ def test_plain_http_connection(test_url, neuron_factory: NeuronFactory):
 
         assert response.status_code == 200
         assert server.client_cert_der is None
+
+
+def test_same_neuron_returns_cached_client(test_url, neuron_factory: NeuronFactory):
+    """
+    Second call to get_neuron_client for the same neuron returns the same client object,
+    confirming that the connection pool is reused.
+    """
+    client = PylonClient(
+        Config(
+            address=test_url,
+            open_access_token=PylonAuthToken("tok"),
+            retry=DEFAULT_RETRIES.copy(wait=wait_none()),
+        )
+    )
+    neuron = neuron_factory.build()
+    with client:
+        with client.get_neuron_client(neuron) as first:
+            pass
+        with client.get_neuron_client(neuron) as second:
+            pass
+    assert first is second
 
 
 def test_neurons_file_yields_plain_client(tmp_path, test_url, neuron_factory: NeuronFactory):
