@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import asyncio
-import logging
 from typing import TYPE_CHECKING
 
 import structlog
@@ -22,10 +21,7 @@ def _get_current_coroutine_name() -> str:
 
     try:
         return "main" if task is None else task.get_name()
-    except Exception as e:
-        logging.getLogger("pylon_service.raw_logger").error(
-            "Exception when getting coroutine name: %s", e, exc_info=True
-        )
+    except Exception:
         return "unknown-task"
 
 
@@ -70,12 +66,9 @@ _CALLSITE_PARAMETER_ADDER = structlog.processors.CallsiteParameterAdder(
     }
 )
 
-# Base processors applied to every log line, and the foreign_pre_chain for the recursion-safe raw logger:
-# no coro_name processor, so logging from inside _get_current_coroutine_name's error path never re-enters it.
-# coro_name and OTEL attributes are layered on top per formatter: the raw formatter omits coro_name to stay
-# recursion-safe (see _get_current_coroutine_name), and OTEL resource attributes are only injected into the
-# json (production) output to keep dev console clean.
-_RAW_FOREIGN_PRE_CHAIN = (
+# Base processors applied to every log line. coro_name and OTEL attributes are layered on top per formatter:
+# OTEL resource attributes are only injected into the json (production) output to keep dev console clean.
+_BASE_FOREIGN_PRE_CHAIN = (
     structlog.processors.TimeStamper(fmt="iso"),
     structlog.stdlib.add_logger_name,
     structlog.stdlib.add_log_level,
@@ -83,11 +76,8 @@ _RAW_FOREIGN_PRE_CHAIN = (
     add_request_id_to_structlog,
 )
 
-# raw json output (production) carries OTEL resource attributes for parity with the json formatter, but
-# still omits coro_name to stay recursion-safe.
-_RAW_JSON_FOREIGN_PRE_CHAIN = (*_RAW_FOREIGN_PRE_CHAIN, add_otel_resource_to_structlog)
-_CONSOLE_FOREIGN_PRE_CHAIN = (*_RAW_FOREIGN_PRE_CHAIN, add_coro_name_to_structlog)
-_JSON_FOREIGN_PRE_CHAIN = (*_RAW_FOREIGN_PRE_CHAIN, add_coro_name_to_structlog, add_otel_resource_to_structlog)
+_CONSOLE_FOREIGN_PRE_CHAIN = (*_BASE_FOREIGN_PRE_CHAIN, add_coro_name_to_structlog)
+_JSON_FOREIGN_PRE_CHAIN = (*_BASE_FOREIGN_PRE_CHAIN, add_coro_name_to_structlog, add_otel_resource_to_structlog)
 
 _JSON_RENDER_PROCESSORS = [
     structlog.stdlib.ProcessorFormatter.remove_processors_meta,
@@ -118,7 +108,6 @@ def litestar_logging_config() -> LoggingConfig:
         loggers={
             "pylon_service": {"level": "DEBUG", "handlers": ["console"], "propagate": False},
             "litestar": {"level": "INFO", "handlers": ["console"], "propagate": False},
-            "pylon_service.raw_logger": {"level": "DEBUG", "handlers": ["raw_console"], "propagate": False},
             "uvicorn": {"level": "INFO", "handlers": ["console"], "propagate": False},
             "uvicorn.error": {"level": "INFO", "handlers": ["console"], "propagate": False},
             "uvicorn.access": {"level": "INFO", "handlers": ["console"], "propagate": False},
@@ -128,19 +117,10 @@ def litestar_logging_config() -> LoggingConfig:
                 "class": "logging.StreamHandler",
                 "formatter": "console" if settings.debug else "json",
             },
-            "raw_console": {
-                "class": "logging.StreamHandler",
-                "formatter": "raw",
-            },
         },
         formatters={
             "console": _console_formatter(_CONSOLE_FOREIGN_PRE_CHAIN),
             "json": _json_formatter(_JSON_FOREIGN_PRE_CHAIN),
-            "raw": (
-                _console_formatter(_RAW_FOREIGN_PRE_CHAIN)
-                if settings.debug
-                else _json_formatter(_RAW_JSON_FOREIGN_PRE_CHAIN)
-            ),
         },
         log_exceptions="always",
         disable_stack_trace=set(range(400, 500)),

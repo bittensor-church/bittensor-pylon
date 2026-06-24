@@ -86,7 +86,7 @@ def test_get_current_coroutine_name_without_event_loop():
     assert _get_current_coroutine_name() == "no-event-loop"
 
 
-def test_get_current_coroutine_name_error_path_does_not_recurse():
+def test_get_current_coroutine_name_returns_fallback_on_error():
     class _RaisingTask:
         def get_name(self):
             raise RuntimeError("boom")
