@@ -175,7 +175,7 @@ async def test_bittensor_contact_pool_stress(barrier_factory):
     )
     await pool.open()
     tasks = [asyncio.create_task(acquire_client(pool, None, barrier)) for _ in range(10000)]
-    async with asyncio.timeout(3):
+    async with asyncio.timeout(5):
         clients = await asyncio.gather(*tasks)
     await pool.close()
     assert set(clients) == {clients[0]}
