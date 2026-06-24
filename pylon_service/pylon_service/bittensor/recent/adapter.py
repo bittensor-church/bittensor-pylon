@@ -1,13 +1,13 @@
 import datetime as dt
-import logging
 from typing import Self
 
+import structlog
 from litestar.stores.base import Store
 from pydantic import BaseModel, ValidationError
 from pylon_commons.models import BittensorModel
 from pylon_commons.types import HotkeyName, NetUid, Timestamp
 
-logger = logging.getLogger(__name__)
+logger = structlog.stdlib.get_logger(__name__)
 
 
 class CacheKey[ModelT: BittensorModel](str):
@@ -83,7 +83,7 @@ class RecentCacheAdapter[ModelT: BittensorModel]:
             entry = _CacheEntry.model_validate_json(data)
             object_ = self._model.model_validate_json(entry.data)
         except ValidationError:
-            logger.warning("Cache entry validation failed. Deleting invalid entry.")
+            logger.warning("cache_entry_validation_failed")
             await self._store.delete(self._key)
             return None
 

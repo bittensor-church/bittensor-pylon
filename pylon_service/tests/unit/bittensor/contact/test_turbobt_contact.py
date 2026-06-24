@@ -1,6 +1,7 @@
 import asyncio
 import contextlib
 import logging
+from typing import Any, cast
 from unittest.mock import AsyncMock, create_autospec, patch
 
 import pytest
@@ -156,7 +157,10 @@ async def test_runtime_error_triggers_contact_recreation_and_retry_without_trace
 
     assert result == Block(number=BlockNumber(42), hash=BlockHash("hash"))
     reconnect_records = [
-        record for record in records if "Recoverable transport error during get_block" in record.getMessage()
+        record
+        for record in records
+        if (event := cast(dict[str, Any], record.msg))["event"] == "recoverable_transport_error"
+        and event["operation"] == "get_block"
     ]
     assert len(reconnect_records) == 1
     assert reconnect_records[0].levelno == logging.INFO

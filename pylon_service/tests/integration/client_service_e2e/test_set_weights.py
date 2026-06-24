@@ -1,8 +1,8 @@
 import asyncio
-import logging
 
 import pytest
 import pytest_asyncio
+import structlog
 from pylon_client.artanis import Hotkey, Weight
 from pylon_client.artanis.v1 import SetWeightsResponse
 from pylon_commons.types import BlockNumber, MechanismId, NetUid, Tempo
@@ -14,7 +14,7 @@ from tests.integration.localchain.dev_accounts import DevAccount
 from tests.integration.localchain.manager import LocalChainManager
 from tests.integration.mitmproxy import CommitTimelockedMechanismWeightsFrame, WSFrame
 
-logger = logging.getLogger(__name__)
+logger = structlog.stdlib.get_logger(__name__)
 
 _CHARLIE_HOTKEY_PUBLIC_KEY = DevAccount.CHARLIE.wallet.hotkey.public_key
 assert _CHARLIE_HOTKEY_PUBLIC_KEY is not None
@@ -118,25 +118,25 @@ async def test_set_weights_succeeds_after_registration(
             and decoded.call_args.netuid == NETUID_AFTER_REGISTRATION
         )
 
-    logger.info("Waiting for an epoch with enough remaining blocks on netuid %d", NETUID_AFTER_REGISTRATION)
+    logger.info("waiting_for_epoch_with_enough_remaining_blocks", netuid=NETUID_AFTER_REGISTRATION)
     async with Bittensor(uri=localchain.ws_url) as bt:
         await _wait_for_epoch_start(bt)
 
-    logger.info("Starting pylon client for identity %s", IDENTITY_AFTER_REGISTRATION)
+    logger.info("starting_pylon_client", identity_name=IDENTITY_AFTER_REGISTRATION)
     with pylon_client_factory(IDENTITY_AFTER_REGISTRATION) as client:
-        logger.info("Submitting weights for unregistered target hotkey %s", TARGET_HOTKEY)
+        logger.info("submitting_weights_for_unregistered_target", hotkey=TARGET_HOTKEY)
         response = client.v1.identity.put_weights(weights={TARGET_HOTKEY: Weight(1.0)})
         assert isinstance(response, SetWeightsResponse)
 
-        logger.info("Waiting for the first setWeights extrinsic submit to be observed")
+        logger.info("waiting_for_first_set_weights_submit")
         await wait_until(
             lambda: any(is_expected_submit(f) for f in ws_recorder.frames),
             timeout=10,
         )
 
-        logger.info("Registering Charlie on netuid %d", NETUID_AFTER_REGISTRATION)
+        logger.info("registering_charlie", netuid=NETUID_AFTER_REGISTRATION)
         await localchain.register_neuron(wallet=charlie, netuid=NETUID_AFTER_REGISTRATION)
-        logger.info("Adding stake for Charlie on netuid %d", NETUID_AFTER_REGISTRATION)
+        logger.info("adding_stake_for_charlie", netuid=NETUID_AFTER_REGISTRATION)
         await localchain.add_stake(
             wallet=charlie,
             netuid=NETUID_AFTER_REGISTRATION,
@@ -145,13 +145,13 @@ async def test_set_weights_succeeds_after_registration(
         )
 
         async with Bittensor(uri=localchain.ws_url) as bt:
-            logger.info("Fetching neurons to resolve Charlie and Alice UIDs")
+            logger.info("fetching_neurons_to_resolve_uids")
             neurons = await asyncio.shield(bt.subnet(NETUID_AFTER_REGISTRATION).list_neurons())
             charlie_uid = next(n.uid for n in neurons if n.hotkey == charlie.hotkey.ss58_address)
             alice_uid = next(n.uid for n in neurons if n.hotkey == DevAccount.ALICE.hotkey_ss58)
-            logger.info("Resolved charlie_uid=%d alice_uid=%d", charlie_uid, alice_uid)
+            logger.info("resolved_uids", charlie_uid=charlie_uid, alice_uid=alice_uid)
 
-            logger.info("Waiting up to 60s for weights to appear on chain for Charlie")
+            logger.info("waiting_for_weights_on_chain", timeout_seconds=60)
             async with asyncio.timeout(60):
                 while True:
                     weights = await asyncio.shield(bt.subnet(NETUID_AFTER_REGISTRATION).weights.get(charlie_uid))
@@ -159,7 +159,7 @@ async def test_set_weights_succeeds_after_registration(
                         break
                     await asyncio.sleep(1)
 
-            logger.info("Weights observed on chain: %r", weights)
+            logger.info("weights_observed_on_chain", weights=weights)
             assert alice_uid in weights
             assert weights[alice_uid] == pytest.approx(1.0)
 

@@ -1,12 +1,12 @@
 from __future__ import annotations
 
 import asyncio
-import logging
 from abc import ABC, abstractmethod
 from collections.abc import Awaitable, Callable
 from dataclasses import dataclass
 from typing import Any, Protocol, cast
 
+import structlog
 from bittensor_wallet import Wallet
 from pylon_commons.constants import LATEST_BLOCK_MARK
 from pylon_commons.currency import Currency, CurrencyRao, Token
@@ -81,7 +81,7 @@ from pylon_service.bittensor.models import (
 from pylon_service.bittensor.utils import map_to_commitment, map_to_revealed_commitment
 from pylon_service.metrics import Attr, Param, bittensor_operation_duration, track_operation
 
-logger = logging.getLogger(__name__)
+logger = structlog.stdlib.get_logger(__name__)
 
 unknown_hotkey = Hotkey("N/A")
 RECONNECT_EXCEPTIONS = (AttributeError, ConnectionClosed, OSError, RuntimeError)
@@ -299,7 +299,7 @@ class TurboBtContact(AbstractBittensorContact):
 
     async def open(self) -> None:
         assert self._raw_client is None, "The contact is already open."
-        logger.info("Opening the TurboBtContact for %s", self.uri)
+        logger.info("opening_turbobt_contact", uri=self.uri)
         self._raw_client = Bittensor(wallet=self.wallet, uri=self.uri)
         await asyncio.shield(self._raw_client.__aenter__())
         self._is_client_ready.set()
@@ -308,7 +308,7 @@ class TurboBtContact(AbstractBittensorContact):
         await self._recreate_bt_client()
 
     async def close(self) -> None:
-        logger.info("Closing the TurboBtContact for %s", self.uri)
+        logger.info("closing_turbobt_contact", uri=self.uri)
         assert self._raw_client is not None, "The contact is already closed."
         async with asyncio.timeout(5):
             await self._is_client_ready.wait()
@@ -319,7 +319,7 @@ class TurboBtContact(AbstractBittensorContact):
 
     async def _recreate_bt_client(self) -> None:
         assert self._raw_client is not None, "The contact is None so cannot be recreated."
-        logger.info("Recreating Bittensor contact for %s", self.uri)
+        logger.info("recreating_bittensor_contact", uri=self.uri)
         if not self._is_client_ready.is_set():
             async with asyncio.timeout(5):
                 await self._is_client_ready.wait()
@@ -331,9 +331,9 @@ class TurboBtContact(AbstractBittensorContact):
                 await asyncio.shield(old_client.__aexit__(None, None, None))
             except Exception as exc:
                 logger.warning(
-                    "Failed to close old Bittensor contact during recreation for %s: %s",
-                    self.uri,
-                    self._transport_gist(exc),
+                    "old_bittensor_contact_close_failed",
+                    uri=self.uri,
+                    error=self._transport_gist(exc),
                 )
             self._raw_client = Bittensor(wallet=self.wallet, uri=self.uri)
             await asyncio.shield(self._raw_client.__aenter__())
@@ -352,29 +352,29 @@ class TurboBtContact(AbstractBittensorContact):
         try:
             return await asyncio.shield(coro_factory(bt_client))
         except asyncio.CancelledError as cancelled_error:
-            logger.info("Bittensor operation %s cancelled on %s; recreating contact", operation_name, self.uri)
+            logger.info("bittensor_operation_cancelled", operation=operation_name, uri=self.uri)
             try:
                 await asyncio.shield(self._recreate_bt_client())
             except asyncio.CancelledError:
                 logger.info(
-                    "Contact recreation cancelled while handling cancellation for %s on %s",
-                    operation_name,
-                    self.uri,
+                    "contact_recreation_cancelled",
+                    operation=operation_name,
+                    uri=self.uri,
                 )
             except Exception as exc:
                 logger.warning(
-                    "Contact recreation failed while handling cancellation for %s on %s: %s",
-                    operation_name,
-                    self.uri,
-                    self._transport_gist(exc),
+                    "contact_recreation_failed",
+                    operation=operation_name,
+                    uri=self.uri,
+                    error=self._transport_gist(exc),
                 )
             raise cancelled_error from None
         except RECONNECT_EXCEPTIONS as exc:
             logger.info(
-                "Recoverable transport error during %s on %s: %s; recreating contact",
-                operation_name,
-                self.uri,
-                self._transport_gist(exc),
+                "recoverable_transport_error",
+                operation=operation_name,
+                uri=self.uri,
+                error=self._transport_gist(exc),
             )
             try:
                 await asyncio.shield(self._recreate_bt_client())
@@ -722,7 +722,7 @@ class TurboBtContact(AbstractBittensorContact):
         labels={"uri": Attr("uri"), "hotkey": Attr("hotkey")},
     )
     async def get_drand_last_stored_round(self, block: Block | None = None) -> int:
-        logger.debug(f"Fetching last stored drand round at {self.uri}")
+        logger.debug("fetching_drand_last_stored_round", uri=self.uri)
         return await self._protect_turbobt(
             "get_drand_last_stored_round",
             lambda c: c.drand.get_last_stored_round(block.hash if block else None),

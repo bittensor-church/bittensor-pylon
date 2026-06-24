@@ -1,8 +1,8 @@
 from __future__ import annotations
 
 import asyncio
-import logging
 
+import structlog
 from litestar.exceptions import ClientException
 from litestar.types import ASGIApp, Receive, Scope, Send
 from pylon_commons.timeout import TIMEOUT_HEADER
@@ -10,7 +10,7 @@ from pylon_commons.timeout import TIMEOUT_HEADER
 from pylon_service.exceptions import GatewayTimeoutException
 from pylon_service.settings import settings
 
-logger = logging.getLogger(__name__)
+logger = structlog.stdlib.get_logger(__name__)
 
 _TIMEOUT_HEADER_KEY = TIMEOUT_HEADER.lower().encode()
 
@@ -35,7 +35,7 @@ class RequestTimeoutMiddleware:
             return
 
         effective_timeout = self._resolve_timeout(scope)
-        logger.debug("Setting request timeout to %s seconds.", effective_timeout)
+        logger.debug("setting_request_timeout", timeout_seconds=effective_timeout)
         try:
             await asyncio.wait_for(self.app(scope, receive, send), timeout=effective_timeout)
         except TimeoutError as e:
@@ -56,9 +56,9 @@ class RequestTimeoutMiddleware:
                     )
                 if client_timeout > settings.max_request_timeout_seconds:
                     logger.warning(
-                        "Value of X-Pylon-Timeout header (%ss) exceeds maximum allowed timeout (%ss).",
-                        client_timeout,
-                        settings.max_request_timeout_seconds,
+                        "client_timeout_exceeds_max",
+                        client_timeout_seconds=client_timeout,
+                        max_timeout_seconds=settings.max_request_timeout_seconds,
                     )
                     return settings.max_request_timeout_seconds
                 return client_timeout

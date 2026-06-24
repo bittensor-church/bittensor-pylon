@@ -1,7 +1,7 @@
 import asyncio
-import logging
 from abc import ABC, abstractmethod
 
+import structlog
 from litestar.stores.base import Store
 from pylon_commons.models import BittensorModel, SubnetNeurons
 from tenacity import AsyncRetrying, stop_before_delay, wait_exponential
@@ -13,7 +13,7 @@ from pylon_service.bittensor.pool import BittensorContactPool
 from .adapter import RecentCacheAdapter
 from .context import AbstractContext, SubnetContext
 
-logger = logging.getLogger(__name__)
+logger = structlog.stdlib.get_logger(__name__)
 
 
 class _SkipRecentObjectUpdate(Exception):
@@ -44,21 +44,21 @@ class UpdateRecentObject[ModelT: BittensorModel, ContextT: AbstractContext](ABC)
                 object_ = await self._get_object(context, client)
             except _SkipRecentObjectUpdate as exc:
                 logger.warning(
-                    "Skipping recent object update. context: %s, object: %s, reason: %s",
-                    context,
-                    self._model.__name__,
-                    exc,
+                    "skipping_recent_object_update",
+                    context=context,
+                    object=self._model.__name__,
+                    reason=str(exc),
                 )
                 return
-            except Exception as e:
-                logger.exception(f"Failed to fetch recent object. object={self._model.__name__}, error: {e}")
+            except Exception:
+                logger.exception("recent_object_fetch_failed", object=self._model.__name__)
                 raise
 
         cache_key = context.build_key(self._model)
         cache_adapter = RecentCacheAdapter(cache_key, self._store, self._model)
         await cache_adapter.save(object_)
 
-        logger.info(f"Updated recent object. context: {context}, object: {self._model.__name__}")
+        logger.info("recent_object_updated", context=context, object=self._model.__name__)
 
 
 class UpdateRecentNeurons(UpdateRecentObject[SubnetNeurons, SubnetContext]):
@@ -122,16 +122,18 @@ class RecentObjectUpdateTaskExecutor:
                 results = await asyncio.gather(*tasks, return_exceptions=True)
         except TimeoutError:
             logger.exception(
-                f"Timeout while waiting for UpdateRecentObject tasks to complete. "
-                f"task={self._updater.__class__.__name__}"
+                "update_recent_object_tasks_timeout",
+                task=self._updater.__class__.__name__,
             )
             return
 
         for context, result in zip(self._contexts, results):
             if isinstance(result, BaseException):
                 logger.exception(
-                    f"Failed to update recent object. task={self._updater.__class__.__name__},"
-                    f" context: {context}, error: {result}"
+                    "recent_object_update_failed",
+                    task=self._updater.__class__.__name__,
+                    context=context,
+                    exc_info=result,
                 )
 
     async def task(self, context: AbstractContext) -> None:

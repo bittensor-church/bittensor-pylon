@@ -1,4 +1,3 @@
-import logging
 import os
 import sys
 import threading
@@ -7,6 +6,7 @@ from pathlib import Path
 
 import pytest
 import pytest_asyncio
+import structlog
 from pylon_client.artanis import Config, IdentityName, PylonAuthToken, PylonClient, PylonTimeout
 from testcontainers.core.container import DockerContainer
 from testcontainers.core.network import Network
@@ -15,7 +15,7 @@ from tests.integration.containers import LocalChainContainer, LocalChainImage, M
 from tests.integration.localchain.manager import LocalChainManager
 from tests.integration.mitmproxy import WSRecorderClient
 
-logger = logging.getLogger(__name__)
+logger = structlog.stdlib.get_logger(__name__)
 
 _WALLETS_PATH = os.environ.get("PYLON_TEST_WALLETS_PATH", Path(__file__).resolve().parents[2] / "wallets")
 
@@ -100,9 +100,12 @@ def pylon_service(docker_network, localchain, mitmproxy, pylon_service_image):
     docker_host = os.environ.get("DOCKER_HOST")
     if docker_host and docker_host.startswith("ssh://"):
         logger.warning(
-            "You are using docker via ssh. Make sure the test wallets are mounted properly, "
-            "otherwise the tests might fail. You may achieve this by copying test wallets to the remote host and "
-            "setting PYLON_TEST_WALLETS_PATH environment variable on the host machine."
+            "docker_via_ssh_check_wallet_mounts",
+            hint=(
+                "Make sure the test wallets are mounted properly, otherwise the tests might fail. "
+                "You may achieve this by copying test wallets to the remote host and setting the "
+                "PYLON_TEST_WALLETS_PATH environment variable on the host machine."
+            ),
         )
     with PylonServiceContainer(
         image=str(pylon_service_image),
