@@ -3,18 +3,18 @@ from __future__ import annotations
 import asyncio
 import functools
 import inspect
-import logging
 from abc import ABC, abstractmethod
 from collections.abc import Awaitable, Callable
 from contextlib import asynccontextmanager
 from time import perf_counter
 from typing import Any, cast
 
+import structlog
 from prometheus_client import Counter, Histogram
 from prometheus_client.metrics import MetricWrapperBase
 from turbobt.substrate.exceptions import UnknownBlock
 
-logger = logging.getLogger(__name__)
+logger = structlog.stdlib.get_logger(__name__)
 
 
 class UseMethodName:

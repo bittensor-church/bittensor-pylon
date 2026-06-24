@@ -1,9 +1,9 @@
 from __future__ import annotations
 
-import logging
 from abc import ABC, abstractmethod
 from typing import Any, Protocol
 
+import structlog
 from eth_typing import ABIEvent
 from hexbytes import HexBytes
 from pylon_commons.models import EvmLog
@@ -18,7 +18,7 @@ from web3.utils import event_abi_to_log_topic
 from pylon_service.evm.exceptions import EvmInvalidAbiError, EvmInvalidAddressError, EvmRpcError
 from pylon_service.metrics import Attr, evm_operation_duration, track_operation
 
-logger = logging.getLogger(__name__)
+logger = structlog.stdlib.get_logger(__name__)
 
 _REQUEST_TIMEOUT_SECONDS = 30
 

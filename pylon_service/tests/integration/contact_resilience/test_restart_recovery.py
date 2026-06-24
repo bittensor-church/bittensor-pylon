@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import contextlib
 import logging
+from typing import Any, cast
 
 import pytest
 from websockets.exceptions import ConnectionClosed
@@ -78,7 +79,7 @@ async def test_contact_recovers_after_subtensor_restart(
         )
 
     assert recovered.number > 0
-    assert any("recreating contact" in record.getMessage().lower() for record in records)
+    assert any(cast(dict[str, Any], record.msg)["event"] == "recreating_bittensor_contact" for record in records)
     assert all(record.exc_info is None for record in records)
     assert_histogram_delta(error_labels, error_before)
     assert_histogram_delta(success_labels, success_before, at_least=2)

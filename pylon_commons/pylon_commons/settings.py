@@ -46,9 +46,8 @@ class Settings(BaseSettings):
     commitment_retry_attempts: int = 10
     commitment_retry_delay_seconds: int = 1
 
-    # sentry
-    sentry_dsn: str = ""
-    sentry_environment: str = "production"
+    # deployment environment (single source of truth for Sentry and OTEL)
+    environment: str = "production"
 
     # request timeouts
     default_request_timeout_seconds: float = 60.0

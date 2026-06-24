@@ -1,12 +1,12 @@
 import os
-import logging
 import subprocess
 from urllib.parse import urlparse
 
+import structlog
 from testcontainers.core.config import testcontainers_config
 
 
-logger = logging.getLogger(__name__)
+logger = structlog.stdlib.get_logger(__name__)
 
 
 def _get_docker_host_from_context() -> str | None:
@@ -20,7 +20,7 @@ def _get_docker_host_from_context() -> str | None:
         if result.returncode == 0 and result.stdout.strip():
             return result.stdout.strip()
     except Exception:
-        logger.info("Failed to get docker host from docker context, using the default.", exc_info=True)
+        logger.info("docker_host_from_context_failed", exc_info=True)
     return None
 
 

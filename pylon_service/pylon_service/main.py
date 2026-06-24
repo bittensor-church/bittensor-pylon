@@ -8,7 +8,7 @@ from pylon_service.api._unstable.routers import unstable_router
 from pylon_service.api.v1.routers import v1_router
 from pylon_service.bittensor.exceptions import ArchiveFallbackException
 from pylon_service.exception_handlers import archive_fallback_handler
-from pylon_service.logging import litestar_logging_config
+from pylon_service.logging import configure_structlog, litestar_logging_config
 from pylon_service.middleware.request_id import RequestIdMiddleware
 from pylon_service.middleware.request_timeout import RequestTimeoutMiddleware
 from pylon_service.prometheus_controller import AuthenticatedPrometheusController
@@ -58,5 +58,6 @@ def create_app() -> Litestar:
     )
 
 
+configure_structlog()
 init_sentry()
 app = create_app()

@@ -8,8 +8,8 @@ suggesting that there is something wrong with the application startup.
 """
 
 import datetime as dt
-import logging
 
+import structlog
 from apscheduler.schedulers.asyncio import AsyncIOScheduler, BaseScheduler
 from litestar import Litestar
 from pylon_commons.types import NetUid
@@ -25,7 +25,7 @@ from pylon_service.identities import identities
 from pylon_service.settings import recent_objects_settings
 from pylon_service.stores import StoreName
 
-logger = logging.getLogger(__name__)
+logger = structlog.stdlib.get_logger(__name__)
 
 
 _SCHEDULER: AsyncIOScheduler | None = None
@@ -66,10 +66,10 @@ def create_scheduler(app: Litestar) -> AsyncIOScheduler:
     global _SCHEDULER
 
     if _SCHEDULER is not None:
-        logger.warning("Scheduler already initialized and it should be initialized only once. Skipping.")
+        logger.warning("scheduler_already_initialized")
         return _SCHEDULER
 
-    logger.info("Initializing scheduler.")
+    logger.info("initializing_scheduler")
     _SCHEDULER = AsyncIOScheduler()
 
     _add_recent_neurons_job(app, _SCHEDULER)

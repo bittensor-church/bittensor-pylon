@@ -1,9 +1,9 @@
 from __future__ import annotations
 
 import asyncio
-import logging
 from collections.abc import Awaitable, Callable
 
+import structlog
 from bittensor_wallet import Wallet
 from pylon_commons.models import CommitmentVariant, RevealedCommitment, SubnetRevealedCommitments
 from pylon_commons.types import (
@@ -38,7 +38,7 @@ from pylon_service.bittensor.models import (
 )
 from pylon_service.metrics import bittensor_fallback_total
 
-logger = logging.getLogger(__name__)
+logger = structlog.stdlib.get_logger(__name__)
 
 
 class BittensorContactRouter:
@@ -86,7 +86,11 @@ class BittensorContactRouter:
         if block is not None:
             latest_block = await self._main_contact.get_latest_block()
             if latest_block.number - block.number > self._archive_blocks_cutoff:
-                logger.debug("Block %s is stale, using archive contact %s", block.number, self._archive_contact.uri)
+                logger.debug(
+                    "block_stale_using_archive_contact",
+                    block_number=block.number,
+                    archive_uri=self._archive_contact.uri,
+                )
                 bittensor_fallback_total.labels(
                     reason="stale_block",
                     operation=operation_name,
@@ -118,7 +122,9 @@ class BittensorContactRouter:
             if block is None:
                 raise
             logger.warning(
-                "Block %s unknown on main contact, falling back to archive %s", block.number, self.archive_uri
+                "block_unknown_falling_back_to_archive",
+                block_number=block.number,
+                archive_uri=self.archive_uri,
             )
             bittensor_fallback_total.labels(
                 reason="unknown_block",

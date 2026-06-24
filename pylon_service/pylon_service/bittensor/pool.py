@@ -1,10 +1,10 @@
 import asyncio
-import logging
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 from enum import StrEnum
 from typing import Self
 
+import structlog
 from bittensor_wallet import Wallet
 from pydantic import BaseModel, ConfigDict
 from pylon_commons.types import ArchiveBlocksCutoff, HotkeyName, WalletName
@@ -12,7 +12,7 @@ from pylon_commons.types import ArchiveBlocksCutoff, HotkeyName, WalletName
 from pylon_service.bittensor.contact import ContactFactory
 from pylon_service.bittensor.contact_router import BittensorContactRouter
 
-logger = logging.getLogger(__name__)
+logger = structlog.stdlib.get_logger(__name__)
 
 
 class BittensorContactPoolInvalidState(Exception):
@@ -85,34 +85,32 @@ class BittensorContactPool[RouterT: BittensorContactRouter]:
 
     async def open(self):
         self._verify_not_open()
-        logger.info(f"Opening {self.contact_router_cls.__name__} contact pool.")
+        logger.info("opening_contact_pool", object=self.contact_router_cls.__name__)
         self.state = self.State.OPEN
 
     async def close(self):
         self._verify_open()
-        logger.info(f"Closing sequence initialized for {self.contact_router_cls.__name__} contact pool.")
+        logger.info("closing_contact_pool_initialized", object=self.contact_router_cls.__name__)
         self.state = self.State.CLOSING
         logger.info(
-            f"Entered the closing state. Waiting {self.closing_timeout} seconds until all "
-            f"({self._acquire_counter}) contact routers are returned to the pool..."
+            "contact_pool_entered_closing_state",
+            closing_timeout=self.closing_timeout,
+            acquire_counter=self._acquire_counter,
         )
         try:
             async with asyncio.timeout(self.closing_timeout):
                 async with self._close_condition:
                     await self._close_condition.wait_for(self._can_close)
         except TimeoutError:
-            logger.exception(
-                "Timeout while waiting for contact routers to be returned to the pool. "
-                "Closing all the contact routers now, tasks using them may break..."
-            )
+            logger.exception("contact_pool_close_timeout")
         else:
-            logger.info("Closing all the contact routers...")
+            logger.info("closing_all_contact_routers")
         await asyncio.gather(
             *(contact_router.close() for contact_router in self._pool.values()), return_exceptions=True
         )
         self._pool.clear()
         self.state = self.State.CLOSED
-        logger.info(f"{self.contact_router_cls.__name__} contact pool successfully closed.")
+        logger.info("contact_pool_closed", object=self.contact_router_cls.__name__)
 
     def _can_close(self) -> bool:
         return self._acquire_counter == 0
@@ -140,16 +138,17 @@ class BittensorContactPool[RouterT: BittensorContactRouter]:
         self._verify_open()
         self._acquire_counter += 1
         wallet_key = wallet and WalletKey.from_wallet(wallet)
-        wallet_name = f"'{wallet.name}'" if wallet else "no"
+        wallet_name = wallet.name if wallet else None
         logger.debug(
-            f"Acquiring contact router with {wallet_name} wallet from the pool. "
-            f"Count of contact routers acquired: {self._acquire_counter}"
+            "acquiring_contact_router",
+            wallet_name=wallet_name,
+            acquire_counter=self._acquire_counter,
         )
         async with self._acquire_lock:
             if wallet_key in self._pool:
                 contact_router = self._pool[wallet_key]
             else:
-                logger.debug(f"Opening new contact router with {wallet_name} wallet.")
+                logger.debug("opening_new_contact_router", wallet_name=wallet_name)
                 contact_router = self._pool[wallet_key] = self.contact_router_cls(
                     wallet=wallet,
                     main_contact=self.contact_factory.create(wallet, self.client_kwargs["uri"]),
@@ -163,7 +162,8 @@ class BittensorContactPool[RouterT: BittensorContactRouter]:
             async with self._close_condition:
                 self._acquire_counter -= 1
                 logger.debug(
-                    f"Returning contact router with {wallet_name} wallet to the pool. "
-                    f"Count of contact routers acquired: {self._acquire_counter}"
+                    "returning_contact_router",
+                    wallet_name=wallet_name,
+                    acquire_counter=self._acquire_counter,
                 )
                 self._close_condition.notify_all()

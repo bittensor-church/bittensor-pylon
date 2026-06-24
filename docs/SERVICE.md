@@ -175,8 +175,11 @@ blockchain queries. By default, data is cached for all subnets configured in ide
 | Variable | Description | Default |
 |----------|-------------|---------|
 | `PYLON_METRICS_TOKEN` | Token for `/metrics` endpoint (empty = 403 Forbidden) | `""` |
+| `PYLON_ENVIRONMENT` | Deployment environment name; single source of truth for Sentry and OTEL log resource attributes | `production` |
 | `PYLON_SENTRY_DSN` | Sentry DSN for error tracking | `""` |
-| `PYLON_SENTRY_ENVIRONMENT` | Sentry environment name | `production` |
+| `PYLON_SENTRY_ENVIRONMENT` | Sentry environment name; falls back to `PYLON_ENVIRONMENT` when left unset | `PYLON_ENVIRONMENT` |
+| `PYLON_OTEL_DEPLOYMENT_ENVIRONMENT` | OTEL `deployment.environment.name` attribute; falls back to `PYLON_ENVIRONMENT` when left unset | `PYLON_ENVIRONMENT` |
+| `PYLON_OTEL_SERVICE_VERSION` | OTEL `service.version` attribute; injected automatically at Docker build time | `""` |
 
 ## Deployment
 

@@ -1,6 +1,6 @@
 import datetime as dt
-import logging
 
+import structlog
 from litestar.stores.base import Store
 from pylon_commons.models import BittensorModel
 
@@ -9,7 +9,7 @@ from .context import AbstractContext
 from .exceptions import RecentObjectMissing, RecentObjectStale
 from .types import HardLimit, SoftLimit
 
-logger = logging.getLogger(__name__)
+logger = structlog.stdlib.get_logger(__name__)
 
 
 class RecentObjectProvider:
@@ -76,8 +76,11 @@ class RecentObjectProvider:
 
         if elapsed_blocks > self._soft_limit:
             logger.warning(
-                f"Recent object is older than soft limit. context: {self._context}, object: {model.__name__},"
-                f"elapsed blocks: {elapsed_blocks}, soft_limit: {self._soft_limit}"
+                "recent_object_older_than_soft_limit",
+                context=self._context,
+                object=model.__name__,
+                elapsed_blocks=elapsed_blocks,
+                soft_limit=self._soft_limit,
             )
 
         return object_

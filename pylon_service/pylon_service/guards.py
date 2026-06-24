@@ -1,6 +1,6 @@
-import logging
 import secrets
 
+import structlog
 from litestar.connection import ASGIConnection
 from litestar.exceptions import (
     InternalServerException,
@@ -13,7 +13,7 @@ from litestar.handlers import BaseRouteHandler
 from pylon_service.identities import identities
 from pylon_service.settings import settings
 
-logger = logging.getLogger(__name__)
+logger = structlog.stdlib.get_logger(__name__)
 
 
 def extract_bearer_token(connection: ASGIConnection) -> str:

@@ -1,8 +1,8 @@
 import asyncio
-import logging
 from abc import ABC, abstractmethod
 from typing import Any, ClassVar, TypeVar
 
+import structlog
 from prometheus_client import Histogram
 from pylon_commons.models import Block, CommitReveal
 from pylon_commons.types import (
@@ -45,7 +45,7 @@ from pylon_service.metrics import (
 )
 from pylon_service.settings import settings
 
-logger = logging.getLogger(__name__)
+logger = structlog.stdlib.get_logger(__name__)
 
 
 class StopRetrying(Exception):
@@ -130,13 +130,12 @@ class BackgroundTask[ReturnT](ABC):
             raise RuntimeError("_log_retry called when not retrying")
         exc = retry_state.outcome.exception()
         logger.error(
-            "Retryable error (attempt %s): %s: %s",
-            retry_state.attempt_number,
-            type(exc).__name__,
-            exc,
+            "retryable_error",
+            attempt=retry_state.attempt_number,
+            error_type=type(exc).__name__,
             exc_info=True,
         )
-        logger.info("Retrying in %.1f seconds...", retry_state.next_action.sleep)
+        logger.info("retrying", sleep_seconds=retry_state.next_action.sleep)
 
     def _on_task_done(self, task: asyncio.Task[ReturnT]) -> None:
         type(self).tasks_running.discard(self)
@@ -146,9 +145,9 @@ class BackgroundTask[ReturnT](ABC):
         except StopRetrying:
             pass
         except Exception as exc:  # noqa: BLE001
-            logger.exception("Task %s failed with an exception: %s: %s", type(self).JOB_NAME, type(exc).__name__, exc)
+            logger.exception("task_failed", job_name=type(self).JOB_NAME, error_type=type(exc).__name__)
         else:
-            logger.info("Task %s (%s) finished successfully.", task, self.JOB_NAME)
+            logger.info("task_finished", task=task, job_name=self.JOB_NAME)
 
     async def _on_task_scheduled(self) -> None:
         pass
@@ -250,29 +249,29 @@ class ApplyWeights(
         task_status = await get_weight_task_status(self._task_id)
         if task_status != TaskStatus.RUNNING:
             logger.warning(
-                "Weight task (%s, %s) stopped, status: %s",
-                self._identity.identity_name,
-                self._mechanism_id,
-                task_status,
+                "weight_task_stopped",
+                identity_name=self._identity.identity_name,
+                mechanism_id=self._mechanism_id,
+                status=task_status,
             )
             raise StopRetrying("Task stopped")
         latest_block = await self._client.get_latest_block()
         if latest_block.number > self._initial_tempo.end:
             await update_weight_task_status(self._task_id, TaskStatus.EXPIRED)
             logger.error(
-                "Weight task (%s, %s) expired, tempo ended: %s > %s.",
-                self._identity.identity_name,
-                self._mechanism_id,
-                latest_block.number,
-                self._initial_tempo.end,
+                "weight_task_expired",
+                identity_name=self._identity.identity_name,
+                mechanism_id=self._mechanism_id,
+                block_number=latest_block.number,
+                tempo_end=self._initial_tempo.end,
             )
             raise StopRetrying("Task expired")
 
         remaining = self._initial_tempo.end - latest_block.number
         logger.info(
-            "apply weights attempt, latest_block=%s, still got %s blocks left to go.",
-            latest_block.number,
-            remaining,
+            "apply_weights_attempt",
+            block_number=latest_block.number,
+            remaining=remaining,
         )
         await asyncio.wait_for(asyncio.shield(self._apply_weights(latest_block)), 120)
         # do not set status to SUCCEEDED if the task was cancelled while running
@@ -285,11 +284,10 @@ class ApplyWeights(
                 await update_weight_task_status(self._task_id, TaskStatus.FAILED, only_if_running=True)
         except Exception as exc:  # noqa: BLE001
             logger.exception(
-                "Updating status for failed weights task (%s, %s) failed with exception %s: %s",
-                self._identity.identity_name,
-                self._mechanism_id,
-                type(exc).__name__,
-                exc,
+                "weight_task_status_update_failed",
+                identity_name=self._identity.identity_name,
+                mechanism_id=self._mechanism_id,
+                error_type=type(exc).__name__,
             )
 
     async def _translate_weights(self, latest_block: Block) -> dict[NeuronUid, Weight]:
@@ -305,8 +303,8 @@ class ApplyWeights(
             translated_weights[uid] = weight
         if missing:
             logger.warning(
-                "Some of the hotkeys passed for weight commitment are missing. Weights will not be committed for: %s",
-                missing,
+                "weight_hotkeys_missing",
+                missing=missing,
             )
         return translated_weights
 
@@ -318,7 +316,7 @@ class ApplyWeights(
         },
     )
     async def _apply_weights(self, latest_block: Block) -> None:
-        logger.info("Applying weights")
+        logger.info("applying_weights")
         hyperparams = await self._client.get_hyperparams(self._netuid, latest_block)
         if hyperparams is None:
             raise HyperparamsNotFoundError("Failed to fetch hyperparameters")
@@ -362,7 +360,7 @@ class SetCommitment(
         return settings.commitment_retry_delay_seconds
 
     async def _single_attempt(self) -> None:
-        logger.info("Set commitment attempt")
+        logger.info("set_commitment_attempt")
         await asyncio.wait_for(
             asyncio.shield(self._client.set_commitment(self._netuid, self._data)),
             timeout=120,
@@ -405,7 +403,7 @@ class SetRevealedCommitment(
         return settings.commitment_retry_delay_seconds
 
     async def _single_attempt(self) -> int:
-        logger.info("Set revealed commitment attempt")
+        logger.info("set_revealed_commitment_attempt")
         return await asyncio.wait_for(
             asyncio.shield(
                 self._client.set_revealed_commitment(self._netuid, self._commitment, self._blocks_until_reveal)

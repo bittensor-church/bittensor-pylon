@@ -1,5 +1,4 @@
-import logging
-
+import structlog
 from litestar import Controller, Response, status_codes
 from pylon_commons._unstable.bodies import EvmLogsBody, SetCommitmentBody, SetRevealedCommitmentBody, SetWeightsBody
 from pylon_commons._unstable.endpoints import Endpoint
@@ -49,7 +48,7 @@ from pylon_service.exceptions import BadGatewayException
 from pylon_service.guards import identity_auth_guard, open_access_auth_guard
 from pylon_service.identities import identities
 
-logger = logging.getLogger(__name__)
+logger = structlog.stdlib.get_logger(__name__)
 
 
 class Handlers:
