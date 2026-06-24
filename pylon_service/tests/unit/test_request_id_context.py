@@ -105,10 +105,10 @@ def test_structlog_processor_injects_otel_resource_attributes():
     }
 
 
-def test_otel_resource_attributes_do_not_override_event_fields():
+def test_otel_resource_attributes_override_event_fields():
     assert add_otel_resource_to_structlog(None, "info", {"service.name": "override"}) == {
         "service.namespace": "bittensor-pylon",
         "deployment.environment.name": otel_settings.deployment_environment,
         "service.instance.id": otel_settings.service_instance_id,
-        "service.name": "override",
+        "service.name": "pylon_service",
     }

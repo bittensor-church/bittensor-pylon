@@ -35,7 +35,7 @@ def add_otel_resource_to_structlog(
     event_dict: EventDict,
 ) -> EventDict:
     """Structlog processor injecting OTEL resource attributes into every log line."""
-    return {**_OTEL_RESOURCE_ATTRS, **event_dict}
+    return {**event_dict, **_OTEL_RESOURCE_ATTRS}
 
 
 def add_request_id_to_structlog(
