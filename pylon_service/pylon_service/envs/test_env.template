@@ -38,6 +38,12 @@ PYLON_OTEL_SERVICE_VERSION=
 # To override, uncomment the line below and set a non-empty value (an empty value would disable the fallback).
 # PYLON_OTEL_DEPLOYMENT_ENVIRONMENT=
 
+# OTLP traces exporter endpoint - base URL of the collector, e.g. http://alloy:4318.
+# Leave empty to disable OpenTelemetry traces (disabled by default). When set, traces are exported via
+# OTLP HTTP/protobuf to <endpoint>/v1/traces, and the Litestar HTTP server plus the httpx, aiohttp
+# and SQLAlchemy libraries are auto-instrumented. You must run your own OTLP collector at this address.
+PYLON_OTEL_COLLECTOR_ENDPOINT=
+
 # Sentry Configuration
 # DSN address for pylon to use - leave empty to disable sentry integration.
 PYLON_SENTRY_DSN=

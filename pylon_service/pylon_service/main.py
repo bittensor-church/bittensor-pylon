@@ -1,6 +1,8 @@
 from litestar import Litestar
 from litestar.di import Provide
 from litestar.openapi.config import OpenAPIConfig
+from litestar.plugins import PluginProtocol
+from litestar.plugins.opentelemetry import OpenTelemetryConfig, OpenTelemetryPlugin
 from litestar.plugins.prometheus import PrometheusConfig
 
 from pylon_service import dependencies, lifecycle
@@ -11,10 +13,11 @@ from pylon_service.exception_handlers import archive_fallback_handler
 from pylon_service.logging import configure_structlog, litestar_logging_config
 from pylon_service.middleware.request_id import RequestIdMiddleware
 from pylon_service.middleware.request_timeout import RequestTimeoutMiddleware
+from pylon_service.otel_config import init_otel
 from pylon_service.prometheus_controller import AuthenticatedPrometheusController
 from pylon_service.schema import PylonSchemaPlugin
 from pylon_service.sentry_config import init_sentry
-from pylon_service.settings import response_cache_config, settings
+from pylon_service.settings import otel_settings, response_cache_config, settings
 from pylon_service.stores import stores
 
 
@@ -26,6 +29,10 @@ def create_app() -> Litestar:
         prefix="pylon",
         group_path=True,  # Group metrics by path template to avoid cardinality explosion
     )
+
+    plugins: list[PluginProtocol] = [PylonSchemaPlugin()]
+    if otel_settings.traces_enabled:
+        plugins.append(OpenTelemetryPlugin(OpenTelemetryConfig()))
 
     return Litestar(
         route_handlers=[
@@ -49,7 +56,7 @@ def create_app() -> Litestar:
             lifecycle.reschedule_weight_tasks_on_startup,
         ],
         dependencies={"bt_contact_pool": Provide(dependencies.bt_contact_pool_dep, use_cache=True)},
-        plugins=[PylonSchemaPlugin()],
+        plugins=plugins,
         exception_handlers={ArchiveFallbackException: archive_fallback_handler},
         stores=stores,
         response_cache_config=response_cache_config,
@@ -58,6 +65,7 @@ def create_app() -> Litestar:
     )
 
 
+init_otel()
 configure_structlog()
 init_sentry()
 app = create_app()

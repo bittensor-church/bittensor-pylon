@@ -54,6 +54,9 @@ class Settings(BaseSettings):
     max_request_timeout_seconds: float = 300.0
 
     # evm
+    # WARNING: these URLs are recorded as-is in telemetry (OpenTelemetry spans, debug logs, and the
+    # Prometheus `rpc_url` metric label), so do NOT embed credentials in them (no `user:pass@` and no
+    # path/query API keys like `/v2/<key>`). If a provider requires authentication, pass it out of band.
     evm_rpc_url: evm_types.RpcUrl = evm_types.RpcUrl("https://lite.chain.opentensor.ai")
     evm_archive_rpc_url: evm_types.RpcUrl = evm_types.RpcUrl("https://archive.chain.opentensor.ai")
     evm_archive_blocks_cutoff: ArchiveBlocksCutoff = ArchiveBlocksCutoff(300)

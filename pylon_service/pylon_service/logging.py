@@ -8,6 +8,7 @@ from litestar.logging import LoggingConfig
 
 from pylon_service.middleware.request_id import current_request_id
 from pylon_service.settings import otel_settings, settings
+from pylon_service.tracing import get_current_valid_span_context
 
 if TYPE_CHECKING:
     from structlog.typing import EventDict, WrappedLogger
@@ -45,6 +46,19 @@ def add_request_id_to_structlog(
 ) -> EventDict:
     """Structlog processor injecting the current request id into the log event."""
     event_dict["pylon_request_id"] = current_request_id() or "-"
+    return event_dict
+
+
+def add_otel_context_to_structlog(
+    logger: WrappedLogger,
+    method_name: str,
+    event_dict: EventDict,
+) -> EventDict:
+    """Structlog processor injecting the active span's trace_id and span_id into the log event."""
+    ctx = get_current_valid_span_context()
+    if ctx is not None:
+        event_dict["trace_id"] = format(ctx.trace_id, "032x")
+        event_dict["span_id"] = format(ctx.span_id, "016x")
     return event_dict
 
 
@@ -97,6 +111,7 @@ _STRUCTLOG_PROCESSORS = (
 _JSON_RENDER_PROCESSORS = [
     structlog.stdlib.ProcessorFormatter.remove_processors_meta,
     add_otel_resource_to_structlog,
+    add_otel_context_to_structlog,
     structlog.processors.format_exc_info,
     structlog.processors.JSONRenderer(),
 ]

@@ -231,8 +231,14 @@ All settings use the `PYLON_` prefix. Example: `PYLON_BITTENSOR_NETWORK=finney`
   - By default, data is cached for all subnets configured in identities
 
 - **Monitoring**:
-  - `sentry_dsn`: Sentry DSN for error tracking (optional)
-  - `sentry_environment`: Environment name for Sentry (default: "development")
+  - `environment` (in `pylon_commons/settings.py`, env `PYLON_ENVIRONMENT`): Deployment environment name; single source of truth for both Sentry and OTEL (default: "production")
+  - Sentry (`SentrySettings` in `pylon_service/settings.py`, env prefix `PYLON_SENTRY_`):
+    - `dsn` (`PYLON_SENTRY_DSN`): Sentry DSN for error tracking; empty disables Sentry (default: "")
+    - `environment` (`PYLON_SENTRY_ENVIRONMENT`): Sentry environment name; falls back to `PYLON_ENVIRONMENT` when left unset
+  - OpenTelemetry traces (`OtelSettings` in `pylon_service/settings.py`, env prefix `PYLON_OTEL_`):
+    - `collector_endpoint` (`PYLON_OTEL_COLLECTOR_ENDPOINT`): Base URL of an OTLP collector; empty disables traces (default: "")
+    - `deployment_environment` (`PYLON_OTEL_DEPLOYMENT_ENVIRONMENT`): OTEL `deployment.environment.name` attribute; falls back to `PYLON_ENVIRONMENT` when left unset
+    - `service_version` (`PYLON_OTEL_SERVICE_VERSION`): OTEL `service.version` attribute; injected automatically at Docker build time (default: "")
 
 - **Development**:
   - `docker_image_name`: Docker image name (default: "bittensor_pylon")
