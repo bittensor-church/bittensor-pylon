@@ -4,11 +4,11 @@ from collections.abc import Iterator
 from contextlib import contextmanager
 from typing import Any, ClassVar, TypeVar
 
+import structlog
 from opentelemetry import trace
 from opentelemetry.context import Context
 from opentelemetry.trace import Link, SpanContext
 from opentelemetry.util.types import AttributeValue
-import structlog
 from prometheus_client import Histogram
 from pylon_commons.models import Block, CommitReveal
 from pylon_commons.types import (
