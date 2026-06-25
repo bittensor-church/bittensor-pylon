@@ -50,7 +50,7 @@ from pylon_service.metrics import (
     track_operation,
 )
 from pylon_service.settings import settings
-from pylon_service.tracing import TraceLinkType, get_current_valid_span_context
+from pylon_service.tracing import TraceLinkType, detached_otel_context, get_current_valid_span_context
 
 logger = structlog.stdlib.get_logger(__name__)
 _tracer = trace.get_tracer(__name__)
@@ -95,7 +95,7 @@ class BackgroundTask[ReturnT](ABC):
 
         self._request_span_context = get_current_valid_span_context()
 
-        self._running_task = asyncio.create_task(self(), name=self.JOB_NAME)
+        self._running_task = asyncio.create_task(self(), name=self.JOB_NAME, context=detached_otel_context())
         type(self).tasks_running.add(self)
         self._running_task.add_done_callback(self._on_task_done)
         return self._running_task
