@@ -2,8 +2,7 @@ import uuid
 from typing import Self
 
 from litestar.config.response_cache import ResponseCacheConfig
-from opentelemetry.semconv._incubating.attributes.deployment_attributes import DEPLOYMENT_ENVIRONMENT_NAME
-from opentelemetry.semconv.resource import ResourceAttributes
+from opentelemetry.semconv.attributes import deployment_attributes, service_attributes
 from pydantic import Field, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 from pylon_commons.settings import ENV_FILE, Settings
@@ -111,13 +110,13 @@ class OtelSettings(BaseSettings):
     def resource_attributes(self) -> dict[str, str]:
         """Return OTEL resource attributes as dotted-key fields for log injection."""
         attrs = {
-            ResourceAttributes.SERVICE_NAMESPACE: self.service_namespace,
-            ResourceAttributes.SERVICE_NAME: self.service_name,
-            DEPLOYMENT_ENVIRONMENT_NAME: self.deployment_environment,
-            ResourceAttributes.SERVICE_INSTANCE_ID: self.service_instance_id,
+            service_attributes.SERVICE_NAMESPACE: self.service_namespace,
+            service_attributes.SERVICE_NAME: self.service_name,
+            deployment_attributes.DEPLOYMENT_ENVIRONMENT_NAME: self.deployment_environment,
+            service_attributes.SERVICE_INSTANCE_ID: self.service_instance_id,
         }
         if self.service_version:
-            attrs[ResourceAttributes.SERVICE_VERSION] = self.service_version
+            attrs[service_attributes.SERVICE_VERSION] = self.service_version
         return attrs
 
 

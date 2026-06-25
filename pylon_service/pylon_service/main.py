@@ -1,8 +1,8 @@
 from litestar import Litestar
-from litestar.contrib.opentelemetry import OpenTelemetryConfig, OpenTelemetryPlugin
 from litestar.di import Provide
 from litestar.openapi.config import OpenAPIConfig
 from litestar.plugins import PluginProtocol
+from litestar.plugins.opentelemetry import OpenTelemetryConfig, OpenTelemetryPlugin
 from litestar.plugins.prometheus import PrometheusConfig
 
 from pylon_service import dependencies, lifecycle

@@ -91,7 +91,7 @@ def test_init_otel_normalizes_collector_endpoint(collector_endpoint, expected_ex
     ],
 )
 def test_create_app_registers_otel_plugin_only_when_enabled(traces_enabled, expected_present):
-    from litestar.contrib.opentelemetry import OpenTelemetryPlugin
+    from litestar.plugins.opentelemetry import OpenTelemetryPlugin
 
     from pylon_service.main import create_app
 
