@@ -611,6 +611,31 @@ class LocalChainManager:
             params=[netuid],
         )
 
+    async def set_max_burn(self, netuid: int, max_burn_rao: int) -> None:
+        """
+        Cap the maximum registration burn for a subnet via sudo call.
+
+        Each burned registration swaps the burn cost from TAO into the subnet's
+        alpha reserve, and the burn ramps up (BurnIncreaseMult) after every
+        registration. Left unbounded, bulk registration drains the alpha reserve
+        below the swap pallet's MinimumReserve and fails with ReservesTooLow.
+        Capping the burn low keeps each swap tiny so the reserve stays healthy.
+
+        Args:
+            netuid: Subnet UID.
+            max_burn_rao: Maximum burn in RAO. Must exceed the chain's
+                MaxBurnLowerBound (0.1 TAO).
+        """
+        logger.info("Setting max burn to %d on subnet %d", max_burn_rao, netuid)
+        async with self._turbobt_client() as client:
+            result = await client.subtensor.sudo.sudo(
+                "AdminUtils",
+                "sudo_set_max_burn",
+                {"netuid": netuid, "max_burn": max_burn_rao},
+                wallet=SUDO_WALLET,
+            )
+            await result.wait_for_finalization()
+
     async def set_serving_rate_limit(self, netuid: int, rate_limit: int) -> None:
         """
         Set the serving rate limit for a subnet via sudo storage update.

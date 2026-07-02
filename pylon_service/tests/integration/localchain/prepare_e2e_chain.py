@@ -75,6 +75,7 @@ FILLER_NEURON_COUNT = MAX_NEURONS - len(DevAccount) - 1  # 251 (UID 0 is a pre-e
 FILLER_TRANSFER_AMOUNT_TAO = 500
 FILLER_REGISTRATION_BATCH_SIZE = 64
 FILLER_TRANSFER_BATCH_SIZE = 256
+FILLER_REGISTRATION_MAX_BURN_RAO = 100_000_001
 
 
 def create_filler_wallets(count: int, wallet_dir: str) -> list[Wallet]:
@@ -178,6 +179,7 @@ async def main() -> None:
             await manager.set_max_registrations_per_block(netuid=netuid, max_regs=256)
             await manager.set_target_registrations_per_interval(netuid=netuid, target=256)
             await manager.set_tx_rate_limit(netuid=netuid, rate_limit=0)
+            await manager.set_max_burn(netuid=netuid, max_burn_rao=FILLER_REGISTRATION_MAX_BURN_RAO)
 
         log_step(f"Creating {FILLER_NEURON_COUNT} filler wallets")
         with tempfile.TemporaryDirectory(prefix="filler-wallets-") as tmpdir:

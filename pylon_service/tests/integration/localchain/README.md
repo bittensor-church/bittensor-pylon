@@ -176,7 +176,11 @@ Set on **subnet 2**only. Evm key associations for Alice and Charlie.
   call failures.
 - **Bulk registration tuning**: `MaxRegistrationsPerBlock` and `TargetRegistrationsPerInterval`
   are raised to 256, and `TxRateLimit` is set to 0 on e2e subnets 1 and 2 before filler
-  registration.
+  registration. `MaxBurn` is also capped just above the chain's `MaxBurnLowerBound` (0.1 TAO):
+  each burned registration swaps its burn from TAO into the subnet's alpha reserve, and the burn
+  ramps up (`BurnIncreaseMult`) after every registration, so an uncapped burn would drain the
+  alpha reserve below the swap pallet's `MinimumReserve` and make bulk registration fail with
+  `ReservesTooLow`.
 - **Drand.NextUnsignedAt**: Set to `current_block + 80` — see [Drand Workaround](#drand-workaround)
   below.
 
