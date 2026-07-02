@@ -90,6 +90,6 @@ class Settings(BaseSettings):
             provided, missing = (main_field, archive_field) if main_set else (archive_field, main_field)
             raise ValueError(
                 f"{env_prefix}{provided.upper()} was overridden but {env_prefix}{missing.upper()} was left "
-                f"at its default. Set both explicitly (you may repeat the default value, but it must be explicit)."
+                "at its default. Set both explicitly."
             )
         return self
