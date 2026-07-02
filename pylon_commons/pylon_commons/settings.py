@@ -27,10 +27,10 @@ def _validate_paired_settings_overridden_together(
     env_prefix: str,
 ) -> None:
     """
-    Ensure each main/archive network pair is either both left at its default or both set explicitly.
+    Ensure each setting pair is either both left at its default or both set explicitly.
 
     A pair with exactly one member provided is rejected, because silently mixing an overridden
-    network with a defaulted counterpart is an easy and dangerous misconfiguration. Repeating the
+    value with a defaulted counterpart is an easy and dangerous misconfiguration. Repeating the
     default value is allowed, as long as it is provided explicitly.
 
     Raises:
@@ -44,8 +44,7 @@ def _validate_paired_settings_overridden_together(
         provided, missing = (main_field, archive_field) if main_set else (archive_field, main_field)
         raise ValueError(
             f"{env_prefix}{provided.upper()} was overridden but {env_prefix}{missing.upper()} was left "
-            f"at its default. When overriding one network you must set both explicitly (you may repeat "
-            f"the default value, but it must be explicit)."
+            f"at its default. Set both explicitly (you may repeat the default value, but it must be explicit)."
         )
 
 
