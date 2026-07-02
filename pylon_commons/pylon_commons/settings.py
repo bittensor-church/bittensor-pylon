@@ -1,6 +1,8 @@
 import os
+from collections.abc import Iterable
+from typing import Self
 
-from pydantic import Field
+from pydantic import Field, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 from .types import (
@@ -11,6 +13,40 @@ from .types import (
 from .types import evm as evm_types
 
 ENV_FILE = os.environ.get("PYLON_ENV_FILE", ".env")
+
+# Pairs of (main, archive) network settings that must be overridden together.
+_PAIRED_NETWORK_FIELDS: tuple[tuple[str, str], ...] = (
+    ("bittensor_network", "bittensor_archive_network"),
+    ("evm_rpc_url", "evm_archive_rpc_url"),
+)
+
+
+def _validate_paired_settings_overridden_together(
+    fields_set: set[str],
+    field_pairs: Iterable[tuple[str, str]],
+    env_prefix: str,
+) -> None:
+    """
+    Ensure each main/archive network pair is either both left at its default or both set explicitly.
+
+    A pair with exactly one member provided is rejected, because silently mixing an overridden
+    network with a defaulted counterpart is an easy and dangerous misconfiguration. Repeating the
+    default value is allowed, as long as it is provided explicitly.
+
+    Raises:
+        ValueError: If exactly one member of a pair was provided.
+    """
+    for main_field, archive_field in field_pairs:
+        main_set = main_field in fields_set
+        archive_set = archive_field in fields_set
+        if main_set == archive_set:
+            continue
+        provided, missing = (main_field, archive_field) if main_set else (archive_field, main_field)
+        raise ValueError(
+            f"{env_prefix}{provided.upper()} was overridden but {env_prefix}{missing.upper()} was left "
+            f"at its default. When overriding one network you must set both explicitly (you may repeat "
+            f"the default value, but it must be explicit)."
+        )
 
 
 class Settings(BaseSettings):
@@ -65,3 +101,15 @@ class Settings(BaseSettings):
     debug: bool = False
 
     model_config = SettingsConfigDict(env_file=ENV_FILE, env_file_encoding="utf-8", env_prefix="PYLON_", extra="ignore")
+
+    @model_validator(mode="after")
+    def validate_networks_overridden_together(self) -> Self:
+        """
+        Reject overriding only one network of a main/archive pair, leaving its counterpart on the default.
+        """
+        _validate_paired_settings_overridden_together(
+            self.model_fields_set,
+            _PAIRED_NETWORK_FIELDS,
+            self.model_config.get("env_prefix", "") or "",
+        )
+        return self
