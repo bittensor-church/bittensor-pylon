@@ -1,6 +1,6 @@
 import time
 
-from pylon_client.artanis import CommitmentDataHex
+from pylon_client.artanis import CommitmentDataHex, PylonNotFound
 from pylon_client.artanis.v1 import (
     GetCommitmentResponse,
     SetCommitmentResponse,
@@ -30,10 +30,15 @@ def test_set_revealed_commitment_writes_readable_revealed_commitment(pylon_clien
         assert set_response.reveal_round > 0
 
         commitment_set = None
-        for _ in range(8):
-            get_response = client.unstable.identity.get_own_revealed_commitments()
+        for _ in range(15):
+            try:
+                get_response = client.unstable.identity.get_own_revealed_commitments()
+            except PylonNotFound:
+                time.sleep(1)
+                continue
             commitment_set = next(
-                commitment for commitment in get_response.commitments if commitment.commitment == expected_commitment
+                (commitment for commitment in get_response.commitments if commitment.commitment == expected_commitment),
+                None,
             )
             if commitment_set is not None:
                 break

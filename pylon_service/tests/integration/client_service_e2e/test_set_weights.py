@@ -49,14 +49,13 @@ async def test_set_weights(pylon_client_factory, low_weights_rate_limit, localch
             bob_uid = next(n.uid for n in neurons if n.hotkey == DevAccount.BOB.hotkey_ss58)
             alice_uid = next(n.uid for n in neurons if n.hotkey == DevAccount.ALICE.hotkey_ss58)
 
-            async with asyncio.timeout(30):
+            async with asyncio.timeout(90):
                 while True:
                     weights = await asyncio.shield(bt.subnet(2).weights.get(bob_uid))
-                    if weights:
+                    if alice_uid in weights:
                         break
                     await asyncio.sleep(1)
 
-            assert alice_uid in weights
             assert weights[alice_uid] == pytest.approx(1.0)
 
 
@@ -73,14 +72,13 @@ async def test_set_mechanism_weights(pylon_client_factory, low_weights_rate_limi
             bob_uid = next(n.uid for n in neurons if n.hotkey == DevAccount.BOB.hotkey_ss58)
             alice_uid = next(n.uid for n in neurons if n.hotkey == DevAccount.ALICE.hotkey_ss58)
 
-            async with asyncio.timeout(30):
+            async with asyncio.timeout(90):
                 while True:
                     weights = await asyncio.shield(bt.subnet(3).weights.get(bob_uid, mechanism_id=1))
-                    if weights:
+                    if alice_uid in weights:
                         break
                     await asyncio.sleep(1)
 
-            assert alice_uid in weights
             assert weights[alice_uid] == pytest.approx(1.0)
 
 
@@ -151,16 +149,15 @@ async def test_set_weights_succeeds_after_registration(
             alice_uid = next(n.uid for n in neurons if n.hotkey == DevAccount.ALICE.hotkey_ss58)
             logger.info("resolved_uids", charlie_uid=charlie_uid, alice_uid=alice_uid)
 
-            logger.info("waiting_for_weights_on_chain", timeout_seconds=60)
-            async with asyncio.timeout(60):
+            logger.info("waiting_for_weights_on_chain", timeout_seconds=180)
+            async with asyncio.timeout(180):
                 while True:
                     weights = await asyncio.shield(bt.subnet(NETUID_AFTER_REGISTRATION).weights.get(charlie_uid))
-                    if weights:
+                    if alice_uid in weights:
                         break
                     await asyncio.sleep(1)
 
             logger.info("weights_observed_on_chain", weights=weights)
-            assert alice_uid in weights
             assert weights[alice_uid] == pytest.approx(1.0)
 
     submit_frames = [f for f in ws_recorder.frames if is_expected_submit(f)]

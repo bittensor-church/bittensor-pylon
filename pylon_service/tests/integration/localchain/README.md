@@ -234,12 +234,19 @@ await manager.offset_drand_next_unsigned_at()
 
 **Phase 2 — At container start time** (test fixtures):
 
-Immediately after starting the container, set `Drand.LastStoredRound` and
-`Drand.OldestStoredRound` to the **current real-world drand round** (fetched via
-`bittensor_drand.get_latest_round()`). This way, when the worker eventually starts (after the
-margin expires), it begins from the current round instead of the stale one.
+On the current localnet runtime the worker no longer catches up from a stale round on its own — it stalls
+after a single fetch batch — and if it wakes on the stale round it floods the chain with pulse extrinsics,
+which can starve the pin writes and deadlock. So `synchronize_drand_last_stored_round()` does, in order:
 
-Wait for the chain to catch up by waiting for the block number to exceed `Drand.NextUnsignedAt` set in phase 1. 
+1. **Hold** the worker asleep by pushing `Drand.NextUnsignedAt` far into the future — done *first*, while the
+   worker is still idle behind the phase 1 margin, so a slow `get_latest_round()` or storage write cannot lose
+   the race.
+2. **Pin** `Drand.LastStoredRound` and `Drand.OldestStoredRound` to the **current real-world drand round**
+   (fetched via `bittensor_drand.get_latest_round()`).
+3. **Wake** the worker by moving `Drand.NextUnsignedAt` back to a few blocks out; it now resumes from the
+   pinned current round instead of the stale one, without ever flooding.
+4. **Verify** the worker is actually tracking the current round, re-pinning as a safety net if the observed
+   gap is still large.
 
 ```python
 # In test conftest.py (simplified):
