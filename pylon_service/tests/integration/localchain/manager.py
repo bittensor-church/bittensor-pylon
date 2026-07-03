@@ -40,7 +40,13 @@ _CONTACT_TEST_AXON_PORT = 12345
 
 _RAO_PER_TAO = 1_000_000_000
 
-_DRAND_WORKER_MARGIN = 80  # Roughly after how many blocks after starting the chain drand rounds will start fetching
+_DRAND_WORKER_MARGIN = 600  # Blocks the worker stays idle after container start, so phase 2 can pin before it wakes
+_DRAND_MAX_ACCEPTABLE_GAP = (
+    60  # How many rounds the worker may lag behind the current real drand round to count as synced
+)
+_DRAND_SYNC_MAX_ATTEMPTS = 90  # Per-phase polling cap (seconds) while synchronizing the drand worker
+_DRAND_SYNC_HOLD_MARGIN = 600  # Blocks to keep the worker asleep while phase 2 pins the current round
+_DRAND_WAKE_DELAY = 5  # Blocks after pinning before the worker is woken to resume fetching
 
 
 class ChainStorage(enum.StrEnum):
@@ -500,26 +506,55 @@ class LocalChainManager:
             )
             await result.wait_for_finalization()
 
-    async def offset_drand_next_unsigned_at(self):
+    async def set_commit_reveal_period(self, netuid: int, reveal_period: int) -> None:
         """
-        Phase 1 of drand workaround — see localchain/README.md#drand-workaround
-        """
-        current_block = await self.get_current_block_number()
-        block_number = current_block + _DRAND_WORKER_MARGIN
+        Set the commit-reveal period (in epochs) for a subnet via sudo call.
 
+        The chain reveals a timelocked weight commit at the start of the first block of epoch
+        ``commit_epoch + reveal_period``, BEFORE that block's epoch runs. Since validator permits
+        are only granted when an epoch runs, a neuron that registers and commits within the same
+        epoch needs ``reveal_period >= 2`` for its permit to exist by reveal time — with the
+        default of 1 the reveal fails permit validation and the commit is silently dropped.
+
+        Args:
+            netuid: Subnet UID.
+            reveal_period: Number of epochs between a weight commit and its reveal.
+        """
+        logger.info("Setting commit reveal period to %d on subnet %d", reveal_period, netuid)
+        async with self._turbobt_client() as client:
+            result = await client.subtensor.sudo.sudo(
+                "AdminUtils",
+                "sudo_set_commit_reveal_weights_interval",
+                {
+                    "netuid": netuid,
+                    "interval": reveal_period,
+                },
+                wallet=SUDO_WALLET,
+            )
+            await result.wait_for_finalization()
+
+    async def _set_next_unsigned_at(self, block_number: int) -> None:
+        """
+        Set the block at which the drand offchain worker resumes fetching pulses.
+        """
         logger.info("Setting Drand.NextUnsignedAt to %d", block_number)
         await self._set_storage(
             storage=ChainStorage.DRAND_NEXT_UNSIGNED_AT,
             storage_value=f"0x{block_number.to_bytes(4, byteorder='little', signed=False).hex()}",
         )
 
-    async def synchronize_drand_last_stored_round(self) -> None:
+    async def offset_drand_next_unsigned_at(self):
         """
-        Phase 2 of drand workaround — see localchain/README.md#drand-workaround
+        Phase 1 of drand workaround — see localchain/README.md#drand-workaround
         """
-        latest_round = bittensor_drand.get_latest_round()
-        round_number = latest_round - 1
+        current_block = await self.get_current_block_number()
+        await self._set_next_unsigned_at(current_block + _DRAND_WORKER_MARGIN)
 
+    async def _reset_drand_stored_round(self, round_number: int) -> None:
+        """
+        Point the drand offchain worker at ``round_number`` by overwriting
+        Drand.LastStoredRound and Drand.OldestStoredRound.
+        """
         logger.info("Setting Drand.LastStoredRound to %d", round_number)
         await self._set_storage(
             storage=ChainStorage.DRAND_LAST_STORED_ROUND,
@@ -532,13 +567,48 @@ class LocalChainManager:
             storage_value=f"0x{round_number.to_bytes(8, byteorder='little', signed=False).hex()}",
         )
 
-        drand_next_unsigned_at = cast(int, await self.get_storage(ChainStorage.DRAND_NEXT_UNSIGNED_AT))
-        print(f"Waiting for block to reach current Drand.NextUnsignedAt: {drand_next_unsigned_at}")
-        for _ in range(30):
-            block = await self.get_current_block_number()
-            if block >= drand_next_unsigned_at:
+    async def synchronize_drand_last_stored_round(self) -> None:
+        """
+        Phase 2 of drand workaround — see localchain/README.md#drand-workaround.
+
+        On the current localnet runtime the worker no longer catches up from a stale snapshot
+        round on its own — it stalls after a single batch — and if it wakes on the stale round it
+        floods the chain with pulse extrinsics, which can starve the pin writes and deadlock. So
+        this first pushes the worker's wake block far out (while it is still idle behind the phase 1
+        margin), pins the stored round to the current real drand round, wakes the worker again, and
+        only then verifies it is tracking the current round, re-pinning as a safety net.
+
+        Raises:
+            RuntimeError: If the worker never starts tracking the current round.
+        """
+        current_block = await self.get_current_block_number()
+        await self._set_next_unsigned_at(current_block + _DRAND_SYNC_HOLD_MARGIN)
+
+        pinned_round = bittensor_drand.get_latest_round() - 1
+        await self._reset_drand_stored_round(pinned_round)
+
+        wake_block = (await self.get_current_block_number()) + _DRAND_WAKE_DELAY
+        await self._set_next_unsigned_at(wake_block)
+        logger.info("Waiting for block to reach Drand.NextUnsignedAt: %d", wake_block)
+        for _ in range(_DRAND_SYNC_MAX_ATTEMPTS):
+            if (await self.get_current_block_number()) >= wake_block:
                 break
             await asyncio.sleep(1)
+
+        for _ in range(_DRAND_SYNC_MAX_ATTEMPTS):
+            latest_round = bittensor_drand.get_latest_round()
+            stored_round = cast(int, await self.get_storage(ChainStorage.DRAND_LAST_STORED_ROUND))
+            gap = latest_round - stored_round
+            if gap > _DRAND_MAX_ACCEPTABLE_GAP:
+                logger.warning("Drand worker woke on a stale round (%d behind); re-pinning to current", gap)
+                pinned_round = latest_round - 1
+                await self._reset_drand_stored_round(pinned_round)
+            elif stored_round > pinned_round:
+                logger.info("Drand worker is tracking the current round (stored %d)", stored_round)
+                return
+            await asyncio.sleep(1)
+
+        raise RuntimeError("Drand worker did not start tracking the current round in time")
 
     async def set_tempo(self, netuid: int, tempo: int) -> None:
         """
@@ -610,6 +680,31 @@ class LocalChainManager:
             storage_value=f"0x{rate_limit.to_bytes(8, byteorder='little', signed=False).hex()}",
             params=[netuid],
         )
+
+    async def set_max_burn(self, netuid: int, max_burn_rao: int) -> None:
+        """
+        Cap the maximum registration burn for a subnet via sudo call.
+
+        Each burned registration swaps the burn cost from TAO into the subnet's
+        alpha reserve, and the burn ramps up (BurnIncreaseMult) after every
+        registration. Left unbounded, bulk registration drains the alpha reserve
+        below the swap pallet's MinimumReserve and fails with ReservesTooLow.
+        Capping the burn low keeps each swap tiny so the reserve stays healthy.
+
+        Args:
+            netuid: Subnet UID.
+            max_burn_rao: Maximum burn in RAO. Must exceed the chain's
+                MaxBurnLowerBound (0.1 TAO).
+        """
+        logger.info("Setting max burn to %d on subnet %d", max_burn_rao, netuid)
+        async with self._turbobt_client() as client:
+            result = await client.subtensor.sudo.sudo(
+                "AdminUtils",
+                "sudo_set_max_burn",
+                {"netuid": netuid, "max_burn": max_burn_rao},
+                wallet=SUDO_WALLET,
+            )
+            await result.wait_for_finalization()
 
     async def set_serving_rate_limit(self, netuid: int, rate_limit: int) -> None:
         """

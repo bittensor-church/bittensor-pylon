@@ -77,7 +77,7 @@ Four subnets are registered (owned by Alice):
 | Subnet 1 | 1 | 100 (default) | Read testing |
 | Subnet 2 | 2 | 50 (low) | Fast commit-reveal weight and write tests |
 | Subnet 3 | 3 | 50 (low) | Mechanism weight tests |
-| Subnet 4 | 4 | 50 (low) | Dedicated to `test_set_weights_succeeds_after_registration` — only Alice registered, `WeightsRateLimit=0`. **This test permanently mutates subnet 4 state** (registers Charlie, adds stake), so the subnet must remain single-tenant. |
+| Subnet 4 | 4 | 50 (low) | Dedicated to `test_set_weights_succeeds_after_registration` — only Alice registered, `WeightsRateLimit=0`, commit-reveal period 2 (see [Commit-Reveal Period on Subnet 4](#commit-reveal-period-on-subnet-4)). **This test permanently mutates subnet 4 state** (registers Charlie, adds stake), so the subnet must remain single-tenant. |
 
 Subtokens are enabled on all four subnets.
 
@@ -176,7 +176,11 @@ Set on **subnet 2**only. Evm key associations for Alice and Charlie.
   call failures.
 - **Bulk registration tuning**: `MaxRegistrationsPerBlock` and `TargetRegistrationsPerInterval`
   are raised to 256, and `TxRateLimit` is set to 0 on e2e subnets 1 and 2 before filler
-  registration.
+  registration. `MaxBurn` is also capped just above the chain's `MaxBurnLowerBound` (0.1 TAO):
+  each burned registration swaps its burn from TAO into the subnet's alpha reserve, and the burn
+  ramps up (`BurnIncreaseMult`) after every registration, so an uncapped burn would drain the
+  alpha reserve below the swap pallet's `MinimumReserve` and make bulk registration fail with
+  `ReservesTooLow`.
 - **Drand.NextUnsignedAt**: Set to `current_block + 80` — see [Drand Workaround](#drand-workaround)
   below.
 
@@ -192,6 +196,22 @@ When writing such a test, prefer creating a **dedicated subnet** for it in
 `prepare_e2e_chain.py` (as was done for subnet 4, used exclusively by
 `test_set_weights_succeeds_after_registration`). Document the ownership in the
 *Subnets* table above so it stays a single-tenant subnet.
+
+### Commit-Reveal Period on Subnet 4
+
+Subnet 4 has its commit-reveal period (`RevealPeriodEpochs`) raised from the default 1 to **2**.
+
+The chain reveals a timelocked weight commit at the start of the first block of epoch
+`commit_epoch + reveal_period` — and this reveal runs **before** that block's epoch
+(`reveal_crv3_commits` precedes `run_coinbase` in `block_step`). Validator permits are only
+granted when a subnet epoch runs. `test_set_weights_succeeds_after_registration` registers
+Charlie, stakes, and commits weights all within one epoch, so with the default period of 1 the
+reveal fires exactly at the boundary where Charlie's permit is about to be granted — the permit
+does not exist yet, `do_set_mechanism_weights` fails `NeuronNoValidatorPermit`, and the chain
+**silently drops the commit** (the weights never appear, with no error surfaced anywhere).
+
+With a period of 2 the reveal happens one full epoch after the permit-granting epoch, so the
+commit reveals reliably.
 
 ### Drand Workaround
 
@@ -230,12 +250,19 @@ await manager.offset_drand_next_unsigned_at()
 
 **Phase 2 — At container start time** (test fixtures):
 
-Immediately after starting the container, set `Drand.LastStoredRound` and
-`Drand.OldestStoredRound` to the **current real-world drand round** (fetched via
-`bittensor_drand.get_latest_round()`). This way, when the worker eventually starts (after the
-margin expires), it begins from the current round instead of the stale one.
+On the current localnet runtime the worker no longer catches up from a stale round on its own — it stalls
+after a single fetch batch — and if it wakes on the stale round it floods the chain with pulse extrinsics,
+which can starve the pin writes and deadlock. So `synchronize_drand_last_stored_round()` does, in order:
 
-Wait for the chain to catch up by waiting for the block number to exceed `Drand.NextUnsignedAt` set in phase 1. 
+1. **Hold** the worker asleep by pushing `Drand.NextUnsignedAt` far into the future — done *first*, while the
+   worker is still idle behind the phase 1 margin, so a slow `get_latest_round()` or storage write cannot lose
+   the race.
+2. **Pin** `Drand.LastStoredRound` and `Drand.OldestStoredRound` to the **current real-world drand round**
+   (fetched via `bittensor_drand.get_latest_round()`).
+3. **Wake** the worker by moving `Drand.NextUnsignedAt` back to a few blocks out; it now resumes from the
+   pinned current round instead of the stale one, without ever flooding.
+4. **Verify** the worker is actually tracking the current round, re-pinning as a safety net if the observed
+   gap is still large.
 
 ```python
 # In test conftest.py (simplified):
