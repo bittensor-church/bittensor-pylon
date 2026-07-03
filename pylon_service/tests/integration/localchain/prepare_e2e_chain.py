@@ -37,7 +37,9 @@ Preparation steps (in order):
     9.  Set commitments for Charlie and Dave on subnet 1
     10. Create & fund 251 filler wallets
     11. Register 251 filler neurons on subnets 1 and 2 (parallelized)
-    12. Create subnet 4; register only Alice; set low tempo and weights_rate_limit=0
+    12. Create subnet 4; register only Alice; set low tempo, weights_rate_limit=0
+        and commit-reveal period 2 (so a permit granted by the first epoch after
+        in-test registration exists by reveal time)
     13. Set Drand.NextUnsignedAt (MUST be last before snapshot)
     14. Create Docker snapshot
 """
@@ -68,6 +70,7 @@ LOW_TEMPO_NETUIDS = [2, 3]
 MECHANISMS_NETUID = 3
 REGISTRATION_RETRY_NETUID = 4
 REGISTRATION_RETRY_TEMPO = LOW_TEMPO
+REGISTRATION_RETRY_REVEAL_PERIOD = 2
 
 MAX_NEURONS = 256
 FILLER_NEURONS_NETUIDS = [1, 2]
@@ -212,6 +215,9 @@ async def main() -> None:
         await manager.register_neuron(wallet=alice.wallet, netuid=REGISTRATION_RETRY_NETUID)
         await manager.set_tempo(netuid=REGISTRATION_RETRY_NETUID, tempo=REGISTRATION_RETRY_TEMPO)
         await manager.set_weights_rate_limit(netuid=REGISTRATION_RETRY_NETUID, rate_limit=0)
+        await manager.set_commit_reveal_period(
+            netuid=REGISTRATION_RETRY_NETUID, reveal_period=REGISTRATION_RETRY_REVEAL_PERIOD
+        )
 
         # Phase 1 of drand workaround — see localchain/README.md#drand-workaround
         log_step("Setting Drand.NextUnsignedAt")

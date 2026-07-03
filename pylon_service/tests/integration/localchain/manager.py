@@ -506,6 +506,33 @@ class LocalChainManager:
             )
             await result.wait_for_finalization()
 
+    async def set_commit_reveal_period(self, netuid: int, reveal_period: int) -> None:
+        """
+        Set the commit-reveal period (in epochs) for a subnet via sudo call.
+
+        The chain reveals a timelocked weight commit at the start of the first block of epoch
+        ``commit_epoch + reveal_period``, BEFORE that block's epoch runs. Since validator permits
+        are only granted when an epoch runs, a neuron that registers and commits within the same
+        epoch needs ``reveal_period >= 2`` for its permit to exist by reveal time — with the
+        default of 1 the reveal fails permit validation and the commit is silently dropped.
+
+        Args:
+            netuid: Subnet UID.
+            reveal_period: Number of epochs between a weight commit and its reveal.
+        """
+        logger.info("Setting commit reveal period to %d on subnet %d", reveal_period, netuid)
+        async with self._turbobt_client() as client:
+            result = await client.subtensor.sudo.sudo(
+                "AdminUtils",
+                "sudo_set_commit_reveal_weights_interval",
+                {
+                    "netuid": netuid,
+                    "interval": reveal_period,
+                },
+                wallet=SUDO_WALLET,
+            )
+            await result.wait_for_finalization()
+
     async def _set_next_unsigned_at(self, block_number: int) -> None:
         """
         Set the block at which the drand offchain worker resumes fetching pulses.

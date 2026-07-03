@@ -77,7 +77,7 @@ Four subnets are registered (owned by Alice):
 | Subnet 1 | 1 | 100 (default) | Read testing |
 | Subnet 2 | 2 | 50 (low) | Fast commit-reveal weight and write tests |
 | Subnet 3 | 3 | 50 (low) | Mechanism weight tests |
-| Subnet 4 | 4 | 50 (low) | Dedicated to `test_set_weights_succeeds_after_registration` — only Alice registered, `WeightsRateLimit=0`. **This test permanently mutates subnet 4 state** (registers Charlie, adds stake), so the subnet must remain single-tenant. |
+| Subnet 4 | 4 | 50 (low) | Dedicated to `test_set_weights_succeeds_after_registration` — only Alice registered, `WeightsRateLimit=0`, commit-reveal period 2 (see [Commit-Reveal Period on Subnet 4](#commit-reveal-period-on-subnet-4)). **This test permanently mutates subnet 4 state** (registers Charlie, adds stake), so the subnet must remain single-tenant. |
 
 Subtokens are enabled on all four subnets.
 
@@ -196,6 +196,22 @@ When writing such a test, prefer creating a **dedicated subnet** for it in
 `prepare_e2e_chain.py` (as was done for subnet 4, used exclusively by
 `test_set_weights_succeeds_after_registration`). Document the ownership in the
 *Subnets* table above so it stays a single-tenant subnet.
+
+### Commit-Reveal Period on Subnet 4
+
+Subnet 4 has its commit-reveal period (`RevealPeriodEpochs`) raised from the default 1 to **2**.
+
+The chain reveals a timelocked weight commit at the start of the first block of epoch
+`commit_epoch + reveal_period` — and this reveal runs **before** that block's epoch
+(`reveal_crv3_commits` precedes `run_coinbase` in `block_step`). Validator permits are only
+granted when a subnet epoch runs. `test_set_weights_succeeds_after_registration` registers
+Charlie, stakes, and commits weights all within one epoch, so with the default period of 1 the
+reveal fires exactly at the boundary where Charlie's permit is about to be granted — the permit
+does not exist yet, `do_set_mechanism_weights` fails `NeuronNoValidatorPermit`, and the chain
+**silently drops the commit** (the weights never appear, with no error surfaced anywhere).
+
+With a period of 2 the reveal happens one full epoch after the permit-granting epoch, so the
+commit reveals reliably.
 
 ### Drand Workaround
 
