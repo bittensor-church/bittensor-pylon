@@ -17,7 +17,7 @@ from pylon_service.api.services import (
     RecentObjectMissingError,
     RecentObjectStaleError,
 )
-from pylon_service.bittensor.exceptions import BittensorTransportError
+from pylon_service.bittensor.exceptions import BittensorTransportError, RuntimeApiUnavailableException
 from pylon_service.evm.exceptions import EvmInvalidAbiError, EvmInvalidAddressError, EvmRpcError
 from pylon_service.identities import identities
 
@@ -34,6 +34,9 @@ def _response_for_exception(exc: Exception) -> Response | None:
 
     if isinstance(exc, BittensorTransportError):
         return Response(status_code=502, content={"status_code": 502, "detail": exc.detail})
+
+    if isinstance(exc, RuntimeApiUnavailableException):
+        return Response(status_code=501, content={"status_code": 501, "detail": exc.detail})
 
     if isinstance(exc, EvmInvalidAddressError):
         return Response(status_code=400, content={"status_code": 400, "detail": exc.detail})
