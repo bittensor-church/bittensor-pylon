@@ -1,6 +1,7 @@
 import os
+from typing import ClassVar, Self
 
-from pydantic import Field
+from pydantic import Field, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 from .types import (
@@ -65,3 +66,30 @@ class Settings(BaseSettings):
     debug: bool = False
 
     model_config = SettingsConfigDict(env_file=ENV_FILE, env_file_encoding="utf-8", env_prefix="PYLON_", extra="ignore")
+
+    # Pairs of (main, archive) network settings that must be overridden together.
+    _PAIRED_NETWORK_FIELDS: ClassVar[tuple[tuple[str, str], ...]] = (
+        ("bittensor_network", "bittensor_archive_network"),
+        ("evm_rpc_url", "evm_archive_rpc_url"),
+    )
+
+    @model_validator(mode="after")
+    def validate_networks_overridden_together(self) -> Self:
+        """
+        Reject overriding only one network of a main/archive pair, leaving its counterpart on the default.
+
+        Raises:
+            ValueError: If exactly one network of a pair was provided.
+        """
+        env_prefix = self.model_config.get("env_prefix", "") or ""
+        for main_field, archive_field in self._PAIRED_NETWORK_FIELDS:
+            main_set = main_field in self.model_fields_set
+            archive_set = archive_field in self.model_fields_set
+            if main_set == archive_set:
+                continue
+            provided, missing = (main_field, archive_field) if main_set else (archive_field, main_field)
+            raise ValueError(
+                f"{env_prefix}{provided.upper()} was overridden but {env_prefix}{missing.upper()} was left "
+                "at its default. Set both explicitly."
+            )
+        return self
