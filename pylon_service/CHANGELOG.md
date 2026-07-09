@@ -1,3 +1,9 @@
+## service-v2.3.0 (2026-07-09)
+
+### Feat
+
+- require main/archive network settings to be overridden together
+
 ## service-v2.2.0 (2026-06-09)
 
 ### Feat
