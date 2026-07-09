@@ -5,10 +5,10 @@ from tenacity import wait_none
 
 from pylon_client._internal.pylon_commons._unstable.endpoints import Endpoint as EndpointUnstable
 from pylon_client.artanis import (
+    DEFAULT_RETRIES,
     BlockHash,
     BlockNumber,
     Config,
-    DEFAULT_RETRIES,
     IdentityName,
     PylonAuthToken,
     PylonClient,

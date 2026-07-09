@@ -415,6 +415,8 @@ class EvmAssociationsExistHandler(StateHandler):
         self._set_default_latest_block(client, block)
         client.add_behavior("get_evm_key_associations", associations)
         client.add_behavior("get_subnet_state", SimpleNamespace(hotkeys=hotkeys))
+
+
 class CertificateExistsHandler(StateHandler):
     name = "certificate exists"
 
