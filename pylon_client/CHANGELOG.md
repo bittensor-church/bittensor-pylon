@@ -1,3 +1,15 @@
+## client-v2.3.0 (2026-07-09)
+
+### Feat
+
+- add file-backed neuron support
+- add mTLS neuron client for direct miner connections
+- add get_certificate API with request and response models
+
+### Refactor
+
+- extract neuron client to module with caching and keepalive
+
 ## client-v2.2.0 (2026-06-09)
 
 ### Feat
