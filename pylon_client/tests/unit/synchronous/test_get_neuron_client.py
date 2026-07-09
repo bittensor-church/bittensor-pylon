@@ -8,7 +8,7 @@ from tenacity import wait_none
 from pylon_client._internal.client.neuron_client import NEURON_CLIENT_CACHE_SIZE, SyncNeuronClientManager
 from pylon_client._internal.pylon_commons.types import Port
 from pylon_client._internal.pylon_commons.v1.endpoints import Endpoint as V1Endpoint
-from pylon_client.artanis import Config, DEFAULT_RETRIES, IdentityName, NetUid, PylonAuthToken, PylonClient
+from pylon_client.artanis import DEFAULT_RETRIES, Config, IdentityName, NetUid, PylonAuthToken, PylonClient
 from pylon_client.exceptions import MtlsVerificationError
 from tests.factories import NeuronFactory
 from tests.mtls_helpers import generate_ed25519_cert, mtls_server, plain_http_server

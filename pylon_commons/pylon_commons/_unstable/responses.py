@@ -1,7 +1,7 @@
 from pydantic import BaseModel
 
-from ..models import NeuronCertificate, NeuronCertificateKeypair, SubnetEvmAssociations
-from ..types import Hotkey, IdentityName, NetUid
+from ..models import NeuronCertificate, SubnetEvmAssociations
+from ..types import IdentityName, NetUid
 from ..types import evm as evm_types
 from .models import (
     Block,
@@ -206,4 +206,3 @@ class GetCertificateResponse(PylonResponse, NeuronCertificate):
     """
 
     pass
-

@@ -71,6 +71,7 @@ from pylon_client._internal.pylon_commons.types import (
     NetUid,
     Weight,
 )
+from pylon_client._internal.pylon_commons.types import evm as evm_types
 
 ResponseT = TypeVar("ResponseT", bound=PylonResponse)
 
