@@ -20,7 +20,12 @@ from pylon_commons.types import (
 from turbobt.substrate.exceptions import SubstrateException, UnknownBlock
 
 from pylon_service.bittensor.contact import AbstractBittensorContact
-from pylon_service.bittensor.exceptions import ArchiveFallbackException, ArchiveInvalidParamsException
+from pylon_service.bittensor.exceptions import (
+    ArchiveFallbackException,
+    ArchiveInvalidParamsException,
+    RuntimeApiUnavailableException,
+    is_missing_runtime_method,
+)
 from pylon_service.bittensor.models import (
     Block,
     CertificateAlgorithm,
@@ -99,6 +104,8 @@ class BittensorContactRouter:
                 try:
                     return await archive_call()
                 except UnknownBlock as exc:
+                    if is_missing_runtime_method(exc):
+                        raise self._runtime_api_unavailable(operation_name, block, exc) from exc
                     raise ArchiveFallbackException(
                         detail=(
                             f"Block {block.number} data is unavailable on the archive node. "
@@ -134,6 +141,8 @@ class BittensorContactRouter:
             try:
                 return await archive_call()
             except UnknownBlock as archive_exc:
+                if is_missing_runtime_method(archive_exc):
+                    raise self._runtime_api_unavailable(operation_name, block, archive_exc) from archive_exc
                 raise ArchiveFallbackException(
                     detail=f"Block {block.number} data is unavailable on both main and archive nodes."
                 ) from archive_exc
@@ -147,6 +156,17 @@ class BittensorContactRouter:
                         )
                     ) from exc
                 raise
+
+    @staticmethod
+    def _runtime_api_unavailable(
+        operation_name: str, block: Block, exc: BaseException
+    ) -> RuntimeApiUnavailableException:
+        return RuntimeApiUnavailableException(
+            detail=(
+                f"The runtime API required for '{operation_name}' is not available at block {block.number}. "
+                f"It was introduced by a later runtime upgrade, so older blocks do not export it ({exc})."
+            )
+        )
 
     async def get_block(self, number):
         return await self._delegate(

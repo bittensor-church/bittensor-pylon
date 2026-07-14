@@ -32,7 +32,7 @@ from pylon_commons.types import (
 from turbobt.substrate.exceptions import UnknownBlock
 
 from pylon_service.bittensor.contact_router import BittensorContactRouter
-from pylon_service.bittensor.exceptions import ArchiveFallbackException
+from pylon_service.bittensor.exceptions import ArchiveFallbackException, RuntimeApiUnavailableException
 from pylon_service.bittensor.mock_contact import MockBittensorContact
 
 
@@ -148,3 +148,50 @@ async def test_contact_router_unknown_block_on_both_nodes_raises_archive_fallbac
         ):
             with pytest.raises(ArchiveFallbackException, match="unavailable on both main and archive nodes"):
                 await contact_router.get_neurons_list(netuid=NetUid(1), block=recent_block)
+
+
+@pytest.mark.asyncio
+async def test_contact_router_missing_runtime_method_on_stale_block_raises_runtime_api_unavailable(
+    contact_router, main_contact, archive_contact
+):
+    """
+    A 4003 'Exported method ... is not found' from the archive must surface as an honest
+    RuntimeApiUnavailableException, not the misleading 'block data is unavailable' message.
+    """
+    stale_block = Block(number=BlockNumber(100), hash=BlockHash("0xstale"))
+    latest_block = Block(number=BlockNumber(500), hash=BlockHash("0xlatest"))
+
+    async with contact_router:
+        async with (
+            main_contact.mock_behavior(get_latest_block=[latest_block]),
+            archive_contact.mock_behavior(
+                get_alpha_prices=[
+                    UnknownBlock(
+                        "Client error: Execution failed: Other: Exported method SwapRuntimeApi_current_alpha_price_all is not found"
+                    )
+                ]
+            ),
+        ):
+            with pytest.raises(RuntimeApiUnavailableException, match="not available at block 100"):
+                await contact_router.get_alpha_prices(stale_block)
+
+
+@pytest.mark.asyncio
+async def test_contact_router_genuine_unknown_block_on_stale_block_raises_archive_fallback(
+    contact_router, main_contact, archive_contact
+):
+    """
+    A genuine unknown/pruned block (no 'Exported method' signature) keeps the archive-unavailable message.
+    """
+    stale_block = Block(number=BlockNumber(100), hash=BlockHash("0xstale"))
+    latest_block = Block(number=BlockNumber(500), hash=BlockHash("0xlatest"))
+
+    async with contact_router:
+        async with (
+            main_contact.mock_behavior(get_latest_block=[latest_block]),
+            archive_contact.mock_behavior(
+                get_alpha_prices=[UnknownBlock("Api called for an unknown Block: State already discarded")]
+            ),
+        ):
+            with pytest.raises(ArchiveFallbackException, match="unavailable on the archive node"):
+                await contact_router.get_alpha_prices(stale_block)
