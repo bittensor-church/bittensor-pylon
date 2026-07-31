@@ -15,6 +15,7 @@ from websockets.exceptions import ConnectionClosedError, ConnectionClosedOK
 
 from pylon_service.bittensor.contact import TurboBtContact
 from pylon_service.bittensor.exceptions import BittensorTransportError
+from pylon_service.metrics import bittensor_transport_recovery_total
 
 
 @pytest.fixture
@@ -165,10 +166,62 @@ async def test_runtime_error_triggers_contact_recreation_and_retry_without_trace
     assert len(reconnect_records) == 1
     assert reconnect_records[0].levelno == logging.INFO
     assert reconnect_records[0].exc_info is None
+    recovery_records = [
+        record
+        for record in records
+        if (event := cast(dict[str, Any], record.msg))["event"] == "bittensor_transport_recovery_succeeded"
+        and event["operation"] == "get_block"
+    ]
+    assert len(recovery_records) == 1
     assert block_ref.get.call_count == 1
     assert new_block_ref.get.call_count == 1
     old_raw_client.__aexit__.assert_called_once()
     assert bittensor_ctor.call_count == 2
+
+
+@pytest.mark.asyncio
+async def test_known_hex_attribute_error_triggers_contact_recreation_and_records_recovery(
+    open_contact, bittensor_ctor, raw_client, block_ref
+):
+    block_ref.get.side_effect = AttributeError("'str' object has no attribute 'hex'")
+
+    new_raw_client = create_autospec(Bittensor, instance=True)
+    new_raw_client.__aenter__ = AsyncMock(return_value=new_raw_client)
+    new_raw_client.__aexit__ = AsyncMock(return_value=None)
+    new_block_ref = create_autospec(TurboBtBlockReference, instance=True)
+    new_block_ref.get.return_value = TurboBtBlock("hash", 42, client=new_raw_client)
+    new_raw_client.block.return_value = new_block_ref
+    bittensor_ctor.side_effect = [new_raw_client]
+
+    attempted = bittensor_transport_recovery_total.labels(
+        operation="get_block", outcome="attempted", error_type="AttributeError"
+    )
+    succeeded = bittensor_transport_recovery_total.labels(
+        operation="get_block", outcome="succeeded", error_type="AttributeError"
+    )
+    attempted_before = attempted._value.get()
+    succeeded_before = succeeded._value.get()
+
+    result = await open_contact.get_block(BlockNumber(42))
+
+    assert result == Block(number=BlockNumber(42), hash=BlockHash("hash"))
+    assert attempted._value.get() == attempted_before + 1
+    assert succeeded._value.get() == succeeded_before + 1
+    raw_client.__aexit__.assert_called_once()
+    assert bittensor_ctor.call_count == 2
+
+
+@pytest.mark.asyncio
+async def test_unrelated_attribute_error_propagates_without_recreation(
+    open_contact, bittensor_ctor, raw_client, block_ref
+):
+    block_ref.get.side_effect = AttributeError("programming bug")
+
+    with pytest.raises(AttributeError, match="programming bug"):
+        await open_contact.get_block(BlockNumber(42))
+
+    raw_client.__aexit__.assert_not_called()
+    assert bittensor_ctor.call_count == 1
 
 
 @pytest.mark.asyncio
@@ -236,14 +289,29 @@ async def test_runtime_error_on_retry_raises_bittensor_transport_error(open_cont
     bittensor_ctor.side_effect = [new_raw_client]
     block_ref.get.side_effect = RuntimeError("turbobt broken permanently")
 
-    with pytest.raises(
-        BittensorTransportError,
-        match="get_block failed on mock://test: RuntimeError: turbobt broken permanently",
-    ) as exc_info:
-        await open_contact.get_block(BlockNumber(42))
+    failed = bittensor_transport_recovery_total.labels(
+        operation="get_block", outcome="failed", error_type="RuntimeError"
+    )
+    failed_before = failed._value.get()
+
+    with capture_contact_logs() as records:
+        with pytest.raises(
+            BittensorTransportError,
+            match="get_block failed on mock://test: RuntimeError: turbobt broken permanently",
+        ) as exc_info:
+            await open_contact.get_block(BlockNumber(42))
 
     assert block_ref.get.call_count == 1
     assert new_block_ref.get.call_count == 1
+    assert failed._value.get() == failed_before + 1
+    failure_records = [
+        record
+        for record in records
+        if (event := cast(dict[str, Any], record.msg))["event"] == "bittensor_transport_recovery_failed"
+        and event["operation"] == "get_block"
+        and event["phase"] == "retry"
+    ]
+    assert len(failure_records) == 1
     assert exc_info.value.operation == "get_block"
     assert exc_info.value.uri == "mock://test"
     assert exc_info.value.error_type == "RuntimeError"

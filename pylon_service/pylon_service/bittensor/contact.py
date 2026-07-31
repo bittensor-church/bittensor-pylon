@@ -79,12 +79,25 @@ from pylon_service.bittensor.models import (
     SubnetState,
 )
 from pylon_service.bittensor.utils import map_to_commitment, map_to_revealed_commitment
-from pylon_service.metrics import Attr, Param, bittensor_operation_duration, track_operation
+from pylon_service.metrics import (
+    Attr,
+    Param,
+    bittensor_operation_duration,
+    bittensor_transport_recovery_total,
+    track_operation,
+)
 
 logger = structlog.stdlib.get_logger(__name__)
 
 unknown_hotkey = Hotkey("N/A")
 RECONNECT_EXCEPTIONS = (AttributeError, ConnectionClosed, OSError, RuntimeError)
+RECOVERABLE_ATTRIBUTE_ERROR_MESSAGES = frozenset({"'str' object has no attribute 'hex'"})
+
+
+def _is_recoverable_transport_error(exc: BaseException) -> bool:
+    if isinstance(exc, AttributeError):
+        return str(exc) in RECOVERABLE_ATTRIBUTE_ERROR_MESSAGES
+    return isinstance(exc, (ConnectionClosed, OSError, RuntimeError))
 
 
 class BittensorPort(Protocol):
@@ -370,6 +383,14 @@ class TurboBtContact(AbstractBittensorContact):
                 )
             raise cancelled_error from None
         except RECONNECT_EXCEPTIONS as exc:
+            if not _is_recoverable_transport_error(exc):
+                raise
+            error_type = type(exc).__name__
+            bittensor_transport_recovery_total.labels(
+                operation=operation_name,
+                outcome="attempted",
+                error_type=error_type,
+            ).inc()
             logger.info(
                 "recoverable_transport_error",
                 operation=operation_name,
@@ -379,12 +400,50 @@ class TurboBtContact(AbstractBittensorContact):
             try:
                 await asyncio.shield(self._recreate_bt_client())
             except Exception as recreate_exc:
+                bittensor_transport_recovery_total.labels(
+                    operation=operation_name,
+                    outcome="failed",
+                    error_type=error_type,
+                ).inc()
+                logger.warning(
+                    "bittensor_transport_recovery_failed",
+                    operation=operation_name,
+                    uri=self.uri,
+                    error=self._transport_gist(recreate_exc),
+                    phase="recreate",
+                )
                 raise self._transport_error(operation_name, recreate_exc) from recreate_exc
             bt_client = await self._get_bt_client()
             try:
-                return await asyncio.shield(coro_factory(bt_client))
+                result = await asyncio.shield(coro_factory(bt_client))
             except RECONNECT_EXCEPTIONS as retry_exc:
+                if not _is_recoverable_transport_error(retry_exc):
+                    raise
+                bittensor_transport_recovery_total.labels(
+                    operation=operation_name,
+                    outcome="failed",
+                    error_type=error_type,
+                ).inc()
+                logger.warning(
+                    "bittensor_transport_recovery_failed",
+                    operation=operation_name,
+                    uri=self.uri,
+                    error=self._transport_gist(retry_exc),
+                    phase="retry",
+                )
                 raise self._transport_error(operation_name, retry_exc) from retry_exc
+            bittensor_transport_recovery_total.labels(
+                operation=operation_name,
+                outcome="succeeded",
+                error_type=error_type,
+            ).inc()
+            logger.info(
+                "bittensor_transport_recovery_succeeded",
+                operation=operation_name,
+                uri=self.uri,
+                error_type=error_type,
+            )
+            return result
 
     def _resolve_hotkey(self, hotkey: Hotkey | None) -> Hotkey:
         if hotkey:

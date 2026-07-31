@@ -168,6 +168,18 @@ bittensor_fallback_total = Counter(
     ["reason", "operation", "hotkey"],
 )
 
+bittensor_transport_recovery_total = Counter(
+    "pylon_bittensor_transport_recovery_total",
+    """Total number of Bittensor transport recovery outcomes.
+
+    Labels:
+        operation: Name of the Bittensor operation that encountered the failure.
+        outcome: Recovery lifecycle outcome ("attempted", "succeeded", or "failed").
+        error_type: Exception type that triggered the recovery attempt.
+    """,
+    ["operation", "outcome", "error_type"],
+)
+
 # ApplyWeights metrics
 apply_weights_job_duration = Histogram(
     "pylon_apply_weights_job_duration_seconds",
