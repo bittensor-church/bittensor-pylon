@@ -1,3 +1,9 @@
+## service-v2.3.1 (2026-08-04)
+
+### Fix
+
+- fix setting weights breaking (#101)
+
 ## service-v2.3.0 (2026-07-09)
 
 ### Feat
