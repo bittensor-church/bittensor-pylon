@@ -84,7 +84,7 @@ from pylon_service.metrics import Attr, Param, bittensor_operation_duration, tra
 logger = structlog.stdlib.get_logger(__name__)
 
 unknown_hotkey = Hotkey("N/A")
-RECONNECT_EXCEPTIONS = (AttributeError, ConnectionClosed, OSError, RuntimeError)
+RECONNECT_EXCEPTIONS = (AttributeError, ConnectionClosed, OSError, RuntimeError, TypeError)
 
 
 class BittensorPort(Protocol):
