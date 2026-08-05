@@ -1,3 +1,9 @@
+## service-v2.3.2 (2026-08-05)
+
+### Fix
+
+- Add TypeError to RECONNECT_EXCEPTIONS so a poisoned turbobt client self-recovers
+
 ## service-v2.3.1 (2026-08-04)
 
 ### Fix
