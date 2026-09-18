@@ -50,7 +50,8 @@ import asyncio
 import logging
 import tempfile
 
-from bittensor_wallet import Wallet
+from bittensor.keyfiles import Keypair
+from bittensor.wallet import Wallet
 
 from tests.integration.containers import LocalChainContainer, LocalChainImage
 from tests.integration.localchain.common import LOW_TEMPO, log_step
@@ -97,8 +98,11 @@ def create_filler_wallets(count: int, wallet_dir: str) -> list[Wallet]:
         name = f"filler{i}"
         uri = f"//Filler{i}"
         wallet = Wallet(name=name, path=wallet_dir)
-        wallet.create_coldkey_from_uri(uri, use_password=False, overwrite=True)
-        wallet.create_hotkey_from_uri(uri, use_password=False, overwrite=True)
+        keypair = Keypair.create_from_uri(uri)
+        wallet.coldkey_file.set_keypair(keypair, encrypt=False, overwrite=True)
+        wallet.hotkey_file.set_keypair(keypair, encrypt=False, overwrite=True)
+        wallet.regenerate_coldkeypub(ss58_address=keypair.ss58_address, overwrite=True)
+        wallet.regenerate_hotkeypub(ss58_address=keypair.ss58_address, overwrite=True)
         wallets.append(wallet)
     return wallets
 

@@ -10,7 +10,6 @@ from unittest.mock import patch
 
 import pytest
 import pytest_asyncio
-from bittensor_wallet import Wallet
 from polyfactory.pytest_plugin import register_fixture
 from pylon_commons.types import ArchiveBlocksCutoff, IdentityName
 from sqlalchemy import delete
@@ -31,6 +30,8 @@ from pylon_service.settings import database_settings, settings
 from pylon_service.stores import StoreName
 from tests.factories import BlockFactory, NeuronFactory
 from tests.fixture_contract import EXPECTED_IDENTITIES, assert_test_fixture_contract
+from tests.integration.localchain import dev_accounts
+from tests.integration.localchain.dev_accounts import DevAccount, generate_dev_wallets
 from tests.mock_store import MockStore
 from tests.world import (
     IdentityContacts,
@@ -49,11 +50,31 @@ register_fixture(NeuronFactory)
 TEST_IDENTITIES = identities_module.identities
 
 
-def pytest_configure() -> None:
-    try:
-        assert_test_fixture_contract(settings=settings, identities=TEST_IDENTITIES)
-    except RuntimeError as exc:
-        raise pytest.UsageError(str(exc)) from exc
+@pytest.fixture(scope="session", autouse=True)
+def dev_wallets(tmp_path_factory):
+    """
+    Use generated v11 keyfiles for all default test identities.
+
+    Raises:
+        pytest.UsageError: If the configured test identities do not match the fixture contract.
+    """
+    directory = tmp_path_factory.mktemp("wallets")
+    generate_dev_wallets(directory)
+    for identity in TEST_IDENTITIES.values():
+        if "wallet" in vars(identity):
+            delattr(identity, "wallet")
+    with (
+        patch.object(dev_accounts, "dev_wallets_directory", return_value=directory),
+        patch.object(settings, "bittensor_wallet_path", str(directory)),
+    ):
+        try:
+            assert_test_fixture_contract(settings=settings, identities=TEST_IDENTITIES)
+        except RuntimeError as exc:
+            raise pytest.UsageError(str(exc)) from exc
+        yield directory
+    for identity in TEST_IDENTITIES.values():
+        if "wallet" in vars(identity):
+            delattr(identity, "wallet")
 
 
 @pytest.fixture
@@ -212,8 +233,8 @@ def test_app(mock_bt_contact_pool, mock_evm_contact_router, mock_stores, setup_t
 
 
 @pytest.fixture
-def wallet():
-    return Wallet(path="tests/wallets", name="pylon", hotkey="pylon")
+def wallet(dev_wallets):
+    return DevAccount.ALICE.wallet
 
 
 @pytest.fixture

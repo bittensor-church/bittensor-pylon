@@ -1,8 +1,10 @@
 from __future__ import annotations
 
 import enum
+import io
 import json
 import logging
+import tarfile
 from pathlib import Path
 from typing import Any
 
@@ -10,6 +12,7 @@ from dotenv import dotenv_values
 from testcontainers.core.container import DockerContainer
 from testcontainers.core.image import DockerImage
 from testcontainers.core.wait_strategies import HttpWaitStrategy, LogMessageWaitStrategy
+from testcontainers.core.waiting_utils import WaitStrategyTarget
 
 from tests.helpers import find_free_port
 
@@ -149,6 +152,26 @@ class LocalChainContainer(BaseDockerContainer):
         return f"http://{self.first_network_alias}:{_CHAIN_RPC_PORT}"
 
 
+class PylonWalletsWaitStrategy(HttpWaitStrategy):
+    """
+    Upload generated wallets before starting Pylon, including when Docker runs remotely.
+    """
+
+    def __init__(self, wallets_path: str | Path):
+        super().__init__(_PYLON_SERVICE_PORT, "/schema/openapi.json")
+        self.wallets_path = Path(wallets_path)
+
+    def wait_until_ready(self, container: WaitStrategyTarget) -> None:
+        archive_data = io.BytesIO()
+        with tarfile.open(fileobj=archive_data, mode="w") as archive:
+            archive.add(self.wallets_path, arcname="wallets")
+            # Write the marker last so the service cannot start before all keys are present.
+            archive.addfile(tarfile.TarInfo("wallets/.ready"))
+        if not container.get_wrapped_container().put_archive("/app", archive_data.getvalue()):
+            raise RuntimeError("Could not upload test wallets to Pylon")
+        super().wait_until_ready(container)
+
+
 class PylonServiceContainer(BaseDockerContainer):
     """
     Pylon service container built from Dockerfile.
@@ -172,12 +195,17 @@ class PylonServiceContainer(BaseDockerContainer):
         self._host_api_port = host_api_port if host_api_port is not None else find_free_port()
         self.with_bind_ports(_PYLON_SERVICE_PORT, self._host_api_port)
         self.waiting_for(
-            HttpWaitStrategy(_PYLON_SERVICE_PORT, "/schema/openapi.json")
-            .with_startup_timeout(startup_timeout)
-            .with_poll_interval(0.5)
+            PylonWalletsWaitStrategy(wallets_path).with_startup_timeout(startup_timeout).with_poll_interval(0.5)
         )
 
-        self.with_volume_mapping(str(wallets_path), "/app/wallets", "ro")
+        self.with_command(
+            [
+                "sh",
+                "-c",
+                "while [ ! -f /app/wallets/.ready ]; do sleep 0.05; done; "
+                "exec pylon_service/.venv/bin/python -m pylon_service.uvicorn_entrypoint",
+            ]
+        )
         envs = {k: v for k, v in dotenv_values(_TEST_ENV_PATH).items() if v is not None}
         envs.pop("PYLON_DATABASE_PATH", None)  # use the default path inside the container
         envs.update(

@@ -1,8 +1,6 @@
-import os
 import sys
 import threading
 from contextlib import contextmanager
-from pathlib import Path
 
 import pytest
 import pytest_asyncio
@@ -22,8 +20,6 @@ from tests.integration.localchain.manager import LocalChainManager
 from tests.integration.mitmproxy import WSRecorderClient
 
 logger = structlog.stdlib.get_logger(__name__)
-
-_WALLETS_PATH = os.environ.get("PYLON_TEST_WALLETS_PATH", Path(__file__).resolve().parents[2] / "wallets")
 
 
 @pytest.fixture(scope="package")
@@ -112,21 +108,11 @@ def anvil(docker_network):
 
 
 @pytest.fixture(scope="package")
-def pylon_service(docker_network, localchain, mitmproxy, pylon_service_image):
-    docker_host = os.environ.get("DOCKER_HOST")
-    if docker_host and docker_host.startswith("ssh://"):
-        logger.warning(
-            "docker_via_ssh_check_wallet_mounts",
-            hint=(
-                "Make sure the test wallets are mounted properly, otherwise the tests might fail. "
-                "You may achieve this by copying test wallets to the remote host and setting the "
-                "PYLON_TEST_WALLETS_PATH environment variable on the host machine."
-            ),
-        )
+def pylon_service(docker_network, localchain, mitmproxy, pylon_service_image, dev_wallets):
     with PylonServiceContainer(
         image=str(pylon_service_image),
         chain_url=mitmproxy.internal_ws_url,
-        wallets_path=str(_WALLETS_PATH),
+        wallets_path=dev_wallets,
     ).with_network(docker_network) as container:
         _stream_container_logs_to_console(container, "pylon_service")
         yield container

@@ -5,7 +5,7 @@ from enum import StrEnum
 from typing import Self
 
 import structlog
-from bittensor_wallet import Wallet
+from bittensor.wallet import Wallet
 from pydantic import BaseModel, ConfigDict
 from pylon_commons.types import ArchiveBlocksCutoff, HotkeyName, WalletName
 

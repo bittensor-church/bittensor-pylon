@@ -2,7 +2,7 @@ import asyncio
 
 import pytest
 import pytest_asyncio
-from bittensor_wallet import Wallet
+from bittensor.wallet import Wallet
 from pylon_commons.types import HotkeyName, WalletName
 
 from pylon_service.bittensor.contact import TurboBtContact
@@ -43,7 +43,7 @@ async def acquire_client(
 @pytest.mark.asyncio
 async def test_bittensor_contact_pool_proper_use(barrier_factory):
     barrier = await barrier_factory(6)
-    wallets = [Wallet(), Wallet()]
+    wallets = [Wallet(path="~/.bittensor/wallets/"), Wallet(path="~/.bittensor/wallets/")]
     pool = BittensorContactPool(
         uri="ws://localhost:8000",
         archive_uri="ws://localhost:8001",

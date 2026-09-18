@@ -16,7 +16,8 @@ from urllib.parse import urlparse
 import bittensor_drand
 import docker
 import scalecodec
-from bittensor_wallet import Wallet
+from bittensor.keyfiles import Keypair
+from bittensor.wallet import Wallet
 from eth_account.messages import encode_defunct
 from eth_account.signers.local import LocalAccount
 from eth_utils.crypto import keccak
@@ -26,7 +27,7 @@ from turbobt.client import Bittensor
 from turbobt.subtensor.exceptions import HotKeyAlreadyRegisteredInSubNet
 
 from tests.integration.containers import LocalChainContainer, LocalChainImage
-from tests.integration.localchain.dev_accounts import SUDO_WALLET
+from tests.integration.localchain.dev_accounts import DevAccount
 from tests.integration.mitmproxy import ExtrinsicDecoder
 
 logger = logging.getLogger(__name__)
@@ -233,8 +234,11 @@ class LocalChainManager:
         """
         logger.info("Creating wallet %s", name)
         wallet = Wallet(name=name)
-        wallet.create_coldkey_from_uri(uri, use_password=False, overwrite=True)
-        wallet.create_hotkey_from_uri(uri, use_password=False, overwrite=True)
+        keypair = Keypair.create_from_uri(uri)
+        wallet.coldkey_file.set_keypair(keypair, encrypt=False, overwrite=True)
+        wallet.hotkey_file.set_keypair(keypair, encrypt=False, overwrite=True)
+        wallet.regenerate_coldkeypub(ss58_address=keypair.ss58_address, overwrite=True)
+        wallet.regenerate_hotkeypub(ss58_address=keypair.ss58_address, overwrite=True)
         return wallet
 
     # ---- Chain operations (async, use turbobt) ----
@@ -262,7 +266,12 @@ class LocalChainManager:
                 "System",
                 "set_storage",
                 {"items": [[storage_key, "0x0000"]]},
-                wallet=SUDO_WALLET,
+                wallet=DevAccount.ALICE.wallet,
+                # The default four-block era can expire while a fresh localnet is
+                # still initializing on slower CI runners. This bootstrap write is
+                # only used on a disposable chain, so an immortal extrinsic avoids
+                # racing the era boundary and the localnet's pruned state.
+                era=None,
             )
             await result.wait_for_finalization()
 
@@ -335,7 +344,7 @@ class LocalChainManager:
                 "AdminUtils",
                 "sudo_set_subtoken_enabled",
                 {"netuid": netuid, "subtoken_enabled": True},
-                wallet=SUDO_WALLET,
+                wallet=DevAccount.ALICE.wallet,
             )
             await result.wait_for_finalization()
 
@@ -362,7 +371,7 @@ class LocalChainManager:
             result = await client.subtensor.admin_utils.sudo_set_commit_reveal_weights_enabled(
                 netuid=netuid,
                 enabled=True,
-                wallet=SUDO_WALLET,
+                wallet=DevAccount.ALICE.wallet,
             )
             await result.wait_for_finalization()
         value = await self.get_storage(ChainStorage.COMMIT_REVEAL_WEIGHTS_ENABLED, netuid)
@@ -385,7 +394,7 @@ class LocalChainManager:
             result = await client.subtensor.admin_utils.sudo_set_commit_reveal_weights_enabled(
                 netuid=netuid,
                 enabled=False,
-                wallet=SUDO_WALLET,
+                wallet=DevAccount.ALICE.wallet,
             )
             await result.wait_for_finalization()
         value = await self.get_storage(ChainStorage.COMMIT_REVEAL_WEIGHTS_ENABLED, netuid)
@@ -502,7 +511,7 @@ class LocalChainManager:
             result = await client.subtensor.admin_utils.sudo_set_weights_set_rate_limit(
                 netuid=netuid,
                 weights_set_rate_limit=rate_limit,
-                wallet=SUDO_WALLET,
+                wallet=DevAccount.ALICE.wallet,
             )
             await result.wait_for_finalization()
 
@@ -529,7 +538,7 @@ class LocalChainManager:
                     "netuid": netuid,
                     "interval": reveal_period,
                 },
-                wallet=SUDO_WALLET,
+                wallet=DevAccount.ALICE.wallet,
             )
             await result.wait_for_finalization()
 
@@ -623,7 +632,7 @@ class LocalChainManager:
             result = await client.subtensor.admin_utils.sudo_set_tempo(
                 netuid=netuid,
                 tempo=tempo,
-                wallet=SUDO_WALLET,
+                wallet=DevAccount.ALICE.wallet,
             )
             await result.wait_for_finalization()
 
@@ -702,7 +711,7 @@ class LocalChainManager:
                 "AdminUtils",
                 "sudo_set_max_burn",
                 {"netuid": netuid, "max_burn": max_burn_rao},
-                wallet=SUDO_WALLET,
+                wallet=DevAccount.ALICE.wallet,
             )
             await result.wait_for_finalization()
 
@@ -805,7 +814,7 @@ class LocalChainManager:
                     "netuid": netuid,
                     "max_allowed_uids": max_allowed_uids,
                 },
-                wallet=SUDO_WALLET,
+                wallet=DevAccount.ALICE.wallet,
             )
             await extrinsic.wait_for_finalization()
 
@@ -816,7 +825,7 @@ class LocalChainManager:
                     "netuid": netuid,
                     "mechanism_count": mechanism_count,
                 },
-                wallet=SUDO_WALLET,
+                wallet=DevAccount.ALICE.wallet,
             )
             await extrinsic.wait_for_finalization()
 
@@ -985,7 +994,7 @@ class LocalChainManager:
                 "System",
                 "set_storage",
                 {"items": [[storage_key, storage_value]]},
-                wallet=SUDO_WALLET,
+                wallet=DevAccount.ALICE.wallet,
             )
             await result.wait_for_finalization()
 
