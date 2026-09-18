@@ -10,7 +10,7 @@ from dataclasses import dataclass
 
 from tests.integration.containers import LocalChainContainer, LocalChainImage
 from tests.integration.localchain.common import LOW_TEMPO, log_step
-from tests.integration.localchain.dev_accounts import SUDO_WALLET, DevAccount
+from tests.integration.localchain.dev_accounts import DevAccount
 from tests.integration.localchain.dev_evm_wallets import DevEvmWallet
 from tests.integration.localchain.manager import LocalChainManager
 
@@ -75,7 +75,7 @@ async def _prepare_subnet(manager: LocalChainManager, subnet_config: SubnetConfi
     if not subnet_config.use_commit_reveal and not subnet_config.use_mechanisms:
         await manager.set_serving_rate_limit(netuid=netuid, rate_limit=0)
         await manager.serve_axon(
-            wallet=SUDO_WALLET,
+            wallet=DevAccount.ALICE.wallet,
             netuid=netuid,
             ip=_CONTACT_TEST_AXON_IP,
             port=_CONTACT_TEST_AXON_PORT,

@@ -4,7 +4,7 @@ import asyncio
 from collections.abc import Awaitable, Callable
 
 import structlog
-from bittensor_wallet import Wallet
+from bittensor.wallet import Wallet
 from pylon_commons.models import CommitmentVariant, RevealedCommitment, SubnetRevealedCommitments
 from pylon_commons.types import (
     ArchiveBlocksCutoff,

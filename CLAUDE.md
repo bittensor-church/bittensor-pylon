@@ -98,7 +98,7 @@ Both clients follow the Communicator pattern, allowing for different transport i
 
 ### Key Dependencies
 - **Web Framework**: Litestar (not FastAPI)
-- **Bittensor**: `turbobt` library for blockchain interaction, `bittensor_wallet` for wallet operations
+- **Bittensor**: `turbobt` library for blockchain interaction, `bittensor.wallet` for wallet operations
 - **Config**: `pydantic-settings` with `.env` file support
 - **HTTP Client**: `httpx` for async HTTP requests
 - **Containerization**: Docker
@@ -187,7 +187,7 @@ The service supports multi-subnet/multi-wallet operations through an identity sy
     - `Subnet.get_hyperparameters()`: Fetches the hyperparameters for a subnet
     - `Subnet.get_certificates()`: Fetches all certificates for a subnet
     - `Subnet.generate_certificate_keypair()`: Generates a new certificate keypair
-- **Wallet Integration**: Using a `bittensor_wallet.Wallet` instance: `Bittensor(wallet=...)`
+- **Wallet Integration**: Using a `bittensor.wallet.Wallet` instance: `Bittensor(wallet=...)`
 - **Weight Operations**: On-chain weight setting and commit-reveal weights
 - **Asynchronous Design**: All network and blockchain operations within `turbobt` are inherently asynchronous
 

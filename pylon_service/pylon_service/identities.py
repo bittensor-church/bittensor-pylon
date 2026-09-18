@@ -1,7 +1,7 @@
 import os
 from functools import cached_property
 
-from bittensor_wallet import Wallet
+from bittensor.wallet import Wallet
 from pydantic_settings import BaseSettings, SettingsConfigDict
 from pylon_commons.settings import ENV_FILE
 from pylon_commons.types import HotkeyName, IdentityName, NetUid, PylonAuthToken, WalletName

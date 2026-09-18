@@ -7,7 +7,7 @@ from dataclasses import dataclass
 from typing import Any, Protocol, cast
 
 import structlog
-from bittensor_wallet import Wallet
+from bittensor.wallet import Wallet
 from pylon_commons.constants import LATEST_BLOCK_MARK
 from pylon_commons.currency import Currency, CurrencyRao, Token
 from pylon_commons.models import CommitmentVariant, RevealedCommitment, SubnetRevealedCommitments

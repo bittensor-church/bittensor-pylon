@@ -1,7 +1,7 @@
 PYLON_BITTENSOR_NETUID=12
 PYLON_BITTENSOR_NETWORK=ws://localhost:9944
 PYLON_BITTENSOR_ARCHIVE_NETWORK=ws://localhost:9944
-PYLON_BITTENSOR_WALLET_PATH=tests/wallets
+# The dev_wallets fixture supplies a temporary directory of native v11 wallets.
 PYLON_DEBUG=True
 
 PYLON_DATABASE_PATH=tests/.tmp/pylon-test.db

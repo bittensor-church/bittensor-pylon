@@ -1,7 +1,7 @@
 import ipaddress
 
 import pytest
-from bittensor_wallet import Wallet
+from bittensor.wallet import Wallet
 from pylon_commons.currency import Currency, Token
 from pylon_commons.models import AxonInfo, AxonProtocol, Block, Neuron, Stakes
 from pylon_commons.types import (

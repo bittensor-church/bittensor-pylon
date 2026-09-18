@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
 
-from bittensor_wallet import Wallet
+from bittensor.wallet import Wallet
 from pylon_commons.models import BittensorModel
 from pylon_commons.types import HotkeyName, NetUid
 
