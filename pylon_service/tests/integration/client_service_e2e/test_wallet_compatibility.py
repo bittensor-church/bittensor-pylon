@@ -1,7 +1,7 @@
 """
 Legacy wallet generation -> PylonClient -> Pylon HTTP service -> signed localchain extrinsic.
 
-Each format uses a dedicated chain so these writes cannot affect other E2E tests.
+Each wallet format gets its own subnet on the shared E2E localchain.
 """
 
 import json
@@ -13,9 +13,8 @@ import pytest_asyncio
 from bittensor.wallet import Wallet
 from pylon_client.artanis import CommitmentDataHex, Config, IdentityName, PylonAuthToken, PylonClient, PylonTimeout
 
-from tests.integration.containers import LocalChainContainer, LocalChainImage, PylonServiceContainer
+from tests.integration.containers import PylonServiceContainer
 from tests.integration.localchain.dev_accounts import DevAccount
-from tests.integration.localchain.manager import LocalChainManager
 
 
 @pytest.fixture(
@@ -91,31 +90,16 @@ def generated_legacy_wallet(request, tmp_path_factory):
 
 
 @pytest_asyncio.fixture(scope="module")
-async def wallet_compatibility_chain(docker_network, generated_legacy_wallet):
+async def wallet_compatibility_service(docker_network, localchain, generated_legacy_wallet, pylon_service_image, anvil):
     wallet, _, _ = generated_legacy_wallet
-    container = (
-        LocalChainContainer(image=LocalChainImage.DEFAULT)
-        .with_network(docker_network)
-        .with_network_aliases("wallet-compatibility-chain")
-    )
-    async with LocalChainManager(container) as manager:
-        await manager.disable_admin_freeze_window()
-        netuid = await manager.get_total_networks()
-        await manager.register_subnet(DevAccount.ALICE.wallet)
-        await manager.transfer(DevAccount.ALICE.wallet, wallet.coldkeypub.ss58_address, 10_000)
-        await manager.register_neuron(wallet, netuid)
-        yield manager, netuid
+    netuid = await localchain.get_total_networks()
+    await localchain.register_subnet(DevAccount.ALICE.wallet)
+    await localchain.transfer(DevAccount.ALICE.wallet, wallet.coldkeypub.ss58_address, 10_000)
+    await localchain.register_neuron(wallet, netuid)
 
-
-@pytest.fixture(scope="module")
-def wallet_compatibility_service(
-    docker_network, wallet_compatibility_chain, generated_legacy_wallet, pylon_service_image, anvil
-):
-    manager, netuid = wallet_compatibility_chain
-    wallet, _, _ = generated_legacy_wallet
     container = PylonServiceContainer(
         image=str(pylon_service_image),
-        chain_url=manager.internal_ws_url,
+        chain_url=localchain.internal_ws_url,
         wallets_path=wallet.path,
         startup_timeout=60,
     ).with_network(docker_network)
