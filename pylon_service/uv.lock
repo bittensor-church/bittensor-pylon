@@ -128,6 +128,15 @@ wheels = [
 ]
 
 [[package]]
+name = "annotated-doc"
+version = "0.0.5"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/5a/8e/38aa427ed5402449e226975b649c5dc73ccadfefeb95e6aecb8f8ea4b6b6/annotated_doc-0.0.5.tar.gz", hash = "sha256:c7e58ce09192557605d8bbd92836d7e1d520ac9580096042c0bfd197efacf1bb", size = 10758, upload-time = "2026-07-28T13:50:58.129Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/3e/30/e900b21425a860e195f32e37657aa1f7c7f2b1bfb26f03ca209b90933c06/annotated_doc-0.0.5-py3-none-any.whl", hash = "sha256:117bac03a25ede5df5440e855b32d556049ca169ead221505badf432fed4b101", size = 5302, upload-time = "2026-07-28T13:50:57.239Z" },
+]
+
+[[package]]
 name = "annotated-types"
 version = "0.7.0"
 source = { registry = "https://pypi.org/simple" }
@@ -310,6 +319,35 @@ wheels = [
 ]
 
 [[package]]
+name = "bittensor"
+version = "11.1.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "bittensor-core" },
+    { name = "eth-account" },
+    { name = "qrcode" },
+    { name = "rich" },
+    { name = "typer" },
+    { name = "websockets" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/e5/78/6a67e5814663debefa20d180c6d4df7a581eace2ffc3c196409d46808025/bittensor-11.1.0.tar.gz", hash = "sha256:97be7e9d523ca36d93eddc7b96318b42a7bbd9512b53c757c5807a7dafb4371d", size = 1246485, upload-time = "2026-08-14T12:16:31.412Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/cc/8f/c9164214528634ccde0382a5a3eb820fa58172e11d68e5244851ade683ba/bittensor-11.1.0-py3-none-any.whl", hash = "sha256:d84e33169249c56c41b4b43f6b2f4ed80bc2fd98afcb69a3d5844720a4d72b58", size = 674330, upload-time = "2026-08-14T12:16:23.053Z" },
+]
+
+[[package]]
+name = "bittensor-core"
+version = "0.1.3"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/87/1d/6fdd630e46ae3a84e016415027900b0aa91d9d3265501b8d5fcb1491bb6d/bittensor_core-0.1.3.tar.gz", hash = "sha256:c8a4b3f3c560bb5d9c23c635a4e00122c3ef425b3aa0083200878eb3060d2a47", size = 280290, upload-time = "2026-08-14T12:16:32.592Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/fb/2b/99b008e65d85113bbe91505b0b8a8590a82732683a3ad22706d7d8d4d012/bittensor_core-0.1.3-cp310-abi3-macosx_10_12_x86_64.whl", hash = "sha256:8e85f87844be5dc32fdec5ca2c4b6a5f13f9c70379d39ad43d5efef4ee5c4c63", size = 4566908, upload-time = "2026-08-14T12:16:24.653Z" },
+    { url = "https://files.pythonhosted.org/packages/46/d4/1356a04060d10c12f0b9e5f8f743c49d29bb70de511b1a8092c8123471ee/bittensor_core-0.1.3-cp310-abi3-macosx_11_0_arm64.whl", hash = "sha256:756f62eed2123d1a050634b769c728bfc0eab72527fef38598505703d3e277a4", size = 4727416, upload-time = "2026-08-14T12:16:26.474Z" },
+    { url = "https://files.pythonhosted.org/packages/86/19/be767d304b3c111fd4be2a00d57e668396e2bdba241e57a966cd1d9a99a5/bittensor_core-0.1.3-cp310-abi3-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:48df1f23b0dad07f588bc8cf66dd107b25edf0e87c10c83771e66ad3285ec14d", size = 5188339, upload-time = "2026-08-14T12:16:28.205Z" },
+    { url = "https://files.pythonhosted.org/packages/93/83/08b871ee350b90f7ae0e373b17d732791d00487d0df55db897fc1ab6c36e/bittensor_core-0.1.3-cp310-abi3-manylinux_2_28_aarch64.whl", hash = "sha256:f8f97b3cc55b16a4250432d6ee4c82772ac8ee11a91b01e310845a701ab0c540", size = 5219509, upload-time = "2026-08-14T12:16:29.815Z" },
+]
+
+[[package]]
 name = "bittensor-drand"
 version = "1.0.1"
 source = { registry = "https://pypi.org/simple" }
@@ -386,8 +424,8 @@ dependencies = [
     { name = "aiosqlite" },
     { name = "alembic" },
     { name = "apscheduler" },
+    { name = "bittensor" },
     { name = "bittensor-pylon-commons" },
-    { name = "bittensor-wallet" },
     { name = "litestar", extra = ["prometheus", "standard"] },
     { name = "opentelemetry-exporter-otlp-proto-http" },
     { name = "opentelemetry-instrumentation-aiohttp-client" },
@@ -433,8 +471,8 @@ requires-dist = [
     { name = "aiosqlite", specifier = ">=0.22.1" },
     { name = "alembic", specifier = ">=1.18.4" },
     { name = "apscheduler" },
+    { name = "bittensor", specifier = ">=11.0.0,<12" },
     { name = "bittensor-pylon-commons", editable = "../pylon_commons" },
-    { name = "bittensor-wallet" },
     { name = "litestar", extras = ["prometheus", "standard"], specifier = ">=2.24,<3" },
     { name = "opentelemetry-exporter-otlp-proto-http", specifier = "~=1.41" },
     { name = "opentelemetry-instrumentation-aiohttp-client", specifier = "~=0.63b1" },
@@ -446,7 +484,7 @@ requires-dist = [
     { name = "sqlalchemy", specifier = ">=2.0.49" },
     { name = "structlog", specifier = ">=25,<26" },
     { name = "tenacity" },
-    { name = "turbobt", specifier = ">=1.3.1" },
+    { name = "turbobt", specifier = ">=1.3.2" },
     { name = "uvicorn", specifier = ">=0.35.0" },
     { name = "web3", specifier = ">=7.16.0" },
 ]
@@ -473,24 +511,6 @@ dev = [
     { name = "syrupy", specifier = ">=4,<5" },
     { name = "testcontainers", specifier = ">=4.0,<5" },
     { name = "time-machine", specifier = ">=3,<4" },
-]
-
-[[package]]
-name = "bittensor-wallet"
-version = "4.0.1"
-source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/74/69/8e5eb1131e3fb750ead1c1b1d2b628dede7b41edfad835cb78764dd88ceb/bittensor_wallet-4.0.1.tar.gz", hash = "sha256:edc2588d5e272835285e4171dd3daf862149f617015bf52e43d433d8e5c297c5", size = 83080, upload-time = "2025-10-28T20:19:33.679Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/5f/41/2712bac4378937b3bd9d65a10f16d853f2659b10033e9f13ca025eefcf02/bittensor_wallet-4.0.1-cp313-cp313-macosx_10_12_x86_64.whl", hash = "sha256:ae561a2450f3ae48cec16b0a9c3de9c4c6763802518f50ca3a6dc23c62073405", size = 840875, upload-time = "2025-10-28T20:19:30.038Z" },
-    { url = "https://files.pythonhosted.org/packages/52/5a/53f7da5c7961f1b875739e84d86974321c50aba16e963eaca6f2a1044ac2/bittensor_wallet-4.0.1-cp313-cp313-macosx_11_0_arm64.whl", hash = "sha256:821aa6e20ded2c42c5f050751c582ef18ae58a6398acd1c96f0710b70a83f8f1", size = 780489, upload-time = "2025-10-28T20:19:22.192Z" },
-    { url = "https://files.pythonhosted.org/packages/0b/5f/014d24b338b7319490b04c147899401210bbe02c7600d9e2246a175ef248/bittensor_wallet-4.0.1-cp313-cp313-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:89f9440bf712f7783c1c40d97b378ca9fce65ce9c649dfa980e564bd5b39eb5d", size = 3001451, upload-time = "2025-10-28T20:18:55.226Z" },
-    { url = "https://files.pythonhosted.org/packages/a8/27/b68c6ad137029d8c3c38cc8dab9b2a6a19db7246eb82af06773b58814585/bittensor_wallet-4.0.1-cp313-cp313-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:780a8a4a75987ad6fd9a829cf85952ae0462bccc06320532e1a8f246616b9e4c", size = 3194202, upload-time = "2025-10-28T20:19:14.138Z" },
-    { url = "https://files.pythonhosted.org/packages/9c/74/3ee0013ffadacf34a1d2c565e8ea289208a0ea83f5aaa1f3d8bdb42155d2/bittensor_wallet-4.0.1-cp313-cp313-manylinux_2_5_i686.manylinux1_i686.whl", hash = "sha256:0e6b28d0f5bffd0065ec424d0b4838e06e24c7e92d149df7240b879073ee9dd9", size = 2986662, upload-time = "2025-10-28T20:19:05.198Z" },
-    { url = "https://files.pythonhosted.org/packages/4b/ae/545cce71c0704cc371f454416a87c1d65ad71e1221b2ffe82344dbf90423/bittensor_wallet-4.0.1-cp314-cp314-macosx_10_12_x86_64.whl", hash = "sha256:e171c50bc043633b8404869145f1a1650854e976c1d5529cb4a5144512c46d40", size = 840046, upload-time = "2025-10-28T20:19:31.302Z" },
-    { url = "https://files.pythonhosted.org/packages/03/89/9a0856bf573039a47e36d3da3c3095e6fae828126d6e74e07d975810501b/bittensor_wallet-4.0.1-cp314-cp314-macosx_11_0_arm64.whl", hash = "sha256:353d2dc2494e4a7f73cd0a0fef31ad74c58dea90bedc409c83f1b2e3824b8b7d", size = 779725, upload-time = "2025-10-28T20:19:23.289Z" },
-    { url = "https://files.pythonhosted.org/packages/f1/ca/5303187937db74416e748c7047ad30661e22be6783784b203ffaea01d62e/bittensor_wallet-4.0.1-cp314-cp314-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:c5d11ed8ca48a4bf1d498561248777178bd851b9e3dca35662341c8dd160c8ea", size = 3001655, upload-time = "2025-10-28T20:18:56.826Z" },
-    { url = "https://files.pythonhosted.org/packages/c3/5f/253128efc1acb8e42cdd64932dbf48bae5c54a6a0cf2dab38b48ebb0b908/bittensor_wallet-4.0.1-cp314-cp314-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:05409a6e0b676901d52fd50c51c00a6ab2966600b0de8b5bd606be592c5f1151", size = 3193818, upload-time = "2025-10-28T20:19:15.925Z" },
-    { url = "https://files.pythonhosted.org/packages/09/75/03d5f5d5de0cd12be4eaead90701a32838de1e51affdf7848841d2c009de/bittensor_wallet-4.0.1-cp314-cp314-manylinux_2_5_i686.manylinux1_i686.whl", hash = "sha256:4c63717b9c08db65a74b4e59aaff4bb9afbcaa8babdd865a16f7f4cc4c212534", size = 2986929, upload-time = "2025-10-28T20:19:06.618Z" },
 ]
 
 [[package]]
@@ -2333,6 +2353,18 @@ wheels = [
 ]
 
 [[package]]
+name = "qrcode"
+version = "8.2"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "colorama", marker = "sys_platform == 'win32'" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/8f/b2/7fc2931bfae0af02d5f53b174e9cf701adbb35f39d69c2af63d4a39f81a9/qrcode-8.2.tar.gz", hash = "sha256:35c3f2a4172b33136ab9f6b3ef1c00260dd2f66f858f24d88418a015f446506c", size = 43317, upload-time = "2025-05-01T15:44:24.726Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/dd/b8/d2d6d731733f51684bbf76bf34dab3b70a9148e8f2cef2bb544fccec681a/qrcode-8.2-py3-none-any.whl", hash = "sha256:16e64e0716c14960108e85d853062c9e8bba5ca8252c0b4d0231b9df4060ff4f", size = 45986, upload-time = "2025-05-01T15:44:22.781Z" },
+]
+
+[[package]]
 name = "questionary"
 version = "2.1.1"
 source = { registry = "https://pypi.org/simple" }
@@ -2542,6 +2574,15 @@ litestar = [
 ]
 
 [[package]]
+name = "shellingham"
+version = "1.5.4"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/58/15/8b3609fd3830ef7b27b655beb4b4e9c62313a4e8da8c676e142cc210d58e/shellingham-1.5.4.tar.gz", hash = "sha256:8dbca0739d487e5bd35ab3ca4b36e11c4078f3a234bfce294b0a0291363404de", size = 10310, upload-time = "2023-10-24T04:13:40.426Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/e0/f9/0595336914c5619e5f28a1fb793285925a8cd4b432c9da0a987836c7f822/shellingham-1.5.4-py2.py3-none-any.whl", hash = "sha256:7ecfff8f2fd72616f7481040475a65b2bf8af90a56c89140852d1120324e8686", size = 9755, upload-time = "2023-10-24T04:13:38.866Z" },
+]
+
+[[package]]
 name = "six"
 version = "1.17.0"
 source = { registry = "https://pypi.org/simple" }
@@ -2725,20 +2766,35 @@ wheels = [
 
 [[package]]
 name = "turbobt"
-version = "1.3.1"
+version = "1.3.2"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
+    { name = "bittensor" },
     { name = "bittensor-drand" },
-    { name = "bittensor-wallet" },
     { name = "eciespy" },
     { name = "httpx" },
     { name = "scalecodec" },
     { name = "websockets" },
     { name = "xxhash" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/8f/8b/ff46d3760a396ac135cf6adccfdab07cbcf50d94f8dcae224580cf158d33/turbobt-1.3.1.tar.gz", hash = "sha256:695048e86bb0fd464b3dc9313d89b29711dbe256f4b2028316682a6a8499c46a", size = 141204, upload-time = "2026-08-04T15:23:53.901Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/0a/e4/497c4f5724c5c739ad97bd1100265486da18934feed55cb2dd2250c698fa/turbobt-1.3.2.tar.gz", hash = "sha256:00f3de671439a9c06867b887a50e01080188daa79a02e224d7ecd6fca9f5e4ed", size = 143100, upload-time = "2026-09-18T05:44:40.931Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/00/e9/0183f0ea5dad421ef54ad7e874c7077b70690aef332156b53d9f21a9fcac/turbobt-1.3.1-py3-none-any.whl", hash = "sha256:5dcd926ce22bf32d8255eef02be0e5516f8786e687dbd8097743e235e572ed7e", size = 46410, upload-time = "2026-08-04T15:23:52.232Z" },
+    { url = "https://files.pythonhosted.org/packages/8a/f6/0d24f64b260634fbd63ff3a9969a52ed1940dd90aeea7e289d1049127838/turbobt-1.3.2-py3-none-any.whl", hash = "sha256:4ff98b67af56b09b5880cdf60e8b5bd5a4e2e246d6038fcfb6c9dd5130550517", size = 46420, upload-time = "2026-09-18T05:44:39.257Z" },
+]
+
+[[package]]
+name = "typer"
+version = "0.27.2"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "annotated-doc" },
+    { name = "colorama", marker = "sys_platform == 'win32'" },
+    { name = "rich" },
+    { name = "shellingham" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/16/f7/57713ba479fd405eb76de31404b2c744c289e336b2d999511ebf51e496f7/typer-0.27.2.tar.gz", hash = "sha256:269b7eb9d3c202ca84b4bc9618cb04ebb43d3d4d1e567e4c768607232c05f945", size = 204045, upload-time = "2026-08-28T10:26:55.046Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/dc/bf/205d0004930ede8f542fb58f601526fccf4ae7626075ca1e6c4de5d3d652/typer-0.27.2-py3-none-any.whl", hash = "sha256:b3a5fc4342d5fc8fda8fc3010b1cf117e9249aab7fae800c2eff62fd3842d97d", size = 123130, upload-time = "2026-08-28T10:26:53.752Z" },
 ]
 
 [[package]]
