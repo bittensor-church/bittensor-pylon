@@ -267,6 +267,11 @@ class LocalChainManager:
                 "set_storage",
                 {"items": [[storage_key, "0x0000"]]},
                 wallet=DevAccount.ALICE.wallet,
+                # The default four-block era can expire while a fresh localnet is
+                # still initializing on slower CI runners. This bootstrap write is
+                # only used on a disposable chain, so an immortal extrinsic avoids
+                # racing the era boundary and the localnet's pruned state.
+                era=None,
             )
             await result.wait_for_finalization()
 
