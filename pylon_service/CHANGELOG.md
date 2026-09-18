@@ -1,3 +1,9 @@
+## service-v2.3.3 (2026-09-18)
+
+### Fix
+
+- upgrade to support bittensor v11 wallets
+
 ## service-v2.3.2 (2026-08-05)
 
 ### Fix
