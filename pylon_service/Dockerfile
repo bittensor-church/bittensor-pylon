@@ -15,7 +15,7 @@ COPY pylon_commons ./pylon_commons
 COPY pylon_service ./pylon_service
 
 # install uv and dependencies
-COPY --from=ghcr.io/astral-sh/uv:0.10 /uv /uvx /bin/
+COPY --from=ghcr.io/astral-sh/uv:0.13.5 /uv /uvx /bin/
 RUN cd pylon_service && /bin/uv sync --no-dev --no-sources-package bittensor-pylon-client
 
 # service version injected at build time (no .git in image, so hatch-vcs cannot derive it at runtime)

@@ -132,6 +132,10 @@ from pylon_client.artanis.v1 import Block, Neuron
 
 ### Setup
 
+Use uv 0.13.4 or newer and sync the updated lockfiles, which require certifi 2026.10.19
+or newer for the eMudhra certificate fix. Refresh existing nox environments after upgrading
+uv so they do not retain an older executable. CI and the service image use uv 0.13.5.
+
 ```bash
 # Install dependencies for a specific package
 cd pylon_client && uv sync --group dev
