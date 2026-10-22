@@ -1,3 +1,10 @@
+## client-v2.3.1 (2026-10-23)
+
+### Fix
+
+- pin patched Node for Pyright in CI
+- update certificate bundles and uv after eMudhra compromise
+
 ## client-v2.3.0 (2026-07-09)
 
 ### Feat
