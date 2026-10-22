@@ -1,3 +1,10 @@
+## service-v2.3.4 (2026-10-22)
+
+### Fix
+
+- pin patched Node for Pyright in CI
+- update certificate bundles and uv after eMudhra compromise
+
 ## service-v2.3.3 (2026-09-18)
 
 ### Fix
