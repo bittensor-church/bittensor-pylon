@@ -72,6 +72,8 @@ raw-options.git_describe_command = ["git", "describe", "--dirty", "--tags", "--l
 packages = ["pylon_service"]
 
 [tool.uv]
+required-version = ">=0.13.4"
+constraint-dependencies = ["certifi>=2026.10.19"]
 package = true
 
 [tool.uv.sources]
