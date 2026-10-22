@@ -9,6 +9,12 @@ inputs:
 runs:
   using: composite
   steps:
+    - name: Set up patched Node.js for Pyright
+      uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38  # v6
+      with:
+        node-version-file: .node-version
+        package-manager-cache: false
+
     - name: Set up Python
       uses: actions/setup-python@v5
       with:

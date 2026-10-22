@@ -29,7 +29,10 @@ def format(session):
     session.run("uv", "sync", "--active", "--group", "dev")
     session.run("ruff", "format", ".")
     session.run("ruff", "check", "--fix", ".")
-    session.run("pyright")
+    session.run(
+        "pyright",
+        env={"PYRIGHT_PYTHON_NODEJS_WHEEL": "0", "PYRIGHT_PYTHON_GLOBAL_NODE": "1"},
+    )
 
 
 @nox.session(name="lint", python=LINT_PYTHON_VERSION)
@@ -37,4 +40,7 @@ def lint(session):
     session.run("uv", "sync", "--active", "--group", "dev")
     session.run("ruff", "format", "--check", "--diff", ".")
     session.run("ruff", "check", ".")
-    session.run("pyright")
+    session.run(
+        "pyright",
+        env={"PYRIGHT_PYTHON_NODEJS_WHEEL": "0", "PYRIGHT_PYTHON_GLOBAL_NODE": "1"},
+    )
