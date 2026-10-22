@@ -144,6 +144,19 @@ cd pylon_client && uv sync --group dev
 cp pylon_service/envs/test_env.template .env
 ```
 
+Type checks use Pyright with an external Node.js runtime. CI installs Node 24.22.1
+from `.node-version`. Before running Nox locally, install that version with your
+Node version manager and make sure it is selected on `PATH`:
+
+```bash
+node --version  # expected: v24.22.1
+```
+
+Patched Node 22.23.4+ or 26.12.1+ also work. Nox disables Pyright's bundled Node
+wheel preference but does not enforce a local version. Keep a patched Node on
+`PATH` to avoid Pyright's automatic Node download fallback when no runtime is
+found. Local runtime updates are the developer's responsibility.
+
 ### Running Tests
 
 Tests can be run separately for every project or collectively using root noxfile.
