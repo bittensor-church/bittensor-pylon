@@ -1,3 +1,9 @@
+## service-v2.4.0 (2026-11-23)
+
+### Feat
+
+- read neuron incentive and last update per mechanism (#106)
+
 ## service-v2.3.4 (2026-10-22)
 
 ### Fix
