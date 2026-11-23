@@ -1,3 +1,9 @@
+## client-v2.4.0 (2026-11-23)
+
+### Feat
+
+- read neuron incentive and last update per mechanism (#106)
+
 ## client-v2.3.1 (2026-10-23)
 
 ### Fix
