@@ -509,7 +509,15 @@ class TurboBtContact(AbstractBittensorContact):
     ) -> MechanismMetrics | None:
         async def read(client: Bittensor) -> MechanismMetrics | None:
             state = client.subtensor.state
-            count = await state.getStorage("SubtensorModule.MechanismCountCurrent", netuid, block_hash=block.hash)
+            # Runtimes that predate mechanisms lack MechanismCountCurrent; turbobt's getStorage would then fail with
+            # an AttributeError, so treat the subnet as having only mechanism 0.
+            await state.substrate._init_runtime()
+            metadata = state.substrate._metadata
+            assert metadata is not None, "Runtime metadata should be loaded"
+            pallet = metadata.get_metadata_pallet("SubtensorModule")
+            count = None
+            if pallet.get_storage_function("MechanismCountCurrent") is not None:
+                count = await state.getStorage("SubtensorModule.MechanismCountCurrent", netuid, block_hash=block.hash)
             if not 0 <= mechanism_id < (count or 1):
                 return None
             index = mechanism_id * GLOBAL_MAX_SUBNET_COUNT + netuid

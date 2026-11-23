@@ -2,18 +2,18 @@ import asyncio
 import contextlib
 import logging
 from typing import Any, cast
-from unittest.mock import AsyncMock, create_autospec, patch
+from unittest.mock import AsyncMock, MagicMock, create_autospec, patch
 
 import pytest
 import pytest_asyncio
 from pylon_commons.models import Block
-from pylon_commons.types import BittensorNetwork, BlockHash, BlockNumber
+from pylon_commons.types import BittensorNetwork, BlockHash, BlockNumber, MechanismId, NetUid
 from turbobt import BlockReference as TurboBtBlockReference
 from turbobt.block import Block as TurboBtBlock
 from turbobt.client import Bittensor
 from websockets.exceptions import ConnectionClosedError, ConnectionClosedOK
 
-from pylon_service.bittensor.contact import TurboBtContact
+from pylon_service.bittensor.contact import MechanismMetrics, TurboBtContact
 from pylon_service.bittensor.exceptions import BittensorTransportError
 
 
@@ -259,4 +259,41 @@ async def test_non_runtime_error_propagates_without_recreation(open_contact, bit
         await open_contact.get_block(BlockNumber(42))
 
     raw_client.__aexit__.assert_not_called()
+    assert bittensor_ctor.call_count == 1
+
+
+@pytest.fixture
+def pre_mechanism_state(raw_client):
+    """
+    Chain state whose runtime has no MechanismCountCurrent storage.
+    """
+    state = MagicMock()
+    state.substrate._init_runtime = AsyncMock()
+    pallet = state.substrate._metadata.get_metadata_pallet.return_value
+    pallet.get_storage_function.side_effect = lambda name: None if name == "MechanismCountCurrent" else MagicMock()
+    storage = {"SubtensorModule.Incentive": [32768], "SubtensorModule.LastUpdate": [42]}
+    state.getStorage = AsyncMock(side_effect=lambda key, *params, block_hash=None: storage[key])
+    raw_client.subtensor = MagicMock(state=state)
+    return state
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    "mechanism_id,expected",
+    [
+        pytest.param(0, MechanismMetrics(incentives=[32768], last_updates=[42]), id="mechanism_zero"),
+        pytest.param(1, None, id="mechanism_one"),
+    ],
+)
+async def test_mechanism_metrics_on_runtime_without_mechanisms(
+    open_contact, bittensor_ctor, pre_mechanism_state, mechanism_id, expected
+):
+    """
+    Test that a runtime without MechanismCountCurrent has only mechanism 0 and does not trigger a reconnect.
+    """
+    block = Block(number=BlockNumber(1), hash=BlockHash("0x01"))
+
+    result = await open_contact.get_mechanism_metrics(NetUid(1), MechanismId(mechanism_id), block)
+
+    assert result == expected
     assert bittensor_ctor.call_count == 1

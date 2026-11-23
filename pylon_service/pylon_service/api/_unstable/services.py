@@ -103,26 +103,25 @@ class NeuronService(BaseService):
         block = await self.contact_router.get_block(block_number)
         if block is None:
             raise BlockNotFoundError(f"Block {block_number} not found.")
-        neurons = await self.contact_router.get_neurons(netuid, block)
-        return await self._for_mechanism(neurons, netuid, mechanism_id)
+        return await self._neurons_at(netuid, block, mechanism_id)
 
     async def get_latest_neurons(self, netuid: NetUid, mechanism_id: MechanismId = MechanismId(0)) -> SubnetNeurons:
         block = await self.contact_router.get_latest_block()
-        neurons = await self.contact_router.get_neurons(netuid, block)
-        return await self._for_mechanism(neurons, netuid, mechanism_id)
+        return await self._neurons_at(netuid, block, mechanism_id)
 
-    async def _for_mechanism(self, neurons: SubnetNeurons, netuid: NetUid, mechanism_id: MechanismId) -> SubnetNeurons:
+    async def _neurons_at(self, netuid: NetUid, block: Block, mechanism_id: MechanismId) -> SubnetNeurons:
         """
-        Overlay the mechanism's incentive and last update; mechanism 0 is what neuron info already holds.
+        Read neurons with the mechanism's incentive and last update; mechanism 0 is what neuron info already holds.
 
         Raises:
             MechanismNotFoundError: The subnet has no such mechanism.
         """
         if mechanism_id == 0:
-            return neurons
-        metrics = await self.contact_router.get_mechanism_metrics(netuid, mechanism_id, neurons.block)
+            return await self.contact_router.get_neurons(netuid, block)
+        metrics = await self.contact_router.get_mechanism_metrics(netuid, mechanism_id, block)
         if metrics is None:
             raise MechanismNotFoundError(f"Mechanism {mechanism_id} not found on subnet {netuid}.")
+        neurons = await self.contact_router.get_neurons(netuid, block)
         return SubnetNeurons(
             block=neurons.block,
             mechanism_id=mechanism_id,

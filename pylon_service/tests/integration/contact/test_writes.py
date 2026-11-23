@@ -85,6 +85,7 @@ async def test_mechanism_set_weights_succeeds_on_direct_subnet(
     participant_uids_factory, write_contact, mechanism_direct_netuid, turbobt_client, snapshot
 ):
     participant_uids = await participant_uids_factory(write_contact, mechanism_direct_netuid)
+    before = await write_contact.get_latest_block()
 
     await write_contact.set_weights(
         mechanism_direct_netuid,
@@ -99,6 +100,12 @@ async def test_mechanism_set_weights_succeeds_on_direct_subnet(
         participant_uids[DevAccount.ALICE], mechanism_id=MechanismId(1)
     )
     assert weights == snapshot
+
+    metrics = await write_contact.get_mechanism_metrics(
+        mechanism_direct_netuid, MechanismId(1), await write_contact.get_latest_block()
+    )
+    assert metrics is not None
+    assert metrics.last_update(participant_uids[DevAccount.ALICE]) > before.number
 
 
 @pytest.mark.asyncio

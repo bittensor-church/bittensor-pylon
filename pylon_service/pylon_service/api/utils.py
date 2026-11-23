@@ -72,7 +72,7 @@ async def check_identity_netuid(request: Request) -> Response | None:
     identity = identities.get(identity_name)
     if identity and identity.netuid != netuid:
         correct_path = re.sub(r"/subnet/\d+", f"/subnet/{identity.netuid}", request.url.path, count=1)
-        return Redirect(path=correct_path, status_code=308)
+        return Redirect(path=correct_path, status_code=308, query_params=request.query_params or None)
     return None
 
 
