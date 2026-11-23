@@ -38,6 +38,7 @@ from pylon_service.api.services import (
     CertificateNotFoundError,
     CommitmentNotFoundError,
     ExtrinsicNotFoundError,
+    MechanismNotFoundError,
     RecentObjectMissingError,
     RecentObjectStaleError,
 )
@@ -96,16 +97,42 @@ class PriceService(BaseService):
 
 
 class NeuronService(BaseService):
-    async def get_neurons(self, netuid: NetUid, block_number: BlockNumber) -> SubnetNeurons:
+    async def get_neurons(
+        self, netuid: NetUid, block_number: BlockNumber, mechanism_id: MechanismId = MechanismId(0)
+    ) -> SubnetNeurons:
         block = await self.contact_router.get_block(block_number)
         if block is None:
             raise BlockNotFoundError(f"Block {block_number} not found.")
+        neurons = await self.contact_router.get_neurons(netuid, block)
+        return await self._for_mechanism(neurons, netuid, mechanism_id)
 
-        return await self.contact_router.get_neurons(netuid, block)
-
-    async def get_latest_neurons(self, netuid: NetUid) -> SubnetNeurons:
+    async def get_latest_neurons(self, netuid: NetUid, mechanism_id: MechanismId = MechanismId(0)) -> SubnetNeurons:
         block = await self.contact_router.get_latest_block()
-        return await self.contact_router.get_neurons(netuid, block)
+        neurons = await self.contact_router.get_neurons(netuid, block)
+        return await self._for_mechanism(neurons, netuid, mechanism_id)
+
+    async def _for_mechanism(self, neurons: SubnetNeurons, netuid: NetUid, mechanism_id: MechanismId) -> SubnetNeurons:
+        """
+        Overlay the mechanism's incentive and last update; mechanism 0 is what neuron info already holds.
+
+        Raises:
+            MechanismNotFoundError: The subnet has no such mechanism.
+        """
+        if mechanism_id == 0:
+            return neurons
+        metrics = await self.contact_router.get_mechanism_metrics(netuid, mechanism_id, neurons.block)
+        if metrics is None:
+            raise MechanismNotFoundError(f"Mechanism {mechanism_id} not found on subnet {netuid}.")
+        return SubnetNeurons(
+            block=neurons.block,
+            mechanism_id=mechanism_id,
+            neurons={
+                hotkey: neuron.model_copy(
+                    update={"incentive": metrics.incentive(neuron.uid), "last_update": metrics.last_update(neuron.uid)}
+                )
+                for hotkey, neuron in neurons.neurons.items()
+            },
+        )
 
     async def get_recent_neurons(self, recent_object_provider: RecentObjectProvider) -> SubnetNeurons:
         try:

@@ -50,3 +50,7 @@ class CommitmentSubmissionFailedError(ServiceError):
 
 class HyperparamsNotFoundError(ServiceError):
     pass
+
+
+class MechanismNotFoundError(ServiceError):
+    pass

@@ -139,6 +139,7 @@ The service supports multi-subnet/multi-wallet operations through an identity sy
 - **GET `/api/v1/identity/{identity_name}/subnet/{netuid}/block/{block_number}/neurons`**: Identity version
 - **GET `/api/v1/identity/{identity_name}/subnet/{netuid}/block/latest/neurons`**: Identity version
 - **GET `/api/v1/identity/{identity_name}/subnet/{netuid}/block/recent/neurons`**: Identity version
+- The at-block and latest neuron endpoints accept an optional `?mechanism_id=<n>` query parameter (default 0). Only `incentive` and `last_update` are per mechanism; other fields are subnet-wide. The response carries `mechanism_id`. Recent (cached) neurons and validators are always mechanism 0. A mechanism the subnet does not have returns 404.
 
 #### Validators (Open Access & Identity)
 - **GET `/api/v1/subnet/{netuid}/block/{block_number}/validators`**: Get validators at specific block

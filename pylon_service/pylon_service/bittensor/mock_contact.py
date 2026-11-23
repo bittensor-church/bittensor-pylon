@@ -23,7 +23,7 @@ from pylon_commons.types import (
     Weight,
 )
 
-from pylon_service.bittensor.contact import AbstractBittensorContact
+from pylon_service.bittensor.contact import AbstractBittensorContact, MechanismMetrics
 from pylon_service.bittensor.models import (
     Block,
     CertificateAlgorithm,
@@ -221,6 +221,11 @@ class MockBittensorContact(AbstractBittensorContact):
 
     async def get_neurons(self, netuid: NetUid, block: Block) -> SubnetNeurons:
         return await self._execute_behavior("get_neurons", netuid, block)
+
+    async def get_mechanism_metrics(
+        self, netuid: NetUid, mechanism_id: MechanismId, block: Block
+    ) -> MechanismMetrics | None:
+        return await self._execute_behavior("get_mechanism_metrics", netuid, mechanism_id, block)
 
     async def get_alpha_prices(self, block: Block) -> SubnetPrices:
         return await self._execute_behavior("get_alpha_prices", block)

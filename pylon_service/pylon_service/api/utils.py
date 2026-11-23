@@ -14,6 +14,7 @@ from pylon_service.api.services import (
     CertificateNotFoundError,
     CommitmentNotFoundError,
     ExtrinsicNotFoundError,
+    MechanismNotFoundError,
     RecentObjectMissingError,
     RecentObjectStaleError,
 )
@@ -23,7 +24,16 @@ from pylon_service.identities import identities
 
 
 def _response_for_exception(exc: Exception) -> Response | None:
-    if isinstance(exc, (BlockNotFoundError, ExtrinsicNotFoundError, CertificateNotFoundError, CommitmentNotFoundError)):
+    if isinstance(
+        exc,
+        (
+            BlockNotFoundError,
+            ExtrinsicNotFoundError,
+            CertificateNotFoundError,
+            CommitmentNotFoundError,
+            MechanismNotFoundError,
+        ),
+    ):
         return Response(status_code=404, content={"status_code": 404, "detail": str(exc)})
 
     if isinstance(exc, (RecentObjectMissingError, RecentObjectStaleError)):
