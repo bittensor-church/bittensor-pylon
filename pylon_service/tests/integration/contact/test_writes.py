@@ -4,11 +4,10 @@ import asyncio
 
 import pytest
 from pylon_commons.models import CommitmentKind
-from pylon_commons.types import CommitmentDataBytes, MechanismId, NetUid, RevealedCommitmentData, Tempo, Weight
+from pylon_commons.types import CommitmentDataBytes, MechanismId, NetUid, RevealedCommitmentData, Weight
 from turbobt.substrate.exceptions import SubstrateException
 from turbobt.subtensor.exceptions import CommitRevealDisabled
 
-from pylon_service.api.epoch import get_epoch_containing_block
 from pylon_service.bittensor.contact import GLOBAL_MAX_SUBNET_COUNT, TurboBtContact
 from pylon_service.bittensor.models import CertificateAlgorithm
 from tests.integration.localchain.common import LOW_TEMPO, MAX_WEIGHT_REVEAL_WAIT_TIME
@@ -16,21 +15,21 @@ from tests.integration.localchain.dev_accounts import DevAccount
 
 # bittensor_drand derives the reveal round from the blocks left until the reveal epoch times the block duration. With
 # fast blocks, committing near the end of an epoch yields a round the chain has already stored, and the commit is
-# rejected with InvalidRevealRound. 30 blocks leave a reveal round several drand periods ahead.
+# rejected with InvalidRevealRound. 30 blocks leave a reveal round a few drand periods ahead.
 MIN_BLOCKS_BEFORE_REVEAL_EPOCH = 30
 
 
 async def _wait_for_commit_window(contact: TurboBtContact, netuid: NetUid, mechanism_id: MechanismId) -> None:
     """
-    Wait until enough blocks remain in the epoch for a timelocked commit to get a not yet stored reveal round.
+    Wait until enough blocks remain before the reveal epoch for a timelocked commit to get a not yet stored reveal round.
     """
-    # bittensor_drand computes epochs from the mechanism storage index, not the netuid.
-    storage_index = NetUid(mechanism_id * GLOBAL_MAX_SUBNET_COUNT + netuid)
+    # Same epoch arithmetic as bittensor_drand, which uses the mechanism storage index instead of the netuid.
+    storage_index = mechanism_id * GLOBAL_MAX_SUBNET_COUNT + netuid
+    interval = LOW_TEMPO + 1
     async with asyncio.timeout(MAX_WEIGHT_REVEAL_WAIT_TIME):
         while True:
             block = await contact.get_latest_block()
-            epoch = get_epoch_containing_block(block.number, storage_index, Tempo(LOW_TEMPO))
-            if epoch.end - block.number >= MIN_BLOCKS_BEFORE_REVEAL_EPOCH:
+            if interval - (block.number + storage_index + 1) % interval >= MIN_BLOCKS_BEFORE_REVEAL_EPOCH:
                 return
             await asyncio.sleep(0.25)
 
