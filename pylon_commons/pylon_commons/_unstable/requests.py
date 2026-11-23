@@ -93,6 +93,7 @@ class GetNeuronsRequest(AuthenticatedPylonRequest[GetNeuronsResponse]):
     response_cls = GetNeuronsResponse
 
     block_number: BlockNumber
+    mechanism_id: MechanismId = MechanismId(0)
 
 
 class GetLatestNeuronsRequest(AuthenticatedPylonRequest[GetNeuronsResponse]):
@@ -101,6 +102,8 @@ class GetLatestNeuronsRequest(AuthenticatedPylonRequest[GetNeuronsResponse]):
     """
 
     response_cls = GetNeuronsResponse
+
+    mechanism_id: MechanismId = MechanismId(0)
 
 
 class GetRecentNeuronsRequest(AuthenticatedPylonRequest[GetNeuronsResponse]):

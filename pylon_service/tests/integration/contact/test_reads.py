@@ -3,7 +3,7 @@ from __future__ import annotations
 import pytest
 from dirty_equals import IsInt, IsStr
 from pylon_commons.models import CommitmentKind
-from pylon_commons.types import ExtrinsicIndex
+from pylon_commons.types import ExtrinsicIndex, MechanismId
 
 from tests.integration.localchain.dev_accounts import DevAccount
 from tests.integration.localchain.dev_evm_wallets import DevEvmWallet
@@ -230,3 +230,20 @@ async def test_get_evm_key_associations_returns_empty_map(open_contact):
     associations = await open_contact.get_evm_key_associations(3)
     assert associations is not None
     assert associations == dict()
+
+
+@pytest.mark.asyncio
+async def test_get_mechanism_metrics_reads_mechanism_storage(open_contact, mechanism_direct_netuid):
+    """
+    Test that mechanism 0 metrics match neuron info and that only existing mechanisms are readable.
+    """
+    block = await open_contact.get_latest_block()
+    mechanism_zero = await open_contact.get_mechanism_metrics(mechanism_direct_netuid, MechanismId(0), block)
+    mechanism_one = await open_contact.get_mechanism_metrics(mechanism_direct_netuid, MechanismId(1), block)
+    neurons = await open_contact.get_neurons(mechanism_direct_netuid, block)
+
+    assert mechanism_zero is not None and mechanism_one is not None
+    assert {n.uid: (n.incentive, n.last_update) for n in neurons.neurons.values()} == {
+        n.uid: (mechanism_zero.incentive(n.uid), mechanism_zero.last_update(n.uid)) for n in neurons.neurons.values()
+    }
+    assert await open_contact.get_mechanism_metrics(mechanism_direct_netuid, MechanismId(2), block) is None

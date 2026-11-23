@@ -21,6 +21,7 @@ from pylon_client._internal.pylon_commons.exceptions import (
     PylonNotFound,
     PylonUnauthorized,
     PylonMisconfigured,
+    PylonMechanismMismatch,
     PylonClosed,
 )
 from pylon_client._internal.pylon_commons.v1.models import (

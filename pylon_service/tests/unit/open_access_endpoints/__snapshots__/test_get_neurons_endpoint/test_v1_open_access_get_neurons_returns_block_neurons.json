@@ -3,6 +3,7 @@
     "hash": "0xblock123",
     "number": 123
   },
+  "mechanism_id": 0,
   "neurons": {
     "hotkey1": {
       "active": true,

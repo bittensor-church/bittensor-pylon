@@ -69,6 +69,32 @@ async def test_netuid_mismatch_returns_308_unstable(test_client: AsyncTestClient
 
 
 @pytest.mark.asyncio
+@pytest.mark.parametrize(
+    "url,expected_location",
+    [
+        pytest.param(
+            "/api/v1/identity/sn1/subnet/99/block/latest/neurons?mechanism_id=1",
+            "/api/v1/identity/sn1/subnet/1/block/latest/neurons?mechanism_id=1",
+            id="v1_latest",
+        ),
+        pytest.param(
+            "/api/_unstable/identity/sn1/subnet/99/block/123/neurons?mechanism_id=1",
+            "/api/_unstable/identity/sn1/subnet/1/block/123/neurons?mechanism_id=1",
+            id="unstable_at_block",
+        ),
+    ],
+)
+async def test_netuid_mismatch_redirect_keeps_query(test_client: AsyncTestClient, url: str, expected_location: str):
+    """
+    Test that the netuid mismatch redirect keeps the query string.
+    """
+    response = await test_client.get(url, headers={"Authorization": "Bearer sn1_token"}, follow_redirects=False)
+
+    assert response.status_code == HTTP_308_PERMANENT_REDIRECT
+    assert response.headers["location"] == expected_location
+
+
+@pytest.mark.asyncio
 async def test_no_auth_header_returns_401_unstable(test_client: AsyncTestClient):
     response = await test_client.get("/api/_unstable/identity/sn1/subnet/1/block/latest/neurons")
 

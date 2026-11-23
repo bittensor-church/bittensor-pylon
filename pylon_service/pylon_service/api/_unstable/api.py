@@ -1,5 +1,8 @@
+from typing import Annotated
+
 import structlog
 from litestar import Controller, Response, status_codes
+from litestar.params import Parameter
 from pylon_commons._unstable.bodies import EvmLogsBody, SetCommitmentBody, SetRevealedCommitmentBody, SetWeightsBody
 from pylon_commons._unstable.endpoints import Endpoint
 from pylon_commons._unstable.requests import GenerateCertificateKeypairRequest
@@ -49,6 +52,8 @@ from pylon_service.guards import identity_auth_guard, open_access_auth_guard
 from pylon_service.identities import identities
 
 logger = structlog.stdlib.get_logger(__name__)
+
+QueryMechanismId = Annotated[MechanismId, Parameter(ge=0)]
 
 
 class Handlers:
@@ -114,14 +119,20 @@ class Handlers:
 
     @handler(Endpoint.NEURONS)
     async def get_neurons(
-        self, unstable_neuron_service: NeuronService, block_number: BlockNumber, netuid: NetUid
+        self,
+        unstable_neuron_service: NeuronService,
+        block_number: BlockNumber,
+        netuid: NetUid,
+        mechanism_id: QueryMechanismId = MechanismId(0),
     ) -> GetNeuronsResponse:
-        neurons = await unstable_neuron_service.get_neurons(netuid, block_number)
+        neurons = await unstable_neuron_service.get_neurons(netuid, block_number, mechanism_id)
         return GetNeuronsResponse.model_validate(neurons, from_attributes=True)
 
     @handler(Endpoint.LATEST_NEURONS)
-    async def get_latest_neurons(self, unstable_neuron_service: NeuronService, netuid: NetUid) -> GetNeuronsResponse:
-        neurons = await unstable_neuron_service.get_latest_neurons(netuid)
+    async def get_latest_neurons(
+        self, unstable_neuron_service: NeuronService, netuid: NetUid, mechanism_id: QueryMechanismId = MechanismId(0)
+    ) -> GetNeuronsResponse:
+        neurons = await unstable_neuron_service.get_latest_neurons(netuid, mechanism_id)
         return GetNeuronsResponse.model_validate(neurons, from_attributes=True)
 
     @handler(Endpoint.RECENT_NEURONS)

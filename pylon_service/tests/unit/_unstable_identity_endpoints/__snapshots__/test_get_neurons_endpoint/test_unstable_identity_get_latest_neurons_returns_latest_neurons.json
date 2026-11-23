@@ -3,6 +3,7 @@
     "hash": "0xshared-latest-block",
     "number": 1000
   },
+  "mechanism_id": 0,
   "neurons": {
     "hotkey1": {
       "active": true,

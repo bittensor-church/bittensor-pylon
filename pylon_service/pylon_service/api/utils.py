@@ -14,6 +14,7 @@ from pylon_service.api.services import (
     CertificateNotFoundError,
     CommitmentNotFoundError,
     ExtrinsicNotFoundError,
+    MechanismNotFoundError,
     RecentObjectMissingError,
     RecentObjectStaleError,
 )
@@ -23,7 +24,16 @@ from pylon_service.identities import identities
 
 
 def _response_for_exception(exc: Exception) -> Response | None:
-    if isinstance(exc, (BlockNotFoundError, ExtrinsicNotFoundError, CertificateNotFoundError, CommitmentNotFoundError)):
+    if isinstance(
+        exc,
+        (
+            BlockNotFoundError,
+            ExtrinsicNotFoundError,
+            CertificateNotFoundError,
+            CommitmentNotFoundError,
+            MechanismNotFoundError,
+        ),
+    ):
         return Response(status_code=404, content={"status_code": 404, "detail": str(exc)})
 
     if isinstance(exc, (RecentObjectMissingError, RecentObjectStaleError)):
@@ -62,7 +72,7 @@ async def check_identity_netuid(request: Request) -> Response | None:
     identity = identities.get(identity_name)
     if identity and identity.netuid != netuid:
         correct_path = re.sub(r"/subnet/\d+", f"/subnet/{identity.netuid}", request.url.path, count=1)
-        return Redirect(path=correct_path, status_code=308)
+        return Redirect(path=correct_path, status_code=308, query_params=request.query_params or None)
     return None
 
 

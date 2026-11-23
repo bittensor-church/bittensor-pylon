@@ -19,7 +19,7 @@ from pylon_commons.types import (
 )
 from turbobt.substrate.exceptions import SubstrateException, UnknownBlock
 
-from pylon_service.bittensor.contact import AbstractBittensorContact
+from pylon_service.bittensor.contact import AbstractBittensorContact, MechanismMetrics
 from pylon_service.bittensor.exceptions import (
     ArchiveFallbackException,
     ArchiveInvalidParamsException,
@@ -258,6 +258,16 @@ class BittensorContactRouter:
             "get_neurons",
             main_call=lambda: self._main_contact.get_neurons(netuid, block),
             archive_call=lambda: self._archive_contact.get_neurons(netuid, block),
+            block=block,
+        )
+
+    async def get_mechanism_metrics(
+        self, netuid: NetUid, mechanism_id: MechanismId, block: Block
+    ) -> MechanismMetrics | None:
+        return await self._delegate(
+            "get_mechanism_metrics",
+            main_call=lambda: self._main_contact.get_mechanism_metrics(netuid, mechanism_id, block),
+            archive_call=lambda: self._archive_contact.get_mechanism_metrics(netuid, mechanism_id, block),
             block=block,
         )
 

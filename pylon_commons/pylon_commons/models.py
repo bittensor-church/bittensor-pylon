@@ -24,6 +24,7 @@ from .types import (
     Hotkey,
     Incentive,
     MaxWeightsLimit,
+    MechanismId,
     NetUid,
     NeuronActive,
     NeuronUid,
@@ -134,6 +135,7 @@ class Neuron(BittensorModel):
 
 class SubnetNeurons(BittensorModel):
     block: Block
+    mechanism_id: MechanismId = MechanismId(0)
     neurons: dict[Hotkey, Neuron]
 
 

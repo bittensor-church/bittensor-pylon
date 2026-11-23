@@ -86,6 +86,27 @@ logger = structlog.stdlib.get_logger(__name__)
 unknown_hotkey = Hotkey("N/A")
 RECONNECT_EXCEPTIONS = (AttributeError, ConnectionClosed, OSError, RuntimeError, TypeError)
 
+# Subtensor keys per-mechanism storage by mechanism_id * GLOBAL_MAX_SUBNET_COUNT + netuid
+# (pallets/subtensor/src/subnets/mechanism.rs, get_mechanism_storage_index).
+GLOBAL_MAX_SUBNET_COUNT = 4096
+U16_MAX = 65535
+
+
+@dataclass(frozen=True)
+class MechanismMetrics:
+    """
+    Raw per-UID mechanism storage; missing UIDs read as 0, like Subtensor's getters.
+    """
+
+    incentives: list[int]
+    last_updates: list[int]
+
+    def incentive(self, uid: int) -> Incentive:
+        return Incentive(self.incentives[uid] / U16_MAX if uid < len(self.incentives) else 0.0)
+
+    def last_update(self, uid: int) -> Timestamp:
+        return Timestamp(self.last_updates[uid] if uid < len(self.last_updates) else 0)
+
 
 class BittensorPort(Protocol):
     wallet: Wallet | None
@@ -111,6 +132,9 @@ class BittensorPort(Protocol):
         self, netuid: NetUid, mechanism_id: MechanismId, weights: dict[NeuronUid, Weight]
     ) -> None: ...
     async def get_neurons(self, netuid: NetUid, block: Block) -> SubnetNeurons: ...
+    async def get_mechanism_metrics(
+        self, netuid: NetUid, mechanism_id: MechanismId, block: Block
+    ) -> MechanismMetrics | None: ...
     async def get_alpha_prices(self, block: Block) -> SubnetPrices: ...
     async def get_alpha_price(self, netuid: NetUid, block: Block) -> SubnetPrice: ...
     async def get_commitment(
@@ -209,6 +233,14 @@ class AbstractBittensorContact(BittensorPort, ABC):
 
     @abstractmethod
     async def get_neurons(self, netuid: NetUid, block: Block) -> SubnetNeurons: ...
+
+    @abstractmethod
+    async def get_mechanism_metrics(
+        self, netuid: NetUid, mechanism_id: MechanismId, block: Block
+    ) -> MechanismMetrics | None:
+        """
+        Read a mechanism's per-UID incentive and last update; None if the subnet has no such mechanism.
+        """
 
     @abstractmethod
     async def get_alpha_prices(self, block: Block) -> SubnetPrices:
@@ -467,6 +499,36 @@ class TurboBtContact(AbstractBittensorContact):
     async def get_neurons(self, netuid: NetUid, block: Block) -> SubnetNeurons:
         neurons = await self.get_neurons_list(netuid, block)
         return SubnetNeurons(block=block, neurons={neuron.hotkey: neuron for neuron in neurons})
+
+    @track_operation(
+        bittensor_operation_duration,
+        labels={"uri": Attr("uri"), "netuid": Param("netuid"), "hotkey": Attr("hotkey")},
+    )
+    async def get_mechanism_metrics(
+        self, netuid: NetUid, mechanism_id: MechanismId, block: Block
+    ) -> MechanismMetrics | None:
+        async def read(client: Bittensor) -> MechanismMetrics | None:
+            state = client.subtensor.state
+            # Runtimes that predate mechanisms lack MechanismCountCurrent; turbobt's getStorage would then fail with
+            # an AttributeError, so treat the subnet as having only mechanism 0.
+            await state.substrate._init_runtime()
+            metadata = state.substrate._metadata
+            assert metadata is not None, "Runtime metadata should be loaded"
+            pallet = metadata.get_metadata_pallet("SubtensorModule")
+            count = None
+            if pallet.get_storage_function("MechanismCountCurrent") is not None:
+                count = await state.getStorage("SubtensorModule.MechanismCountCurrent", netuid, block_hash=block.hash)
+            if not 0 <= mechanism_id < (count or 1):
+                return None
+            index = mechanism_id * GLOBAL_MAX_SUBNET_COUNT + netuid
+            incentives = await state.getStorage("SubtensorModule.Incentive", index, block_hash=block.hash)
+            last_updates = await state.getStorage("SubtensorModule.LastUpdate", index, block_hash=block.hash)
+            return MechanismMetrics(
+                incentives=[int(value) for value in incentives or []],
+                last_updates=[int(value) for value in last_updates or []],
+            )
+
+        return await self._protect_turbobt("get_mechanism_metrics", read)
 
     @track_operation(
         bittensor_operation_duration,

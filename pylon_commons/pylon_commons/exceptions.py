@@ -126,5 +126,12 @@ class PylonMisconfigured(BasePylonException):
     """
 
 
+class PylonMechanismMismatch(BasePylonException):
+    """
+    Error raised when the service answers a neuron request for a different mechanism, e.g. a service without
+    mechanism support.
+    """
+
+
 class PylonCacheException(BasePylonException):
     """Base class for all Pylon cache exception."""

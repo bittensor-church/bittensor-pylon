@@ -157,6 +157,10 @@ By default it connects to the public Bittensor EVM nodes.
 | `PYLON_EVM_ARCHIVE_RPC_URL` | EVM archive RPC URL for historical logs | `https://archive.chain.opentensor.ai` |
 | `PYLON_EVM_ARCHIVE_BLOCKS_CUTOFF` | Blocks threshold for switching to archive network | `300` |
 
+### Neuron Data per Mechanism
+
+The at-block and latest neuron endpoints (`/block/{block_number}/neurons` and `/block/latest/neurons`, open access and identity) accept an optional `mechanism_id` query parameter, default `0`. For a non-zero mechanism, each neuron's `incentive` and `last_update` come from that mechanism's storage; all other fields are subnet-wide and unchanged. The response includes the `mechanism_id` it answers for. A mechanism the subnet does not have returns 404. Recent (cached) neurons and validators are always mechanism 0.
+
 ### Recent Objects Caching
 
 Pylon can cache neuron data for fast retrieval via the `/block/recent/neurons` endpoint.
