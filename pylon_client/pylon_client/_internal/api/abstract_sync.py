@@ -58,6 +58,7 @@ from pylon_client._internal.pylon_commons._unstable.responses import (
 from pylon_client._internal.pylon_commons.apiver import ApiVersion
 from pylon_client._internal.pylon_commons.exceptions import (
     PylonClosed,
+    PylonMechanismMismatch,
     PylonNetuidMismatch,
 )
 from pylon_client._internal.pylon_commons.types import (
@@ -99,6 +100,15 @@ class AbstractApi(ABC):
         request.api_version = self.api_version
         return self._communicator.request(request)
 
+    @staticmethod
+    def _require_mechanism(response: GetNeuronsResponse, mechanism_id: MechanismId) -> GetNeuronsResponse:
+        if response.mechanism_id != mechanism_id:
+            raise PylonMechanismMismatch(
+                f"Requested mechanism {mechanism_id} but the service answered for mechanism {response.mechanism_id}; "
+                "upgrade the Pylon service"
+            )
+        return response
+
     def _file_backed_neurons(self) -> GetNeuronsResponse | None:
         """
         Returns neurons loaded from the configured local `neurons_file` for local development,
@@ -127,33 +137,45 @@ class AbstractOpenAccessApi(AbstractApi, ABC):
 
     # Public API
 
-    def get_neurons(self, netuid: NetUid, block_number: BlockNumber) -> GetNeuronsResponse:
+    def get_neurons(
+        self, netuid: NetUid, block_number: BlockNumber, *, mechanism_id: MechanismId = MechanismId(0)
+    ) -> GetNeuronsResponse:
         """
         Retrieves neurons for a specific subnet at a given block number.
 
         Args:
             netuid: The unique identifier of the subnet.
             block_number: The blockchain block number to query neurons at.
+            mechanism_id: Mechanism whose incentive and last update to return; other fields are subnet-wide.
 
         Returns:
             GetNeuronsResponse: containing the block information and a dictionary mapping hotkeys to Neuron objects.
-        """
-        return self._send_request(self._get_neurons_request(netuid, block_number))
 
-    def get_latest_neurons(self, netuid: NetUid) -> GetNeuronsResponse:
+        Raises:
+            PylonMechanismMismatch: The service answered for a different mechanism.
+        """
+        response = self._send_request(self._get_neurons_request(netuid, block_number, mechanism_id))
+        return self._require_mechanism(response, mechanism_id)
+
+    def get_latest_neurons(self, netuid: NetUid, *, mechanism_id: MechanismId = MechanismId(0)) -> GetNeuronsResponse:
         """
         Retrieves neurons for a specific subnet at the latest available block.
 
         Args:
             netuid: The unique identifier of the subnet.
+            mechanism_id: Mechanism whose incentive and last update to return; other fields are subnet-wide.
 
         Returns:
             GetNeuronsResponse: containing the latest block information and a dictionary mapping hotkeys to
             Neuron objects.
+
+        Raises:
+            PylonMechanismMismatch: The service answered for a different mechanism.
         """
-        if (file_backed := self._file_backed_neurons()) is not None:
+        if mechanism_id == 0 and (file_backed := self._file_backed_neurons()) is not None:
             return file_backed
-        return self._send_request(self._get_latest_neurons_request(netuid))
+        response = self._send_request(self._get_latest_neurons_request(netuid, mechanism_id))
+        return self._require_mechanism(response, mechanism_id)
 
     def get_recent_neurons(self, netuid: NetUid) -> GetNeuronsResponse:
         """
@@ -374,10 +396,14 @@ class AbstractOpenAccessApi(AbstractApi, ABC):
     # Private API
 
     @abstractmethod
-    def _get_neurons_request(self, netuid: NetUid, block_number: BlockNumber) -> GetNeuronsRequest: ...
+    def _get_neurons_request(
+        self, netuid: NetUid, block_number: BlockNumber, mechanism_id: MechanismId = MechanismId(0)
+    ) -> GetNeuronsRequest: ...
 
     @abstractmethod
-    def _get_latest_neurons_request(self, netuid: NetUid) -> GetLatestNeuronsRequest: ...
+    def _get_latest_neurons_request(
+        self, netuid: NetUid, mechanism_id: MechanismId = MechanismId(0)
+    ) -> GetLatestNeuronsRequest: ...
 
     @abstractmethod
     def _get_recent_neurons_request(self, netuid: NetUid) -> GetRecentNeuronsRequest: ...
@@ -503,29 +529,45 @@ class AbstractIdentityApi(AbstractApi, ABC):
 
     # Public API
 
-    def get_neurons(self, block_number: BlockNumber) -> GetNeuronsResponse:
+    def get_neurons(
+        self, block_number: BlockNumber, *, mechanism_id: MechanismId = MechanismId(0)
+    ) -> GetNeuronsResponse:
         """
         Retrieves neurons for the authenticated identity's subnet at a given block number.
 
         Args:
             block_number: The blockchain block number to query neurons at.
+            mechanism_id: Mechanism whose incentive and last update to return; other fields are subnet-wide.
 
         Returns:
             GetNeuronsResponse containing the block information and a dictionary mapping hotkeys to Neuron objects.
-        """
-        return self._send_identity_request(partial(self._get_neurons_request, block_number))
 
-    def get_latest_neurons(self) -> GetNeuronsResponse:
+        Raises:
+            PylonMechanismMismatch: The service answered for a different mechanism.
+        """
+        response = self._send_identity_request(
+            partial(self._get_neurons_request, block_number, mechanism_id=mechanism_id)
+        )
+        return self._require_mechanism(response, mechanism_id)
+
+    def get_latest_neurons(self, *, mechanism_id: MechanismId = MechanismId(0)) -> GetNeuronsResponse:
         """
         Retrieves neurons for the authenticated identity's subnet at the latest available block.
+
+        Args:
+            mechanism_id: Mechanism whose incentive and last update to return; other fields are subnet-wide.
 
         Returns:
             GetNeuronsResponse containing the latest block information and a dictionary mapping hotkeys to
             Neuron objects.
+
+        Raises:
+            PylonMechanismMismatch: The service answered for a different mechanism.
         """
-        if (file_backed := self._file_backed_neurons()) is not None:
+        if mechanism_id == 0 and (file_backed := self._file_backed_neurons()) is not None:
             return file_backed
-        return self._send_identity_request(self._get_latest_neurons_request)
+        response = self._send_identity_request(partial(self._get_latest_neurons_request, mechanism_id=mechanism_id))
+        return self._require_mechanism(response, mechanism_id)
 
     def get_recent_neurons(self) -> GetNeuronsResponse:
         """
@@ -792,10 +834,12 @@ class AbstractIdentityApi(AbstractApi, ABC):
     # Private API
 
     @abstractmethod
-    def _get_neurons_request(self, block_number: BlockNumber) -> GetNeuronsRequest: ...
+    def _get_neurons_request(
+        self, block_number: BlockNumber, mechanism_id: MechanismId = MechanismId(0)
+    ) -> GetNeuronsRequest: ...
 
     @abstractmethod
-    def _get_latest_neurons_request(self) -> GetLatestNeuronsRequest: ...
+    def _get_latest_neurons_request(self, mechanism_id: MechanismId = MechanismId(0)) -> GetLatestNeuronsRequest: ...
 
     @abstractmethod
     def _get_recent_neurons_request(self) -> GetRecentNeuronsRequest: ...

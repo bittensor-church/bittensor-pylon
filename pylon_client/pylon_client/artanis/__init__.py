@@ -8,6 +8,7 @@ from pylon_client._internal.pylon_commons.exceptions import (
     PylonBadGateway,
     PylonClosed,
     PylonForbidden,
+    PylonMechanismMismatch,
     PylonMisconfigured,
     PylonNetuidMismatch,
     PylonNotFound,

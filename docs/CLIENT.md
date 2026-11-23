@@ -393,8 +393,8 @@ Target subnet is chosen based on the netuid passed to the method via the argumen
 
 | Method                                     | Description                                              |
 |--------------------------------------------|----------------------------------------------------------|
-| `get_latest_neurons(netuid)`               | Get neurons at latest block                              |
-| `get_neurons(netuid, block_number)`        | Get neurons at specific block                            |
+| `get_latest_neurons(netuid, *, mechanism_id=0)` | Get neurons at latest block                         |
+| `get_neurons(netuid, block_number, *, mechanism_id=0)` | Get neurons at specific block                |
 | `get_recent_neurons(netuid)`               | Get cached neurons (fast, may be slightly behind latest) |
 | `get_latest_validators(netuid)`            | Get validators at latest block                           |
 | `get_validators(netuid, block_number)`     | Get validators at specific block                         |
@@ -413,8 +413,8 @@ for which the client is configured.
 
 | Method                                                     | Description                                                          |
 |------------------------------------------------------------|----------------------------------------------------------------------|
-| `get_latest_neurons()`                                     | Get neurons at latest block                                          |
-| `get_neurons(block_number)`                                | Get neurons at specific block                                        |
+| `get_latest_neurons(*, mechanism_id=0)`                    | Get neurons at latest block                                          |
+| `get_neurons(block_number, *, mechanism_id=0)`             | Get neurons at specific block                                        |
 | `get_recent_neurons()`                                     | Get cached neurons (fast, may be slightly behind latest)             |
 | `get_latest_validators()`                                  | Get validators at latest block                                       |
 | `get_validators(block_number)`                             | Get validators at specific block                                     |
@@ -428,6 +428,10 @@ for which the client is configured.
 | `get_own_revealed_commitments()`                           | Get revealed commitments for identity's own wallet                   |
 | `set_revealed_commitment(commitment, blocks_until_reveal)` | Set revealed commitment on-chain                                     |
 | `get_certificate(hotkey)`                                  | Get mTLS certificate for a specific hotkey                           |
+
+### Neurons per Mechanism
+
+`get_neurons` and `get_latest_neurons` accept a keyword-only `mechanism_id` (default 0). For a non-zero mechanism, each neuron's `incentive` and `last_update` are that mechanism's values; other fields are subnet-wide. The client sends the parameter only when it is non-zero, so default requests are unchanged. A non-zero mechanism requires a Pylon service release that supports per-mechanism neuron reads; an older service ignores the parameter, and the client then raises `PylonMechanismMismatch` instead of returning mechanism 0 values. A configured `neurons_file` serves only mechanism 0; other mechanisms are always read from the service.
 
 ## Retries
 
@@ -531,6 +535,7 @@ BasePylonException
 │   ├── PylonUnauthorized      # Trying to access the server with no credentials passed.
 │   └── PylonForbidden         # Trying to access the resource with no permissions.
 ├── PylonClosed                # Trying to use closed client instance.
+├── PylonMechanismMismatch     # Service answered neurons for a different mechanism (service too old).
 └── PylonMisconfigured         # Invalid client configuration
 
 ├── PylonMisconfigured         # Invalid client configuration

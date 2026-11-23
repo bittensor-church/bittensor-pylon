@@ -45,6 +45,13 @@ if TYPE_CHECKING:
 HttpCommunicatorT = TypeVar("HttpCommunicatorT", bound="HttpCommunicator | AsyncHttpCommunicator")
 
 
+def _mechanism_params(request: GetNeuronsRequest | GetLatestNeuronsRequest) -> dict[str, int] | None:
+    """
+    Omit the default so requests stay identical for services without mechanism support.
+    """
+    return {"mechanism_id": request.mechanism_id} if request.mechanism_id else None
+
+
 class HttpTranslator(AbstractRequestTranslator[Request, HttpCommunicatorT]):
     """
     Translates PylonRequests into httpx Requests using _unstable API endpoints.
@@ -75,7 +82,9 @@ class HttpTranslator(AbstractRequestTranslator[Request, HttpCommunicatorT]):
     def _translate_get_neurons(self, request: GetNeuronsRequest, communicator: HttpCommunicatorT) -> Request:
         url = self._build_url(self._endpoint_cls.NEURONS, request)
         headers = self._get_auth_headers(request, communicator)
-        return communicator.raw_client.build_request(method=self._endpoint_cls.NEURONS.method, url=url, headers=headers)
+        return communicator.raw_client.build_request(
+            method=self._endpoint_cls.NEURONS.method, url=url, headers=headers, params=_mechanism_params(request)
+        )
 
     def _translate_get_latest_neurons(
         self, request: GetLatestNeuronsRequest, communicator: HttpCommunicatorT
@@ -83,7 +92,10 @@ class HttpTranslator(AbstractRequestTranslator[Request, HttpCommunicatorT]):
         url = self._build_url(self._endpoint_cls.LATEST_NEURONS, request)
         headers = self._get_auth_headers(request, communicator)
         return communicator.raw_client.build_request(
-            method=self._endpoint_cls.LATEST_NEURONS.method, url=url, headers=headers
+            method=self._endpoint_cls.LATEST_NEURONS.method,
+            url=url,
+            headers=headers,
+            params=_mechanism_params(request),
         )
 
     def _translate_get_recent_neurons(

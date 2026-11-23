@@ -57,9 +57,10 @@ def neuron_matcher(hotkey: str, uid: int) -> dict:
     }
 
 
-def neurons_response_matcher(hotkey_1: str, hotkey_2: str) -> dict:
+def neurons_response_matcher(hotkey_1: str, hotkey_2: str, mechanism_id: int = 0) -> dict:
     return {
         "block": block_matcher(),
+        "mechanism_id": mechanism_id,
         "neurons": match.each_value_matches(
             match.each_key_matches(  # type: ignore[reportArgumentType]
                 {

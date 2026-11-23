@@ -37,6 +37,7 @@ from pylon_commons.types import (
     evm as evm_types,
 )
 
+from pylon_service.bittensor.contact import MechanismMetrics
 from pylon_service.bittensor.exceptions import ArchiveFallbackException
 from pylon_service.bittensor.models import RawEvmKeyAssociationInfo
 from pylon_service.bittensor.recent.adapter import _CacheEntry
@@ -149,6 +150,20 @@ class NeuronsExistHandler(StateHandler):
         client = self._get_client(parameters)
         self._set_default_latest_block(client, block)
         client.add_behavior("get_neurons", subnet_neurons)
+
+
+class NeuronsExistForMechanismHandler(StateHandler):
+    name = "neurons exist for mechanism"
+
+    def setup(self, parameters: dict[str, Any]) -> None:
+        block = BlockFactory.build()
+        neurons = NeuronFactory.batch(parameters.get("neuron_count", 1))
+        subnet_neurons = SubnetNeurons(block=block, neurons={n.hotkey: n for n in neurons})
+
+        client = self._get_client(parameters)
+        self._set_default_latest_block(client, block)
+        client.add_behavior("get_neurons", subnet_neurons)
+        client.add_behavior("get_mechanism_metrics", MechanismMetrics(incentives=[], last_updates=[]))
 
 
 class NeuronsExistAtBlockHandler(StateHandler):

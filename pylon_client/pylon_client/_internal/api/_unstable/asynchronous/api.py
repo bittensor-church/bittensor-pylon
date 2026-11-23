@@ -51,14 +51,19 @@ from pylon_client._internal.pylon_commons.types import evm as evm_types
 class AsyncOpenAccessApi(AbstractAsyncOpenAccessApi):
     api_version = ApiVersion.UNSTABLE
 
-    async def _get_neurons_request(self, netuid: NetUid, block_number: BlockNumber) -> GetNeuronsRequest:
+    async def _get_neurons_request(
+        self, netuid: NetUid, block_number: BlockNumber, mechanism_id: MechanismId = MechanismId(0)
+    ) -> GetNeuronsRequest:
         return GetNeuronsRequest(
             netuid=netuid,
             block_number=block_number,
+            mechanism_id=mechanism_id,
         )
 
-    async def _get_latest_neurons_request(self, netuid: NetUid) -> GetLatestNeuronsRequest:
-        return GetLatestNeuronsRequest(netuid=netuid)
+    async def _get_latest_neurons_request(
+        self, netuid: NetUid, mechanism_id: MechanismId = MechanismId(0)
+    ) -> GetLatestNeuronsRequest:
+        return GetLatestNeuronsRequest(netuid=netuid, mechanism_id=mechanism_id)
 
     async def _get_recent_neurons_request(self, netuid: NetUid) -> GetRecentNeuronsRequest:
         return GetRecentNeuronsRequest(netuid=netuid)
@@ -134,17 +139,21 @@ class AsyncIdentityApi(AbstractAsyncIdentityApi):
             raise PylonMisconfigured(f"Identity '{self.identity_name}' is not configured on the server.")
         self._netuid = response.identities[self.identity_name]
 
-    async def _get_neurons_request(self, block_number: BlockNumber) -> GetNeuronsRequest:
+    async def _get_neurons_request(
+        self, block_number: BlockNumber, mechanism_id: MechanismId = MechanismId(0)
+    ) -> GetNeuronsRequest:
         return GetNeuronsRequest(
             netuid=self.netuid,
             identity_name=self.identity_name,
             block_number=block_number,
+            mechanism_id=mechanism_id,
         )
 
-    async def _get_latest_neurons_request(self) -> GetLatestNeuronsRequest:
+    async def _get_latest_neurons_request(self, mechanism_id: MechanismId = MechanismId(0)) -> GetLatestNeuronsRequest:
         return GetLatestNeuronsRequest(
             netuid=self.netuid,
             identity_name=self.identity_name,
+            mechanism_id=mechanism_id,
         )
 
     async def _get_recent_neurons_request(self) -> GetRecentNeuronsRequest:
