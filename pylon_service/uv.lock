@@ -487,7 +487,7 @@ requires-dist = [
     { name = "sqlalchemy", specifier = ">=2.0.49" },
     { name = "structlog", specifier = ">=25,<26" },
     { name = "tenacity" },
-    { name = "turbobt", specifier = ">=1.3.2" },
+    { name = "turbobt", git = "https://github.com/bittensor-church/turbobt?rev=commitment-bigraw" },
     { name = "uvicorn", specifier = ">=0.35.0" },
     { name = "web3", specifier = ">=7.16.0" },
 ]
@@ -2769,8 +2769,8 @@ wheels = [
 
 [[package]]
 name = "turbobt"
-version = "1.3.2"
-source = { registry = "https://pypi.org/simple" }
+version = "1.3.3.dev2+g52a993a"
+source = { git = "https://github.com/bittensor-church/turbobt?rev=commitment-bigraw#52a993ae76ece931a15add49790dfac4fe889ed9" }
 dependencies = [
     { name = "bittensor" },
     { name = "bittensor-drand" },
@@ -2779,10 +2779,6 @@ dependencies = [
     { name = "scalecodec" },
     { name = "websockets" },
     { name = "xxhash" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/0a/e4/497c4f5724c5c739ad97bd1100265486da18934feed55cb2dd2250c698fa/turbobt-1.3.2.tar.gz", hash = "sha256:00f3de671439a9c06867b887a50e01080188daa79a02e224d7ecd6fca9f5e4ed", size = 143100, upload-time = "2026-09-18T05:44:40.931Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/8a/f6/0d24f64b260634fbd63ff3a9969a52ed1940dd90aeea7e289d1049127838/turbobt-1.3.2-py3-none-any.whl", hash = "sha256:4ff98b67af56b09b5880cdf60e8b5bd5a4e2e246d6038fcfb6c9dd5130550517", size = 46420, upload-time = "2026-09-18T05:44:39.257Z" },
 ]
 
 [[package]]

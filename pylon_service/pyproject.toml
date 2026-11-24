@@ -79,6 +79,7 @@ package = true
 [tool.uv.sources]
 bittensor-pylon-commons = { path = "../pylon_commons", editable = true }
 bittensor-pylon-client = { path = "../pylon_client", editable = true }
+turbobt = { git = "https://github.com/bittensor-church/turbobt", rev = "commitment-bigraw" }
 
 [tool.ruff]
 line-length = 120
