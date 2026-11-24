@@ -1,3 +1,9 @@
+## service-v2.5.0 (2026-11-24)
+
+### Feat
+
+- support commitments up to 512 bytes (#107)
+
 ## service-v2.4.0 (2026-11-23)
 
 ### Feat
