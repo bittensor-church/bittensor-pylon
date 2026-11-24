@@ -49,7 +49,7 @@ async def test_set_commitment_writes_readable_commitment(write_contact, direct_n
 
 @pytest.mark.asyncio
 async def test_set_commitment_big_raw_round_trips(write_contact, direct_netuid):
-    expected_commitment = CommitmentDataBytes(b"<F:" + b"x" * 296 + b">")
+    expected_commitment = CommitmentDataBytes(b"<F:" + b"x" * 508 + b">")
 
     await write_contact.set_commitment(direct_netuid, expected_commitment)
 
