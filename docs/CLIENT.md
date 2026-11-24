@@ -422,7 +422,7 @@ for which the client is configured.
 | `get_commitments()`                                        | Get all commitments for the subnet                                   |
 | `get_commitment(hotkey)`                                   | Get commitment for specific hotkey                                   |
 | `get_own_commitment()`                                     | Get commitment for identity's own wallet                             |
-| `set_commitment(commitment)`                               | Set commitment on-chain                                              |
+| `set_commitment(commitment)`                               | Set commitment on-chain (max 512 bytes; over 128 needs service > 2.4.0) |
 | `get_all_revealed_commitments()`                           | Get all revealed commitments for the subnet                          |
 | `get_revealed_commitments(hotkey)`                         | Get revealed commitments for specific hotkey                         |
 | `get_own_revealed_commitments()`                           | Get revealed commitments for identity's own wallet                   |

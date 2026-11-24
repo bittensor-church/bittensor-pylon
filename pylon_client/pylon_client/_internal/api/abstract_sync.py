@@ -697,9 +697,13 @@ class AbstractIdentityApi(AbstractApi, ABC):
 
         Args:
             commitment: The commitment data to set. Can be bytes or hex string format (with or without 0x prefix).
+                At most 512 bytes; more than 128 bytes requires a Pylon service newer than 2.4.0.
 
         Returns:
             SetCommitmentResponse indicating the commitment has been set successfully.
+
+        Raises:
+            pydantic.ValidationError: If the commitment is empty, malformed or longer than 512 bytes.
         """
         return self._send_identity_request(partial(self._set_commitment_request, commitment))
 

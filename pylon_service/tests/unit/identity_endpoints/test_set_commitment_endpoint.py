@@ -129,3 +129,30 @@ async def test_v1_identity_set_commitment_unknown_identity_returns_404(identity_
 
         assert response.status_code == HTTP_404_NOT_FOUND
         assert response.json() == snapshot_json
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    ("size", "status", "expected_calls"),
+    [
+        pytest.param(512, HTTP_201_CREATED, [(2, b"\xab" * 512)], id="at_limit"),
+        pytest.param(513, HTTP_400_BAD_REQUEST, [], id="over_limit"),
+    ],
+)
+async def test_set_commitment_identity_size_limit(
+    identity_test_client_factory, mock_bt_client_factory, size, status, expected_calls, snapshot_json
+):
+    """
+    Test that commitments above the chain's 512-byte BigRaw bound are rejected before reaching the chain.
+    """
+    async with mock_bt_client_factory("sn2") as mock_client:
+        async with mock_client.mock_behavior(set_commitment=[None]):
+            async with identity_test_client_factory("sn2") as client:
+                response = await client.post(
+                    "/api/v1/identity/sn2/subnet/2/commitments",
+                    json={"commitment": "ab" * size},
+                )
+
+        assert response.status_code == status
+        assert response.json() == snapshot_json
+        assert mock_client.calls["set_commitment"] == expected_calls

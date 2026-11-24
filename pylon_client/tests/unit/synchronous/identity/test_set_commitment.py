@@ -95,6 +95,28 @@ class TestSyncIdentitySetCommitment(IdentityEndpointTest):
                 id="none_value",
             ),
             pytest.param(
+                b"\xab" * 513,
+                [
+                    {
+                        "type": "value_error",
+                        "loc": ("commitment",),
+                        "msg": "Value error, commitment must not exceed 512 bytes",
+                    }
+                ],
+                id="over_max_bytes",
+            ),
+            pytest.param(
+                "ab" * 513,
+                [
+                    {
+                        "type": "value_error",
+                        "loc": ("commitment",),
+                        "msg": "Value error, commitment must not exceed 512 bytes",
+                    }
+                ],
+                id="over_max_bytes_hex",
+            ),
+            pytest.param(
                 b"",
                 [
                     {

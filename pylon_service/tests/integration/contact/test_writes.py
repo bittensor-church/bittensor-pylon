@@ -48,6 +48,19 @@ async def test_set_commitment_writes_readable_commitment(write_contact, direct_n
 
 
 @pytest.mark.asyncio
+async def test_set_commitment_big_raw_round_trips(write_contact, direct_netuid):
+    expected_commitment = CommitmentDataBytes(b"<F:" + b"x" * 508 + b">")
+
+    await write_contact.set_commitment(direct_netuid, expected_commitment)
+
+    latest_block = await write_contact.get_latest_block()
+    commitment = await write_contact.get_commitment(direct_netuid, latest_block)
+
+    assert commitment is not None
+    assert commitment.commitment == expected_commitment.hex()
+
+
+@pytest.mark.asyncio
 async def test_set_revealed_commitment_writes_readable_commitment(
     write_contact, direct_netuid, snapshot, turbobt_client
 ):

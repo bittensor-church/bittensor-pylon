@@ -4,6 +4,8 @@ from pydantic import BaseModel, field_serializer, field_validator
 
 from ..types import CommitmentDataBytes, CommitmentDataHex, Hotkey, RevealedCommitmentData, Weight
 
+COMMITMENT_MAX_BYTES = 512  # The chain's BigRaw bound.
+
 
 class PylonBody(BaseModel):
     """
@@ -47,12 +49,14 @@ class SetCommitmentBody(PylonBody):
     def validate_commitment(cls, v):
         if isinstance(v, str):
             try:
-                return CommitmentDataBytes.fromhex(v)
+                v = CommitmentDataBytes.fromhex(v)
             except ValueError as e:
                 # Give more user-friendly message to the api.
                 raise ValueError("passed commitment data is not a valid hex string.") from e
         if not isinstance(v, bytes):
             raise ValueError("commitment must be bytes or hex string")
+        if len(v) > COMMITMENT_MAX_BYTES:
+            raise ValueError(f"commitment must not exceed {COMMITMENT_MAX_BYTES} bytes")
         return v
 
     @field_serializer("commitment")

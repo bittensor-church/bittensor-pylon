@@ -1,0 +1,10 @@
+{
+  "detail": "Validation failed for POST /api/v1/identity/sn2/subnet/2/commitments",
+  "extra": [
+    {
+      "key": "commitment",
+      "message": "Value error, commitment must not exceed 512 bytes"
+    }
+  ],
+  "status_code": 400
+}
